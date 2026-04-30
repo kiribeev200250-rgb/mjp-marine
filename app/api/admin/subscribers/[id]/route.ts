@@ -7,8 +7,9 @@ async function requireAdmin() {
   return !!(await getServerSession(authOptions));
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  await prisma.subscriber.delete({ where: { id: Number(params.id) } });
+  const { id } = await params;
+  await prisma.subscriber.delete({ where: { id: Number(id) } });
   return NextResponse.json({ ok: true });
 }

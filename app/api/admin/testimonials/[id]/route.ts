@@ -7,14 +7,16 @@ async function requireAdmin() {
   return !!(await getServerSession(authOptions));
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { id } = await params;
   const body = await req.json();
-  return NextResponse.json(await prisma.testimonial.update({ where: { id: Number(params.id) }, data: body }));
+  return NextResponse.json(await prisma.testimonial.update({ where: { id: Number(id) }, data: body }));
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  await prisma.testimonial.delete({ where: { id: Number(params.id) } });
+  const { id } = await params;
+  await prisma.testimonial.delete({ where: { id: Number(id) } });
   return NextResponse.json({ ok: true });
 }
