@@ -9,28 +9,27 @@ const QR_OPTIONS = {
 
 export async function GET(req: NextRequest) {
   const format = req.nextUrl.searchParams.get('format') ?? 'png';
-  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
-  const host = req.headers.get('host') ?? 'localhost';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${proto}://${host}`;
-  const url = `${siteUrl}/go`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+    `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('host')}`;
+  const qrUrl = `${siteUrl}/go`;
 
   if (format === 'svg') {
-    const svg = await QRCode.toString(url, { ...QR_OPTIONS, type: 'svg' });
+    const svg = await QRCode.toString(qrUrl, { ...QR_OPTIONS, type: 'svg' });
     return new NextResponse(svg, {
       headers: {
         'Content-Type': 'image/svg+xml',
         'Content-Disposition': 'attachment; filename="qr.svg"',
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'no-store',
       },
     });
   }
 
-  const buffer = await QRCode.toBuffer(url, { ...QR_OPTIONS, width: 1024 });
+  const buffer = await QRCode.toBuffer(qrUrl, { ...QR_OPTIONS, width: 1024 });
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'image/png',
       'Content-Disposition': 'attachment; filename="qr.png"',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'no-store',
     },
   });
 }
