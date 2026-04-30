@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap&subset=latin,cyrillic');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-dm-sans: 'DM Sans', sans-serif;
+    --font-cormorant: 'Cormorant Garamond', serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans text-gray-700 bg-cream;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-heading;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light transition-colors duration-200 text-sm;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-6 py-3 border-2 border-gold/70 text-gold font-semibold rounded-lg hover:bg-gold hover:text-navy transition-colors duration-200 text-sm;
+  }
+
+  .section-title {
+    @apply font-heading text-3xl md:text-4xl font-bold text-navy;
+  }
+
+  .card {
+    @apply bg-cream rounded-2xl shadow-sm border border-beige-dark p-6;
+  }
+
+  /* Parallax helper — works on all browsers except iOS Safari */
+  .parallax-bg {
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  @supports (-webkit-overflow-scrolling: touch) {
+    .parallax-bg {
+      background-attachment: scroll;
+    }
+  }
+}

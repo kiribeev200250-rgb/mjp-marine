@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model SiteConfig {
+  id          Int      @id @default(1)
+  companyName String   @default("MJP Marine Service")
+  phone       String   @default("")
+  whatsapp    String   @default("")
+  email       String   @default("")
+  hours       String   @default("")
+  coverage    String   @default("")
+  instagram   String   @default("")
+  facebook    String   @default("")
+  whatsappUrl String   @default("")
+  tiktok      String   @default("")
+  youtube     String   @default("")
+  logoUrl     String?
+  metaTitle   String   @default("MJP Marine Service — Mobile Yacht Repair Costa Blanca")
+  metaDesc    String   @default("Mobile yacht repair & maintenance in Costa Blanca. We come to your marina. 48h response. Alicante · Dénia · Torrevieja.")
+  updatedAt   DateTime @updatedAt
+}
+
+model Service {
+  id         Int    @id @default(autoincrement())
+  icon       String @default("⚓")
+  nameEn     String
+  nameEs     String
+  nameRu     String
+  nameUk     String
+  descEn     String
+  descEs     String
+  descRu     String
+  descUk     String
+  priceLabel String
+  sortOrder  Int    @default(0)
+}
+
+model Testimonial {
+  id        Int      @id @default(autoincrement())
+  name      String
+  boatType  String
+  marina    String
+  rating    Int
+  textEn    String
+  textEs    String
+  textRu    String
+  textUk    String
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model PageText {
+  id  Int    @id @default(autoincrement())
+  key String @unique
+  en  String
+  es  String
+  ru  String
+  uk  String
+}
+
+model ContactRequest {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  email     String?
+  marina    String?
+  boatType  String?
+  service   String?
+  message   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Subscriber {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  language  String   @default("en")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model PresiteLink {
+  id        Int           @id @default(autoincrement())
+  platform  String
+  label     String
+  url       String
+  active    Boolean       @default(true)
+  sortOrder Int           @default(0)
+  stats     PresiteStat[]
+}
+
+model PresiteConfig {
+  id          Int     @id @default(1)
+  taglineEn   String  @default("Mobile Yacht Repair · Costa Blanca")
+  taglineEs   String  @default("Reparación Náutica Móvil · Costa Blanca")
+  taglineRu   String  @default("Мобильный яхтенный сервис · Коста Бланка")
+  taglineUk   String  @default("Мобільний яхтовий сервіс · Коста Бланка")
+  pageTitle   String  @default("MJP Marine Service")
+  showWave    Boolean @default(true)
+  bgStyle     String  @default("gradient")
+  footerText  String  @default("© 2026 MJP Marine Service · Costa Blanca, España")
+}
+
+model PresiteStat {
+  id        Int         @id @default(autoincrement())
+  linkId    Int
+  link      PresiteLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  clickedAt DateTime    @default(now())
+}
