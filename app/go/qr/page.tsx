@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 
+const envHost = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL.replace(/^https?:\/\//, '')
+  : '';
+
 export default function QrPage() {
   const [imgError, setImgError] = useState(false);
+  const displayHost = envHost || (typeof window !== 'undefined' ? window.location.host : '');
 
   const handleDownload = async (format: 'png' | 'svg') => {
     try {
@@ -39,7 +44,7 @@ export default function QrPage() {
           Scan to find us
         </h1>
         <p className="text-[#C9A84C]/70 text-sm mb-8 text-center">
-          mjpmarine.es/go
+          {displayHost}/go
         </p>
 
         <div id="qr-print-area" className="mb-8">

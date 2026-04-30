@@ -9,7 +9,9 @@ const QR_OPTIONS = {
 
 export async function GET(req: NextRequest) {
   const format = req.nextUrl.searchParams.get('format') ?? 'png';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mjpmarine.es';
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+  const host = req.headers.get('host') ?? 'localhost';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${proto}://${host}`;
   const url = `${siteUrl}/go`;
 
   if (format === 'svg') {
