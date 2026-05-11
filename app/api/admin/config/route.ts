@@ -23,3 +23,14 @@ export async function PUT(req: NextRequest) {
   });
   return NextResponse.json(config);
 }
+
+export async function PATCH(req: NextRequest) {
+  if (!await requireAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const body = await req.json();
+  const config = await prisma.siteConfig.upsert({
+    where: { id: 1 },
+    update: body,
+    create: { id: 1, ...body },
+  });
+  return NextResponse.json(config);
+}

@@ -5,6 +5,7 @@ import WhyUs from '@/components/landing/WhyUs';
 import Services from '@/components/landing/Services';
 import HowItWorks from '@/components/landing/HowItWorks';
 import Testimonials from '@/components/landing/Testimonials';
+import Gallery from '@/components/landing/Gallery';
 import ContactSection from '@/components/landing/ContactSection';
 import Subscribe from '@/components/landing/Subscribe';
 import Footer from '@/components/landing/Footer';
@@ -14,14 +15,15 @@ export const revalidate = 60;
 
 async function getData() {
   try {
-    const [config, services, testimonials] = await Promise.all([
+    const [config, services, testimonials, galleryItems] = await Promise.all([
       prisma.siteConfig.findUnique({ where: { id: 1 } }),
       prisma.service.findMany({ orderBy: { sortOrder: 'asc' } }),
       prisma.testimonial.findMany({ where: { visible: true }, orderBy: { id: 'asc' } }),
+      prisma.galleryItem.findMany({ where: { visible: true }, orderBy: { sortOrder: 'asc' } }),
     ]);
-    return { config, services, testimonials };
+    return { config, services, testimonials, galleryItems };
   } catch {
-    return { config: null, services: [], testimonials: [] };
+    return { config: null, services: [], testimonials: [], galleryItems: [] };
   }
 }
 
@@ -38,23 +40,56 @@ const defaultConfig = {
   tiktok: '',
   youtube: '',
   logoUrl: null,
+  heroBgUrl: null,
+  heroOverlayOpacity: 0.75,
+  showHeroStats: true,
+  heroAnimation: 'none',
+  servicesBgColor: null,
+  servicesCardStyle: 'bordered',
+  showPriceLabel: true,
+  footerBgColor: null,
+  footerShowBrand: true,
+  footerShowNav: true,
+  footerShowSocial: true,
+  footerCustomLinks: '[]',
+  showGallery: false,
+  showAnimations: true,
+  showWave: true,
 };
 
 export default async function LandingPage() {
-  const { config, services, testimonials } = await getData();
-  const cfg = config ?? defaultConfig;
+  const { config, services, testimonials, galleryItems } = await getData();
+  const cfg = { ...defaultConfig, ...config };
 
   return (
     <>
       <Navbar logoUrl={cfg.logoUrl} />
       <main>
-        <Hero />
-        <WhyUs />
-        <Services services={services.length > 0 ? services : undefined} />
-        <HowItWorks />
-        {testimonials.length > 0 && <Testimonials testimonials={testimonials} />}
+        <Hero
+          heroBgUrl={cfg.heroBgUrl}
+          heroOverlayOpacity={cfg.heroOverlayOpacity}
+          showHeroStats={cfg.showHeroStats}
+          heroAnimation={cfg.heroAnimation}
+          showWave={cfg.showWave}
+          showAnimations={cfg.showAnimations}
+        />
+        <WhyUs showAnimations={cfg.showAnimations} />
+        <Services
+          services={services.length > 0 ? services : undefined}
+          servicesBgColor={cfg.servicesBgColor}
+          servicesCardStyle={cfg.servicesCardStyle}
+          showPriceLabel={cfg.showPriceLabel}
+          showAnimations={cfg.showAnimations}
+        />
+        <HowItWorks showAnimations={cfg.showAnimations} />
+        {testimonials.length > 0 && (
+          <Testimonials testimonials={testimonials} showAnimations={cfg.showAnimations} />
+        )}
+        {cfg.showGallery && galleryItems.length > 0 && (
+          <Gallery items={galleryItems} showAnimations={cfg.showAnimations} />
+        )}
         <Subscribe />
-        <ContactSection config={cfg} />
+        <ContactSection config={cfg} showAnimations={cfg.showAnimations} />
       </main>
       <Footer config={cfg} />
       <WhatsAppButton number={cfg.whatsapp} />

@@ -9,22 +9,59 @@ datasource db {
 }
 
 model SiteConfig {
-  id          Int      @id @default(1)
-  companyName String   @default("MJP Marine Service")
-  phone       String   @default("")
-  whatsapp    String   @default("")
-  email       String   @default("")
-  hours       String   @default("")
-  coverage    String   @default("")
-  instagram   String   @default("")
-  facebook    String   @default("")
-  whatsappUrl String   @default("")
-  tiktok      String   @default("")
-  youtube     String   @default("")
-  logoUrl     String?
-  metaTitle   String   @default("MJP Marine Service — Mobile Yacht Repair Costa Blanca")
-  metaDesc    String   @default("Mobile yacht repair & maintenance in Costa Blanca. We come to your marina. 48h response. Alicante · Dénia · Torrevieja.")
-  updatedAt   DateTime @updatedAt
+  id                Int      @id @default(1)
+  companyName       String   @default("MJP Marine Service")
+  phone             String   @default("")
+  whatsapp          String   @default("")
+  email             String   @default("")
+  hours             String   @default("")
+  coverage          String   @default("")
+  instagram         String   @default("")
+  facebook          String   @default("")
+  whatsappUrl       String   @default("")
+  tiktok            String   @default("")
+  youtube           String   @default("")
+  logoUrl           String?
+  heroBgUrl         String?
+  heroOverlayOpacity Float   @default(0.75)
+  faviconUrl        String?
+  colorPrimary      String   @default("#0A2342")
+  colorAccent       String   @default("#C9A84C")
+  colorText         String   @default("#FFFFFF")
+  showHeroStats     Boolean  @default(true)
+  heroAnimation     String   @default("none")
+  servicesBgColor   String?
+  servicesCardStyle String   @default("bordered")
+  showPriceLabel    Boolean  @default(true)
+  footerBgColor     String?
+  footerShowBrand   Boolean  @default(true)
+  footerShowNav     Boolean  @default(true)
+  footerShowSocial  Boolean  @default(true)
+  footerCustomLinks String   @default("[]")
+  showGallery       Boolean  @default(false)
+  showAnimations    Boolean  @default(true)
+  showWave          Boolean  @default(true)
+  metaTitle         String   @default("MJP Marine Service — Mobile Yacht Repair Costa Blanca")
+  metaDesc          String   @default("Mobile yacht repair & maintenance in Costa Blanca. We come to your marina. 48h response. Alicante · Dénia · Torrevieja.")
+  updatedAt         DateTime @updatedAt
+}
+
+model GalleryItem {
+  id          Int      @id @default(autoincrement())
+  title       String
+  titleEs     String   @default("")
+  titleRu     String   @default("")
+  titleUk     String   @default("")
+  description String   @default("")
+  descEs      String   @default("")
+  descRu      String   @default("")
+  descUk      String   @default("")
+  beforeUrl   String
+  afterUrl    String
+  serviceTag  String   @default("")
+  sortOrder   Int      @default(0)
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }
 
 model Service {

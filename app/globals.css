@@ -53,4 +53,92 @@
       background-attachment: scroll;
     }
   }
+
+  /* Scroll reveal animations */
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.65s ease, transform 0.65s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-32px);
+    transition: opacity 0.65s ease, transform 0.65s ease;
+  }
+
+  .reveal-left.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(32px);
+    transition: opacity 0.65s ease, transform 0.65s ease;
+  }
+
+  .reveal-right.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Staggered reveal for grid children */
+  .reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+  }
+
+  .reveal-stagger.visible > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0s; }
+  .reveal-stagger.visible > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.08s; }
+  .reveal-stagger.visible > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.16s; }
+  .reveal-stagger.visible > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
+  .reveal-stagger.visible > *:nth-child(5) { opacity: 1; transform: translateY(0); transition-delay: 0.32s; }
+  .reveal-stagger.visible > *:nth-child(6) { opacity: 1; transform: translateY(0); transition-delay: 0.40s; }
+  .reveal-stagger.visible > *:nth-child(n+7) { opacity: 1; transform: translateY(0); transition-delay: 0.48s; }
+
+  /* Service card shimmer on hover */
+  .card-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(201,168,76,0.18) 50%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .card-shimmer:hover::after {
+    opacity: 1;
+    animation: shimmer-slide 0.6s ease forwards;
+  }
+
+  @keyframes shimmer-slide {
+    from { background-position: -200% center; }
+    to   { background-position: 200% center; }
+  }
+
+  /* SVG wave animation */
+  .wave-path {
+    animation: wave-drift 8s ease-in-out infinite alternate;
+    transform-origin: center bottom;
+  }
+
+  @keyframes wave-drift {
+    0%   { d: path("M0,30 C180,55 420,5 600,30 C780,55 980,5 1200,30 L1200,80 L0,80 Z"); }
+    25%  { d: path("M0,35 C200,10 400,55 600,35 C800,10 1000,55 1200,35 L1200,80 L0,80 Z"); }
+    50%  { d: path("M0,25 C220,50 380,8 600,28 C820,48 980,8 1200,28 L1200,80 L0,80 Z"); }
+    75%  { d: path("M0,38 C180,12 420,58 600,38 C780,12 980,58 1200,38 L1200,80 L0,80 Z"); }
+    100% { d: path("M0,30 C180,55 420,5 600,30 C780,55 980,5 1200,30 L1200,80 L0,80 Z"); }
+  }
 }

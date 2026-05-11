@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { detectLang, type Lang } from '@/lib/i18n';
+
+interface CustomLink { label: string; url: string }
 
 interface Config {
   instagram?: string | null;
@@ -12,6 +15,11 @@ interface Config {
   youtube?: string | null;
   logoUrl?: string | null;
   companyName?: string | null;
+  footerBgColor?: string | null;
+  footerShowBrand?: boolean | null;
+  footerShowNav?: boolean | null;
+  footerShowSocial?: boolean | null;
+  footerCustomLinks?: string | null;
 }
 
 const navByLang: Record<Lang, string[]> = {
@@ -51,72 +59,78 @@ export default function Footer({ config }: { config: Config }) {
     || (config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null);
 
   const socialLinks = [
-    {
-      url: config.instagram,
-      label: 'Instagram',
-      hoverClass: 'hover:text-pink-400 hover:border-pink-400/40',
-      Icon: InstagramIcon,
-    },
-    {
-      url: config.facebook,
-      label: 'Facebook',
-      hoverClass: 'hover:text-blue-400 hover:border-blue-400/40',
-      Icon: FacebookIcon,
-    },
-    {
-      url: whatsappHref,
-      label: 'WhatsApp',
-      hoverClass: 'hover:text-[#25D366] hover:border-green-400/40',
-      Icon: WhatsAppIcon,
-    },
-    {
-      url: config.tiktok,
-      label: 'TikTok',
-      hoverClass: 'hover:text-white hover:border-white/40',
-      Icon: TikTokIcon,
-    },
-    {
-      url: config.youtube,
-      label: 'YouTube',
-      hoverClass: 'hover:text-red-500 hover:border-red-500/40',
-      Icon: YouTubeIcon,
-    },
+    { url: config.instagram, label: 'Instagram', hoverClass: 'hover:text-pink-400 hover:border-pink-400/40', Icon: InstagramIcon },
+    { url: config.facebook, label: 'Facebook', hoverClass: 'hover:text-blue-400 hover:border-blue-400/40', Icon: FacebookIcon },
+    { url: whatsappHref, label: 'WhatsApp', hoverClass: 'hover:text-[#25D366] hover:border-green-400/40', Icon: WhatsAppIcon },
+    { url: config.tiktok, label: 'TikTok', hoverClass: 'hover:text-white hover:border-white/40', Icon: TikTokIcon },
+    { url: config.youtube, label: 'YouTube', hoverClass: 'hover:text-red-500 hover:border-red-500/40', Icon: YouTubeIcon },
   ].filter((s) => s.url);
 
+  let customLinks: CustomLink[] = [];
+  try {
+    if (config.footerCustomLinks) {
+      customLinks = JSON.parse(config.footerCustomLinks) as CustomLink[];
+    }
+  } catch { /* ignore */ }
+
+  const showBrand = config.footerShowBrand !== false;
+  const showNav = config.footerShowNav !== false;
+  const showSocial = config.footerShowSocial !== false && (socialLinks.length > 0 || customLinks.length > 0);
+
+  const bgStyle = config.footerBgColor ? { backgroundColor: config.footerBgColor } : undefined;
+
+  const visibleCols = [showBrand, showNav, showSocial].filter(Boolean).length;
+  const gridClass = visibleCols === 1 ? '' : visibleCols === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3';
+
   return (
-    <footer className="bg-navy-dark border-t border-gold/10">
+    <footer className="bg-navy-dark border-t border-gold/10" style={bgStyle}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid md:grid-cols-3 gap-8 mb-10">
+        <div className={`grid ${gridClass} gap-8 mb-10`}>
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-gold text-2xl">⚓</span>
-              <span className="text-white font-heading text-xl font-bold">
-                {config.companyName || 'MJP'}
-              </span>
-              {!config.companyName && (
-                <span className="text-gold/60 text-xs uppercase tracking-widest">Marine Service</span>
-              )}
+          {showBrand && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                {config.logoUrl ? (
+                  <Image src={config.logoUrl} alt={config.companyName ?? 'Logo'} width={120} height={40} className="h-10 w-auto object-contain" />
+                ) : (
+                  <>
+                    <span className="text-gold text-2xl">⚓</span>
+                    <span className="text-white font-heading text-xl font-bold">
+                      {config.companyName || 'MJP'}
+                    </span>
+                    {!config.companyName && (
+                      <span className="text-gold/60 text-xs uppercase tracking-widest">Marine Service</span>
+                    )}
+                  </>
+                )}
+              </div>
+              <p className="text-gray-500 text-sm leading-relaxed max-w-xs" data-i18n="footer.tagline">
+                {tagline}
+              </p>
             </div>
-            <p className="text-gray-500 text-sm leading-relaxed max-w-xs" data-i18n="footer.tagline">
-              {tagline}
-            </p>
-          </div>
+          )}
 
           {/* Nav links */}
-          <div>
-            <h4 className="text-white font-semibold text-sm uppercase tracking-wide mb-4">Navigation</h4>
-            <div className="flex flex-col gap-2">
-              {navLinks.map((href, i) => (
-                <a key={href} href={href} className="text-gray-500 hover:text-gold transition-colors text-sm">
-                  {navByLang[lang][i]}
-                </a>
-              ))}
+          {showNav && (
+            <div>
+              <h4 className="text-white font-semibold text-sm uppercase tracking-wide mb-4">Navigation</h4>
+              <div className="flex flex-col gap-2">
+                {navLinks.map((href, i) => (
+                  <a key={href} href={href} className="text-gray-500 hover:text-gold transition-colors text-sm">
+                    {navByLang[lang][i]}
+                  </a>
+                ))}
+                {customLinks.map((cl, i) => (
+                  <a key={i} href={cl.url} className="text-gray-500 hover:text-gold transition-colors text-sm">
+                    {cl.label}
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Social */}
-          {socialLinks.length > 0 && (
+          {showSocial && (
             <div>
               <h4 className="text-white font-semibold text-sm uppercase tracking-wide mb-4">Follow us</h4>
               <div className="flex gap-3 flex-wrap">

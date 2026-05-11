@@ -28,6 +28,7 @@ export default function AdminSidebar() {
     { href: '/admin/testimonials', label: T.nav_testimonials, icon: TestimonialsIcon },
     { href: '/admin/contacts', label: T.nav_contacts, icon: ContactsIcon, badge: unread },
     { href: '/admin/subscribers', label: T.nav_subscribers, icon: SubscribersIcon },
+    { href: '/admin/gallery', label: T.nav_gallery ?? 'Gallery', icon: GalleryIcon },
     { href: '/admin/presite', label: T.nav_presite, icon: PresiteIcon },
   ];
 
@@ -130,4 +131,7 @@ function LogoutIcon({ className }: { className?: string }) {
 }
 function PresiteIcon({ className }: { className?: string }) {
   return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4.5v15m7.5-7.5h-15" /><rect x="3" y="3" width="18" height="18" rx="3" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} /></svg>;
+}
+function GalleryIcon({ className }: { className?: string }) {
+  return <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
 }

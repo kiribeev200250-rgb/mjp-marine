@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
 
 const MARINAS = [
@@ -28,13 +28,22 @@ interface Config {
   email: string;
   hours: string;
   coverage: string;
+  whatsappUrl?: string;
 }
 
-export default function ContactSection({ config }: { config: Config }) {
+interface ContactSectionProps {
+  config: Config;
+  showAnimations?: boolean | null;
+}
+
+export default function ContactSection({ config, showAnimations }: ContactSectionProps) {
   const [lang, setLangState] = useState<Lang>('en');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const animate = showAnimations !== false;
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [sectionVisible, setSectionVisible] = useState(false);
 
   useEffect(() => {
     setLangState(detectLang());
@@ -45,6 +54,18 @@ export default function ContactSection({ config }: { config: Config }) {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!animate) return;
+    const el = sectionRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setSectionVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [animate]);
 
   const t = labels[lang];
 
@@ -76,7 +97,10 @@ export default function ContactSection({ config }: { config: Config }) {
   return (
     <section id="contact" className="py-20 bg-beige">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div
+          ref={sectionRef}
+          className={`text-center mb-12 ${animate ? 'reveal' : ''} ${animate && sectionVisible ? 'visible' : ''}`}
+        >
           <h2 className="section-title mb-3" data-i18n="contact.title">{t.title}</h2>
           <div className="w-16 h-1 bg-gradient-to-r from-gold to-orange mx-auto rounded-full mb-4" />
           <p className="text-gray-500" data-i18n="contact.subtitle">{t.subtitle}</p>
@@ -87,46 +111,66 @@ export default function ContactSection({ config }: { config: Config }) {
           <div className="space-y-6">
             <h3 className="font-heading text-xl font-bold text-navy">{t.info}</h3>
 
-            <a href={`tel:${config.phone}`} className="flex items-start gap-4 group">
-              <div className="w-10 h-10 bg-gold/10 border border-gold/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-gold transition-colors">
-                📞
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Phone</p>
-                <p className="font-semibold text-navy">{config.phone}</p>
-              </div>
-            </a>
+            {config.phone && (
+              <a href={`tel:${config.phone}`} className="flex items-start gap-4 group">
+                <div className="w-10 h-10 bg-gold/10 border border-gold/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-gold transition-colors">
+                  📞
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Phone</p>
+                  <p className="font-semibold text-navy">{config.phone}</p>
+                </div>
+              </a>
+            )}
 
-            <a
-              href={`https://wa.me/${config.whatsapp.replace(/\D/g, '')}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-start gap-4 group"
-            >
-              <div className="w-10 h-10 bg-gold/10 border border-gold/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-[#25D366] transition-colors">
-                💬
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">WhatsApp</p>
-                <p className="font-semibold text-navy">{config.phone}</p>
-              </div>
-            </a>
+            {config.whatsapp && (
+              <a
+                href={config.whatsappUrl || `https://wa.me/${config.whatsapp.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-start gap-4 group"
+              >
+                <div className="w-10 h-10 bg-gold/10 border border-gold/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-[#25D366] transition-colors">
+                  💬
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">WhatsApp</p>
+                  <p className="font-semibold text-navy">{config.whatsapp}</p>
+                </div>
+              </a>
+            )}
 
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-navy rounded-lg flex items-center justify-center text-white shrink-0">⏰</div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">{t.hours}</p>
-                <p className="font-semibold text-navy">{config.hours}</p>
-              </div>
-            </div>
+            {config.email && (
+              <a href={`mailto:${config.email}`} className="flex items-start gap-4 group">
+                <div className="w-10 h-10 bg-gold/10 border border-gold/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-gold transition-colors">
+                  ✉️
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Email</p>
+                  <p className="font-semibold text-navy">{config.email}</p>
+                </div>
+              </a>
+            )}
 
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-navy rounded-lg flex items-center justify-center text-white shrink-0">📍</div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">{t.coverage}</p>
-                <p className="font-semibold text-navy">{config.coverage}</p>
+            {config.hours && (
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-navy rounded-lg flex items-center justify-center text-white shrink-0">⏰</div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">{t.hours}</p>
+                  <p className="font-semibold text-navy">{config.hours}</p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {config.coverage && (
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-navy rounded-lg flex items-center justify-center text-white shrink-0">📍</div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">{t.coverage}</p>
+                  <p className="font-semibold text-navy">{config.coverage}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Form */}

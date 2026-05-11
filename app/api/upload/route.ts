@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { randomUUID } from 'crypto';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -16,16 +17,16 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(bytes);
 
   if (buffer.length > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: 'File too large (max 5 MB)' }, { status: 400 });
+    return NextResponse.json({ error: 'File too large. Max 5MB.' }, { status: 400 });
   }
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-  const allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+  const allowed = ['jpg', 'jpeg', 'png', 'webp', 'svg', 'ico'];
   if (!allowed.includes(ext)) {
     return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
   }
 
-  const filename = `logo-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const filename = `${randomUUID()}.${ext}`;
   const uploadDir = join(process.cwd(), 'public', 'uploads');
 
   try {

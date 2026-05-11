@@ -9,19 +9,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        navy: '#111111',
-        gold: '#F5C518',
-        'gold-light': '#FFD84D',
-        'navy-dark': '#0A0A0A',
-        'navy-light': '#1C1C1C',
-        orange: '#F97316',
+        navy: '#0A2342',
+        gold: '#C9A84C',
+        'gold-light': '#d4b768',
+        'navy-dark': '#071829',
+        'navy-light': '#1a3a5c',
+        orange: '#C9A84C',
         cream: '#FAF8F4',
         beige: '#F2EDE4',
         'beige-dark': '#E8DFD3',
       },
       fontFamily: {
-        sans: ['var(--font-dm-sans)', 'sans-serif'],
-        heading: ['var(--font-cormorant)', 'serif'],
+        sans: ['DM Sans', 'sans-serif'],
+        heading: ['Cormorant Garamond', 'serif'],
       },
     },
   },

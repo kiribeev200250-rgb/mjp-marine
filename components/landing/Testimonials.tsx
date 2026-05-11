@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
 
 interface Testimonial {
@@ -26,8 +26,18 @@ function getText(t: Testimonial, lang: Lang) {
   return { en: t.textEn, es: t.textEs, ru: t.textRu, uk: t.textUk }[lang];
 }
 
-export default function Testimonials({ testimonials }: { testimonials: Testimonial[] }) {
+interface TestimonialsProps {
+  testimonials: Testimonial[];
+  showAnimations?: boolean | null;
+}
+
+export default function Testimonials({ testimonials, showAnimations }: TestimonialsProps) {
   const [lang, setLangState] = useState<Lang>('en');
+  const animate = showAnimations !== false;
+  const titleRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [titleVisible, setTitleVisible] = useState(false);
+  const [gridVisible, setGridVisible] = useState(false);
 
   useEffect(() => {
     setLangState(detectLang());
@@ -39,17 +49,39 @@ export default function Testimonials({ testimonials }: { testimonials: Testimoni
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!animate) return;
+    const observe = (el: HTMLElement | null, setter: (v: boolean) => void) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setter(true); obs.disconnect(); } },
+        { threshold: 0.1 }
+      );
+      obs.observe(el);
+      return () => obs.disconnect();
+    };
+    const d1 = observe(titleRef.current, setTitleVisible);
+    const d2 = observe(gridRef.current, setGridVisible);
+    return () => { d1?.(); d2?.(); };
+  }, [animate]);
+
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div
+          ref={titleRef}
+          className={`text-center mb-12 ${animate ? 'reveal' : ''} ${animate && titleVisible ? 'visible' : ''}`}
+        >
           <h2 className="section-title mb-3" data-i18n="testimonials.title">
             {titleByLang[lang]}
           </h2>
           <div className="w-16 h-1 bg-gold mx-auto rounded-full" />
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div
+          ref={gridRef}
+          className={`grid md:grid-cols-3 gap-6 ${animate ? 'reveal-stagger' : ''} ${animate && gridVisible ? 'visible' : ''}`}
+        >
           {testimonials.map((t) => (
             <div key={t.id} className="card relative">
               {/* Quote mark */}

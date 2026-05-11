@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+
 const features = [
   {
     icon: '⚓',
@@ -24,20 +26,52 @@ const features = [
   },
 ];
 
-export default function WhyUs() {
+interface WhyUsProps {
+  showAnimations?: boolean | null;
+}
+
+export default function WhyUs({ showAnimations }: WhyUsProps) {
+  const animate = showAnimations !== false;
+  const titleRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [titleVisible, setTitleVisible] = useState(false);
+  const [gridVisible, setGridVisible] = useState(false);
+
+  useEffect(() => {
+    if (!animate) return;
+    const observe = (el: HTMLElement | null, setter: (v: boolean) => void) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setter(true); obs.disconnect(); } },
+        { threshold: 0.15 }
+      );
+      obs.observe(el);
+      return () => obs.disconnect();
+    };
+    const d1 = observe(titleRef.current, setTitleVisible);
+    const d2 = observe(gridRef.current, setGridVisible);
+    return () => { d1?.(); d2?.(); };
+  }, [animate]);
+
   return (
     <section className="py-20 bg-beige">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div
+          ref={titleRef}
+          className={`text-center mb-12 ${animate ? 'reveal' : ''} ${animate && titleVisible ? 'visible' : ''}`}
+        >
           <h2 className="section-title mb-3" data-i18n="why.title">Why choose MJP?</h2>
           <div className="w-16 h-1 bg-orange mx-auto rounded-full" />
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div
+          ref={gridRef}
+          className={`grid md:grid-cols-3 gap-8 ${animate ? 'reveal-stagger' : ''} ${animate && gridVisible ? 'visible' : ''}`}
+        >
           {features.map((f) => (
             <div
               key={f.titleKey}
-              className="relative p-8 rounded-2xl bg-cream border border-beige-dark hover:border-gold/50 hover:shadow-md transition-all duration-300 group"
+              className="relative p-8 rounded-2xl bg-cream border border-beige-dark hover:border-gold/50 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group card-shimmer cursor-default"
             >
               <div className="w-14 h-14 bg-gold/10 rounded-xl flex items-center justify-center text-3xl mb-5 group-hover:bg-orange/10 transition-colors">
                 {f.icon}

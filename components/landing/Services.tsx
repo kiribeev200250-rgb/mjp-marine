@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
 
 interface Service {
@@ -15,6 +15,14 @@ interface Service {
   descRu: string;
   descUk: string;
   priceLabel: string;
+}
+
+interface ServicesProps {
+  services?: Service[];
+  servicesBgColor?: string | null;
+  servicesCardStyle?: string | null;
+  showPriceLabel?: boolean | null;
+  showAnimations?: boolean | null;
 }
 
 const defaultServices: Service[] = [
@@ -40,9 +48,49 @@ const sectionTitles: Record<Lang, { title: string; subtitle: string }> = {
   uk: { title: 'Наші послуги', subtitle: 'Все необхідне для вашого човна — прямо у марині.' },
 };
 
-export default function Services({ services }: { services?: Service[] }) {
+function getGridClass(count: number): string {
+  if (count === 1) return 'grid grid-cols-1 max-w-sm mx-auto';
+  if (count === 2) return 'grid grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto';
+  if (count <= 4) return 'grid grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto';
+  return 'grid sm:grid-cols-2 lg:grid-cols-3';
+}
+
+function getCardClass(style: string): string {
+  switch (style) {
+    case 'filled':
+      return 'bg-navy text-white rounded-2xl p-6 shadow-sm border border-navy hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group card-shimmer cursor-default';
+    case 'minimal':
+      return 'rounded-2xl p-6 hover:bg-beige transition-all duration-300 group border border-transparent hover:border-beige-dark hover:-translate-y-1 hover:shadow-md card-shimmer cursor-default';
+    default:
+      return 'bg-beige rounded-2xl p-6 shadow-sm border border-beige-dark hover:shadow-lg hover:-translate-y-1 hover:border-orange/40 transition-all duration-300 group card-shimmer cursor-default';
+  }
+}
+
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return { ref, visible };
+}
+
+export default function Services({ services, servicesBgColor, servicesCardStyle, showPriceLabel, showAnimations }: ServicesProps) {
   const [lang, setLangState] = useState<Lang>('en');
   const list = services ?? defaultServices;
+  const cardStyle = servicesCardStyle ?? 'bordered';
+  const showPrice = showPriceLabel !== false;
+  const animate = showAnimations !== false;
+
+  const titleReveal = useReveal();
+  const gridReveal = useReveal();
 
   useEffect(() => {
     const detected = detectLang();
@@ -56,10 +104,15 @@ export default function Services({ services }: { services?: Service[] }) {
     return () => observer.disconnect();
   }, []);
 
+  const sectionStyle = servicesBgColor ? { backgroundColor: servicesBgColor } : undefined;
+
   return (
-    <section id="services" className="py-20 bg-cream">
+    <section id="services" className="py-20 bg-cream" style={sectionStyle}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div
+          ref={titleReveal.ref}
+          className={`text-center mb-12 ${animate ? 'reveal' : ''} ${animate && titleReveal.visible ? 'visible' : ''}`}
+        >
           <h2 className="section-title mb-3" data-i18n="services.title">
             {sectionTitles[lang].title}
           </h2>
@@ -69,22 +122,24 @@ export default function Services({ services }: { services?: Service[] }) {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          ref={gridReveal.ref}
+          className={`${getGridClass(list.length)} gap-6 ${animate ? 'reveal-stagger' : ''} ${animate && gridReveal.visible ? 'visible' : ''}`}
+        >
           {list.map((service) => (
-            <div
-              key={service.id}
-              className="bg-beige rounded-2xl p-6 shadow-sm border border-beige-dark hover:shadow-md hover:border-orange/40 transition-all duration-300 group"
-            >
+            <div key={service.id} className={getCardClass(cardStyle)}>
               <div className="text-4xl mb-4">{service.icon}</div>
-              <h3 className="font-heading text-lg font-bold text-navy mb-2 group-hover:text-orange transition-colors">
+              <h3 className={`font-heading text-lg font-bold mb-2 group-hover:text-orange transition-colors ${cardStyle === 'filled' ? 'text-white' : 'text-navy'}`}>
                 {getServiceName(service, lang)}
               </h3>
-              <p className="text-gray-500 text-sm leading-relaxed mb-4">
+              <p className={`text-sm leading-relaxed mb-4 ${cardStyle === 'filled' ? 'text-gray-300' : 'text-gray-500'}`}>
                 {getServiceDesc(service, lang)}
               </p>
-              <div className="inline-flex items-center gap-1 text-gold font-bold text-sm">
-                {service.priceLabel}
-              </div>
+              {showPrice && (
+                <div className="inline-flex items-center gap-1 text-gold font-bold text-sm">
+                  {service.priceLabel}
+                </div>
+              )}
             </div>
           ))}
         </div>
