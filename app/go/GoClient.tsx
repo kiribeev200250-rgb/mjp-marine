@@ -39,7 +39,7 @@ function getTagline(config: Config | null, lang: Lang): string {
   return map[lang];
 }
 
-async function trackClick(linkId: number) {
+async function trackClick(linkId: number, label: string) {
   try {
     await fetch('/api/presite/click', {
       method: 'POST',
@@ -47,6 +47,10 @@ async function trackClick(linkId: number) {
       body: JSON.stringify({ linkId }),
     });
   } catch { /* fire and forget */ }
+  if (typeof window !== 'undefined' && window.ttq) {
+    window.ttq.track('ClickButton', { content_name: label });
+    window.ttq.track('Contact');
+  }
 }
 
 export default function GoClient({ links, config, siteConfig }: {
@@ -108,7 +112,7 @@ export default function GoClient({ links, config, siteConfig }: {
               href={link.url}
               target="_blank"
               rel="noreferrer"
-              onClick={() => trackClick(link.id)}
+              onClick={() => trackClick(link.id, link.label)}
               className="group flex items-center gap-4 w-full px-5 py-4 rounded-2xl border border-[#C9A84C]/30 transition-all duration-200 hover:border-[#C9A84C] hover:bg-[#C9A84C] hover:shadow-lg hover:shadow-[#C9A84C]/20"
               style={{ background: 'rgba(255,255,255,0.04)', textDecoration: 'none' }}
             >
