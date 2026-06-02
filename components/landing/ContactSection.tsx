@@ -85,6 +85,10 @@ export default function ContactSection({ config, showAnimations }: ContactSectio
       if (!res.ok) throw new Error('Failed');
       setSubmitted(true);
       form.reset();
+      if (typeof window !== 'undefined' && window.ttq) {
+        window.ttq.track('SubmitForm');
+        window.ttq.track('Contact');
+      }
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {

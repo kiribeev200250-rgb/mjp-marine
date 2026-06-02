@@ -37,7 +37,12 @@ export default function Subscribe() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, language: lang }),
       });
-      if (res.ok) setDone(true);
+      if (res.ok) {
+        setDone(true);
+        if (typeof window !== 'undefined' && window.ttq) {
+          window.ttq.track('Subscribe');
+        }
+      }
     } finally {
       setLoading(false);
     }
