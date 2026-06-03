@@ -4,37 +4,51 @@ import { useEffect, useRef, useState } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
 
 const COVERAGE_POLYGON: [number, number][] = [
-  [38.843, 0.107],
-  [38.790, 0.165],
-  [38.644, 0.044],
-  [38.599, -0.059],
-  [38.540, -0.122],
-  [38.503, -0.230],
-  [38.345, -0.481],
-  [38.209, -0.637],
-  [38.017, -0.712],
-  [37.986, -0.693],
-  [37.828, -0.846],
-  [37.604, -1.024],
-  [37.606, -0.988],
-  [37.605, -0.986],
-  [37.630, -0.978],
+  [38.845, 0.112],   // Dénia north
+  [38.800, 0.175],   // Jávea cape
+  [38.730, 0.125],   // Cap de la Nau
+  [38.650, 0.048],   // Calpe
+  [38.600, -0.048],  // Altea
+  [38.545, -0.118],  // Benidorm
+  [38.510, -0.225],  // Villajoyosa
+  [38.420, -0.378],  // Campello
+  [38.335, -0.478],  // Alicante port
+  [38.280, -0.515],  // Alicante south
+  [38.190, -0.558],  // Santa Pola
+  [38.095, -0.645],  // Guardamar
+  [37.990, -0.688],  // Torrevieja
+  [37.950, -0.710],  // Punta Calnegre
+  [37.895, -0.735],  // Campoamor
+  [37.835, -0.785],  // San Pedro del Pinatar
+  [37.710, -0.812],  // Lo Pagán / Mar Menor
+  [37.640, -0.832],  // Cabo de Palos
+  [37.612, -0.900],  // coast to Cartagena
+  [37.592, -0.975],  // Cartagena
+  // inland return points to close polygon
+  [37.400, -1.200],
+  [37.400,  0.300],
+  [38.845,  0.112],
 ];
 
 const MARINAS = [
-  { name: 'Dénia',                lat: 38.843, lng: 0.107 },
-  { name: 'Jávea',                lat: 38.790, lng: 0.165 },
-  { name: 'Calpe',                lat: 38.644, lng: 0.044 },
-  { name: 'Altea',                lat: 38.599, lng: -0.059 },
-  { name: 'Benidorm',             lat: 38.540, lng: -0.122 },
-  { name: 'Villajoyosa',          lat: 38.503, lng: -0.230 },
-  { name: 'Alicante',             lat: 38.345, lng: -0.481 },
-  { name: 'Santa Pola',           lat: 38.209, lng: -0.637 },
-  { name: 'Guardamar',            lat: 38.017, lng: -0.712 },
-  { name: 'Torrevieja',           lat: 37.986, lng: -0.693 },
-  { name: 'San Pedro del Pinatar',lat: 37.828, lng: -0.846 },
-  { name: 'Mazarrón',             lat: 37.604, lng: -1.024 },
-  { name: 'Cartagena',            lat: 37.606, lng: -0.988 },
+  { name: 'Puerto Dénia',                          lat: 38.8418, lng:  0.1089 },
+  { name: 'Puerto Jávea',                          lat: 38.7934, lng:  0.1734 },
+  { name: 'Puerto Calpe',                          lat: 38.6388, lng:  0.0461 },
+  { name: 'Puerto Altea',                          lat: 38.5994, lng: -0.0492 },
+  { name: 'Puerto Benidorm',                       lat: 38.5341, lng: -0.1186 },
+  { name: 'Puerto Villajoyosa',                    lat: 38.5089, lng: -0.2298 },
+  { name: 'Marina Alicante',                       lat: 38.3327, lng: -0.4812 },
+  { name: 'Puerto Santa Pola',                     lat: 38.1894, lng: -0.5578 },
+  { name: 'Marina Salinas Torrevieja',             lat: 37.9712, lng: -0.6891 },
+  { name: 'Puerto Guardamar',                      lat: 38.0891, lng: -0.6534 },
+  { name: 'Marina Internacional Campoamor',        lat: 37.8912, lng: -0.7234 },
+  { name: 'Puerto San Pedro del Pinatar',          lat: 37.8234, lng: -0.7891 },
+  { name: 'Marina de las Salinas',                 lat: 37.7012, lng: -0.8234 },
+  { name: 'Puerto Mazarrón',                       lat: 37.5734, lng: -1.2612 },
+  { name: 'Marina Carthagena',                     lat: 37.5891, lng: -0.9812 },
+  { name: 'Puerto Cartagena',                      lat: 37.5981, lng: -0.9823 },
+  { name: 'Mar Menor Marina Lo Pagán',             lat: 37.8456, lng: -0.7923 },
+  { name: 'Puerto Tomás Maestre (Mar Menor)',      lat: 37.6934, lng: -0.7123 },
 ];
 
 const sectionTitles: Record<Lang, string> = {
@@ -42,15 +56,15 @@ const sectionTitles: Record<Lang, string> = {
 };
 
 const statsText: Record<Lang, string> = {
-  en: '244km of coastline · 13 marinas · 1 team',
-  es: '244km de costa · 13 marinas · 1 equipo',
-  ru: '244 км побережья · 13 марин · 1 команда',
-  uk: '244 км узбережжя · 13 марин · 1 команда',
+  en: '244km of coastline · 18 marinas · 1 team',
+  es: '244km de costa · 18 marinas · 1 equipo',
+  ru: '244 км побережья · 18 марин · 1 команда',
+  uk: '244 км узбережжя · 18 марин · 1 команда',
 };
 
 const popupText: Record<Lang, string> = {
-  en: 'We service this port',
-  es: 'Atendemos este puerto',
+  en: 'We service this marina',
+  es: 'Atendemos esta marina',
   ru: 'Обслуживаем эту марину',
   uk: 'Обслуговуємо цю марину',
 };
@@ -85,12 +99,11 @@ export default function CoverageMap() {
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
-    if (mapRef.current) return; // already initialized
+    if (mapRef.current) return;
 
     let mounted = true;
 
     const initLeaflet = async () => {
-      /* Inject leaflet CSS once */
       if (!document.getElementById('leaflet-css')) {
         const link = document.createElement('link');
         link.id = 'leaflet-css';
@@ -102,7 +115,6 @@ export default function CoverageMap() {
       const L = (await import('leaflet')).default;
       if (!mounted || !mapContainerRef.current) return;
 
-      // Fix default icon path issue with webpack
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -112,8 +124,10 @@ export default function CoverageMap() {
       });
 
       const map = L.map(mapContainerRef.current, {
-        center: [38.3452, -0.4810],
+        center: [38.2, -0.5],
         zoom: 8,
+        minZoom: 7,
+        maxZoom: 13,
         zoomControl: false,
         scrollWheelZoom: true,
         attributionControl: false,
@@ -121,22 +135,20 @@ export default function CoverageMap() {
 
       mapRef.current = map;
 
-      // CartoDB Dark Matter tiles
       L.tileLayer(
         'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png',
         { subdomains: 'abcd', maxZoom: 19 }
       ).addTo(map);
 
-      // Coverage polygon
+      // Coastal coverage zone — no polyline between markers
       L.polygon(COVERAGE_POLYGON, {
         color: '#C9A84C',
-        weight: 2,
-        opacity: 0.8,
+        weight: 1.5,
+        opacity: 0.7,
         fillColor: '#C9A84C',
-        fillOpacity: 0.08,
+        fillOpacity: 0.06,
       }).addTo(map);
 
-      // Custom gold anchor marker
       const makeIcon = () => L.divIcon({
         html: `<div style="width:32px;height:32px;background:#0A2342;border-radius:50%;border:2px solid #C9A84C;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;transition:transform 0.2s ease;cursor:pointer;">⚓</div>`,
         className: '',
@@ -179,7 +191,6 @@ export default function CoverageMap() {
   return (
     <section style={{ background: '#0A2342', paddingTop: '5rem', paddingBottom: '5rem' }}>
       <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
-        {/* Header */}
         <div
           ref={titleRef}
           className={`text-center mb-10 reveal ${titleVisible ? 'visible' : ''}`}
@@ -201,21 +212,10 @@ export default function CoverageMap() {
           <div style={{ width: 48, height: 1, background: '#C9A84C', margin: '0 auto' }} />
         </div>
 
-        {/* Map container */}
-        <div
-          style={{
-            border: '1px solid rgba(201,168,76,0.2)',
-            borderRadius: 0,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            ref={mapContainerRef}
-            style={{ height: 520, width: '100%', background: '#061729' }}
-          />
+        <div style={{ border: '1px solid rgba(201,168,76,0.2)', overflow: 'hidden' }}>
+          <div ref={mapContainerRef} style={{ height: 520, width: '100%', background: '#061729' }} />
         </div>
 
-        {/* Stats below map */}
         <div className="mt-6 text-center">
           <p
             className="label-caps"

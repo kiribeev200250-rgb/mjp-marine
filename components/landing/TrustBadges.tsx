@@ -6,7 +6,7 @@ import { detectLang, type Lang } from '@/lib/i18n';
 const badges = [
   { icon: '⚓', key: 'trust.badge1', defaults: { en: 'Licensed & Insured', es: 'Con Licencia y Seguro', ru: 'Лицензированные', uk: 'Ліцензовані' } },
   { icon: '🔧', key: 'trust.badge2', defaults: { en: '5+ Years Experience', es: '5+ Años de Experiencia', ru: '5+ Лет опыта', uk: '5+ Років досвіду' } },
-  { icon: '⏱', key: 'trust.badge3', defaults: { en: '48h Guarantee', es: 'Garantía 48h', ru: 'Гарантия 48ч', uk: 'Гарантія 48г' } },
+  { icon: '⏱', key: 'trust.badge3', defaults: { en: 'Warranty on All Work', es: 'Garantía en todos los trabajos', ru: 'Гарантия на все работы', uk: 'Гарантія на всі роботи' } },
   { icon: '📍', key: 'trust.badge4', defaults: { en: '20+ Marinas', es: '20+ Marinas', ru: '20+ Марин', uk: '20+ Марин' } },
 ];
 

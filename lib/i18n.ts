@@ -89,7 +89,7 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     trust: {
       badge1: 'Licensed & Insured',
       badge2: '5+ Years Experience',
-      badge3: '48h Guarantee',
+      badge3: 'Warranty on All Work',
       badge4: '20+ Marinas',
     },
     why: {
@@ -108,8 +108,8 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     },
     map: {
       title: 'Our Coverage',
-      popup: 'We service this port',
-      stats: '244km of coastline · 13 marinas · 1 team',
+      popup: 'We service this marina',
+      stats: '244km of coastline · 18 marinas · 1 team',
     },
     testimonials: { title: 'What Our Clients Say' },
     gallery: {
@@ -159,7 +159,7 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     trust: {
       badge1: 'Con Licencia y Seguro',
       badge2: '5+ Años de Experiencia',
-      badge3: 'Garantía 48h',
+      badge3: 'Garantía en todos los trabajos',
       badge4: '20+ Marinas',
     },
     why: {
@@ -178,8 +178,8 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     },
     map: {
       title: 'Nuestra Cobertura',
-      popup: 'Atendemos este puerto',
-      stats: '244km de costa · 13 marinas · 1 equipo',
+      popup: 'Atendemos esta marina',
+      stats: '244km de costa · 18 marinas · 1 equipo',
     },
     testimonials: { title: 'Lo Que Dicen Nuestros Clientes' },
     gallery: {
@@ -229,7 +229,7 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     trust: {
       badge1: 'Лицензированные',
       badge2: '5+ Лет опыта',
-      badge3: 'Гарантия 48ч',
+      badge3: 'Гарантия на все работы',
       badge4: '20+ Марин',
     },
     why: {
@@ -249,7 +249,7 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     map: {
       title: 'Наша зона покрытия',
       popup: 'Обслуживаем эту марину',
-      stats: '244 км побережья · 13 марин · 1 команда',
+      stats: '244 км побережья · 18 марин · 1 команда',
     },
     testimonials: { title: 'Отзывы наших клиентов' },
     gallery: {
@@ -299,7 +299,7 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     trust: {
       badge1: 'Ліцензовані',
       badge2: '5+ Років досвіду',
-      badge3: 'Гарантія 48г',
+      badge3: 'Гарантія на всі роботи',
       badge4: '20+ Марин',
     },
     why: {
@@ -319,7 +319,7 @@ export const translations: Record<Lang, Record<string, unknown>> = {
     map: {
       title: 'Наша зона покриття',
       popup: 'Обслуговуємо цю марину',
-      stats: '244 км узбережжя · 13 марин · 1 команда',
+      stats: '244 км узбережжя · 18 марин · 1 команда',
     },
     testimonials: { title: 'Відгуки наших клієнтів' },
     gallery: {
