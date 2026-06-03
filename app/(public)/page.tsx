@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import Navbar from '@/components/landing/Navbar';
 import Hero from '@/components/landing/Hero';
-import WhyUs from '@/components/landing/WhyUs';
+import TrustBadges from '@/components/landing/TrustBadges';
 import Services from '@/components/landing/Services';
 import HowItWorks from '@/components/landing/HowItWorks';
+import CoverageMap from '@/components/landing/CoverageMap';
 import Testimonials from '@/components/landing/Testimonials';
 import Gallery from '@/components/landing/Gallery';
 import ContactSection from '@/components/landing/ContactSection';
@@ -73,7 +74,7 @@ export default async function LandingPage() {
           showWave={cfg.showWave}
           showAnimations={cfg.showAnimations}
         />
-        <WhyUs showAnimations={cfg.showAnimations} />
+        <TrustBadges />
         <Services
           services={services.length > 0 ? services : undefined}
           servicesBgColor={cfg.servicesBgColor}
@@ -82,6 +83,7 @@ export default async function LandingPage() {
           showAnimations={cfg.showAnimations}
         />
         <HowItWorks showAnimations={cfg.showAnimations} />
+        <CoverageMap />
         {testimonials.length > 0 && (
           <Testimonials testimonials={testimonials} showAnimations={cfg.showAnimations} />
         )}

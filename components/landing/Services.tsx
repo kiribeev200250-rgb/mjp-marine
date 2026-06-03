@@ -6,14 +6,8 @@ import { detectLang, type Lang } from '@/lib/i18n';
 interface Service {
   id: number;
   icon: string;
-  nameEn: string;
-  nameEs: string;
-  nameRu: string;
-  nameUk: string;
-  descEn: string;
-  descEs: string;
-  descRu: string;
-  descUk: string;
+  nameEn: string; nameEs: string; nameRu: string; nameUk: string;
+  descEn: string; descEs: string; descRu: string; descUk: string;
   priceLabel: string;
 }
 
@@ -34,19 +28,26 @@ const defaultServices: Service[] = [
   { id: 6, icon: '⛵', nameEn: 'Season Prep Package', nameEs: 'Paquete de Puesta a Punto', nameRu: 'Пакет подготовки к сезону', nameUk: 'Пакет підготовки до сезону', descEn: 'Complete pre-season service: engine, electrics, hull, safety.', descEs: 'Servicio completo previo a temporada.', descRu: 'Полное предсезонное обслуживание.', descUk: 'Повне передсезонне обслуговування.', priceLabel: 'from €590' },
 ];
 
-function getServiceName(s: Service, lang: Lang) {
-  return { en: s.nameEn, es: s.nameEs, ru: s.nameRu, uk: s.nameUk }[lang];
-}
-function getServiceDesc(s: Service, lang: Lang) {
-  return { en: s.descEn, es: s.descEs, ru: s.descRu, uk: s.descUk }[lang];
-}
-
 const sectionTitles: Record<Lang, { title: string; subtitle: string }> = {
   en: { title: 'Our Services', subtitle: 'Everything your boat needs, delivered to your marina.' },
   es: { title: 'Nuestros Servicios', subtitle: 'Todo lo que tu barco necesita, en tu marina.' },
   ru: { title: 'Наши услуги', subtitle: 'Всё необходимое для вашей лодки — прямо у причала.' },
   uk: { title: 'Наші послуги', subtitle: 'Все необхідне для вашого човна — прямо у марині.' },
 };
+
+const quoteLinkLabel: Record<Lang, string> = {
+  en: 'Request a custom quote →',
+  es: 'Solicitar un presupuesto personalizado →',
+  ru: 'Запросить индивидуальную смету →',
+  uk: 'Запросити індивідуальний кошторис →',
+};
+
+function getName(s: Service, lang: Lang) {
+  return { en: s.nameEn, es: s.nameEs, ru: s.nameRu, uk: s.nameUk }[lang];
+}
+function getDesc(s: Service, lang: Lang) {
+  return { en: s.descEn, es: s.descEs, ru: s.descRu, uk: s.descUk }[lang];
+}
 
 function getGridClass(count: number): string {
   if (count === 1) return 'grid grid-cols-1 max-w-sm mx-auto';
@@ -55,37 +56,25 @@ function getGridClass(count: number): string {
   return 'grid sm:grid-cols-2 lg:grid-cols-3';
 }
 
-function getCardClass(style: string): string {
-  switch (style) {
-    case 'filled':
-      return 'bg-navy text-white rounded-2xl p-6 shadow-sm border border-navy hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group card-shimmer cursor-default';
-    case 'minimal':
-      return 'rounded-2xl p-6 hover:bg-beige transition-all duration-300 group border border-transparent hover:border-beige-dark hover:-translate-y-1 hover:shadow-md card-shimmer cursor-default';
-    default:
-      return 'bg-beige rounded-2xl p-6 shadow-sm border border-beige-dark hover:shadow-lg hover:-translate-y-1 hover:border-orange/40 transition-all duration-300 group card-shimmer cursor-default';
-  }
-}
-
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold: 0.1 }
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); io.disconnect(); } },
+      { threshold: 0.12 }
     );
-    obs.observe(el);
-    return () => obs.disconnect();
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
   return { ref, visible };
 }
 
-export default function Services({ services, servicesBgColor, servicesCardStyle, showPriceLabel, showAnimations }: ServicesProps) {
+export default function Services({ services, servicesBgColor, showPriceLabel, showAnimations }: ServicesProps) {
   const [lang, setLangState] = useState<Lang>('en');
   const list = services ?? defaultServices;
-  const cardStyle = servicesCardStyle ?? 'bordered';
   const showPrice = showPriceLabel !== false;
   const animate = showAnimations !== false;
 
@@ -93,63 +82,132 @@ export default function Services({ services, servicesBgColor, servicesCardStyle,
   const gridReveal = useReveal();
 
   useEffect(() => {
-    const detected = detectLang();
-    setLangState(detected);
-
-    const observer = new MutationObserver(() => {
-      const stored = localStorage.getItem('lang') as Lang | null;
+    setLangState(detectLang());
+    const obs = new MutationObserver(() => {
+      const stored = localStorage.getItem('mjp_lang') as Lang | null;
       if (stored) setLangState(stored);
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-    return () => observer.disconnect();
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    return () => obs.disconnect();
   }, []);
 
-  const sectionStyle = servicesBgColor ? { backgroundColor: servicesBgColor } : undefined;
+  const sectionBg = servicesBgColor ?? '#F5F0E8';
+  const titles = sectionTitles[lang];
 
   return (
-    <section id="services" className="py-20 bg-cream" style={sectionStyle}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="services" style={{ backgroundColor: sectionBg, paddingTop: '5rem', paddingBottom: '5rem' }}>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
+        {/* Header */}
         <div
           ref={titleReveal.ref}
-          className={`text-center mb-12 ${animate ? 'reveal' : ''} ${animate && titleReveal.visible ? 'visible' : ''}`}
+          className={`text-center mb-14 ${animate ? 'reveal' : ''} ${animate && titleReveal.visible ? 'visible' : ''}`}
         >
-          <h2 className="section-title mb-3" data-i18n="services.title">
-            {sectionTitles[lang].title}
+          <p className="label-caps mb-3" style={{ color: '#A8893A' }}>What we do</p>
+          <h2
+            style={{
+              fontFamily: 'Cormorant Garamond, serif',
+              fontWeight: 600,
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+              color: '#0A2342',
+              lineHeight: 1.1,
+              marginBottom: '1rem',
+            }}
+            data-i18n="services.title"
+          >
+            {titles.title}
           </h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-gold to-orange mx-auto rounded-full mb-4" />
-          <p className="text-gray-400 max-w-xl mx-auto" data-i18n="services.subtitle">
-            {sectionTitles[lang].subtitle}
+          <div style={{ width: 48, height: 1, background: '#C9A84C', margin: '0 auto 1rem' }} />
+          <p
+            style={{ color: '#6b7280', maxWidth: '36rem', margin: '0 auto', fontFamily: 'Mulish, sans-serif', fontWeight: 300, fontSize: '1.05rem' }}
+            data-i18n="services.subtitle"
+          >
+            {titles.subtitle}
           </p>
         </div>
 
+        {/* Grid */}
         <div
           ref={gridReveal.ref}
           className={`${getGridClass(list.length)} gap-6 ${animate ? 'reveal-stagger' : ''} ${animate && gridReveal.visible ? 'visible' : ''}`}
         >
           {list.map((service) => (
-            <div key={service.id} className={getCardClass(cardStyle)}>
-              <div className="text-4xl mb-4">{service.icon}</div>
-              <h3 className={`font-heading text-lg font-bold mb-2 group-hover:text-orange transition-colors ${cardStyle === 'filled' ? 'text-white' : 'text-navy'}`}>
-                {getServiceName(service, lang)}
-              </h3>
-              <p className={`text-sm leading-relaxed mb-4 ${cardStyle === 'filled' ? 'text-gray-300' : 'text-gray-500'}`}>
-                {getServiceDesc(service, lang)}
-              </p>
-              {showPrice && (
-                <div className="inline-flex items-center gap-1 text-gold font-bold text-sm">
-                  {service.priceLabel}
-                </div>
-              )}
-            </div>
+            <ServiceCard key={service.id} service={service} lang={lang} showPrice={showPrice} />
           ))}
         </div>
 
-        <div className="text-center mt-10">
-          <a href="#contact" className="btn-primary">
-            Request a custom quote →
+        {/* CTA */}
+        <div className="text-center mt-12">
+          <a href="#contact" className="btn-gold">
+            {quoteLinkLabel[lang]}
           </a>
         </div>
       </div>
     </section>
+  );
+}
+
+function ServiceCard({ service, lang, showPrice }: { service: Service; lang: Lang; showPrice: boolean }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: '#FFFFFF',
+        borderRadius: 0,
+        padding: '2rem',
+        borderTop: hovered ? '3px solid #C9A84C' : '1px solid rgba(201,168,76,0.4)',
+        borderRight: '1px solid rgba(201,168,76,0.1)',
+        borderBottom: '1px solid rgba(201,168,76,0.1)',
+        borderLeft: '1px solid rgba(201,168,76,0.1)',
+        transform: hovered ? 'translateY(-6px)' : 'none',
+        boxShadow: hovered ? '0 16px 48px rgba(10,35,66,0.12)' : 'none',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-top 0.2s ease',
+        cursor: 'default',
+      }}
+    >
+      <div style={{ fontSize: '2.5rem', marginBottom: '1.25rem', lineHeight: 1 }}>
+        {service.icon}
+      </div>
+      <h3
+        style={{
+          fontFamily: 'Cormorant Garamond, serif',
+          fontWeight: 600,
+          fontSize: '1.35rem',
+          color: hovered ? '#C9A84C' : '#0A2342',
+          marginBottom: '0.75rem',
+          transition: 'color 0.2s ease',
+          lineHeight: 1.2,
+        }}
+      >
+        {getName(service, lang)}
+      </h3>
+      <p
+        style={{
+          fontFamily: 'Mulish, sans-serif',
+          fontWeight: 300,
+          fontSize: '0.9rem',
+          color: '#6b7280',
+          lineHeight: 1.65,
+          marginBottom: showPrice ? '1.25rem' : 0,
+        }}
+      >
+        {getDesc(service, lang)}
+      </p>
+      {showPrice && (
+        <div
+          style={{
+            fontFamily: 'Space Mono, monospace',
+            fontSize: '0.875rem',
+            fontWeight: 700,
+            color: '#C9A84C',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {service.priceLabel}
+        </div>
+      )}
+    </div>
   );
 }

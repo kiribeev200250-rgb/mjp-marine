@@ -9,10 +9,7 @@ interface Testimonial {
   boatType: string;
   marina: string;
   rating: number;
-  textEn: string;
-  textEs: string;
-  textRu: string;
-  textUk: string;
+  textEn: string; textEs: string; textRu: string; textUk: string;
 }
 
 const titleByLang: Record<Lang, string> = {
@@ -41,24 +38,24 @@ export default function Testimonials({ testimonials, showAnimations }: Testimoni
 
   useEffect(() => {
     setLangState(detectLang());
-    const observer = new MutationObserver(() => {
-      const stored = localStorage.getItem('lang') as Lang | null;
+    const obs = new MutationObserver(() => {
+      const stored = localStorage.getItem('mjp_lang') as Lang | null;
       if (stored) setLangState(stored);
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-    return () => observer.disconnect();
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    return () => obs.disconnect();
   }, []);
 
   useEffect(() => {
-    if (!animate) return;
+    if (!animate) { setTitleVisible(true); setGridVisible(true); return; }
     const observe = (el: HTMLElement | null, setter: (v: boolean) => void) => {
       if (!el) return;
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { setter(true); obs.disconnect(); } },
-        { threshold: 0.1 }
+      const io = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setter(true); io.disconnect(); } },
+        { threshold: 0.12 }
       );
-      obs.observe(el);
-      return () => obs.disconnect();
+      io.observe(el);
+      return () => io.disconnect();
     };
     const d1 = observe(titleRef.current, setTitleVisible);
     const d2 = observe(gridRef.current, setGridVisible);
@@ -66,52 +63,113 @@ export default function Testimonials({ testimonials, showAnimations }: Testimoni
   }, [animate]);
 
   return (
-    <section className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section style={{ background: '#F5F0E8', paddingTop: '5rem', paddingBottom: '5rem' }}>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
+        {/* Header */}
         <div
           ref={titleRef}
-          className={`text-center mb-12 ${animate ? 'reveal' : ''} ${animate && titleVisible ? 'visible' : ''}`}
+          className={`text-center mb-14 ${animate ? 'reveal' : ''} ${animate && titleVisible ? 'visible' : ''}`}
         >
-          <h2 className="section-title mb-3" data-i18n="testimonials.title">
+          <p className="label-caps mb-3" style={{ color: '#A8893A' }}>Client stories</p>
+          <h2
+            style={{
+              fontFamily: 'Cormorant Garamond, serif',
+              fontWeight: 600,
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+              color: '#0A2342',
+              lineHeight: 1.1,
+              marginBottom: '1rem',
+            }}
+            data-i18n="testimonials.title"
+          >
             {titleByLang[lang]}
           </h2>
-          <div className="w-16 h-1 bg-gold mx-auto rounded-full" />
+          <div style={{ width: 48, height: 1, background: '#C9A84C', margin: '0 auto' }} />
         </div>
 
+        {/* Grid */}
         <div
           ref={gridRef}
           className={`grid md:grid-cols-3 gap-6 ${animate ? 'reveal-stagger' : ''} ${animate && gridVisible ? 'visible' : ''}`}
         >
           {testimonials.map((t) => (
-            <div key={t.id} className="card relative">
-              {/* Quote mark */}
-              <div className="absolute top-4 right-6 text-5xl text-gold/10 font-serif leading-none">"</div>
-
-              <div className="flex gap-0.5 mb-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <svg
-                    key={i}
-                    className={`w-4 h-4 ${i < t.rating ? 'text-gold' : 'text-gray-200'}`}
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
-              </div>
-
-              <p className="text-gray-600 text-sm leading-relaxed mb-5 italic">
-                &ldquo;{getText(t, lang)}&rdquo;
-              </p>
-
-              <div className="border-t border-gray-100 pt-4">
-                <p className="font-semibold text-navy text-sm">{t.name}</p>
-                <p className="text-gray-400 text-xs mt-0.5">{t.boatType} · {t.marina}</p>
-              </div>
-            </div>
+            <TestimonialCard key={t.id} testimonial={t} lang={lang} />
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function TestimonialCard({ testimonial: t, lang }: { testimonial: Testimonial; lang: Lang }) {
+  return (
+    <div
+      style={{
+        background: '#FFFFFF',
+        borderRadius: 0,
+        padding: '2rem',
+        borderLeft: '3px solid #C9A84C',
+        borderTop: '1px solid rgba(201,168,76,0.1)',
+        borderRight: '1px solid rgba(201,168,76,0.1)',
+        borderBottom: '1px solid rgba(201,168,76,0.1)',
+        position: 'relative',
+      }}
+    >
+      {/* Large quotation mark */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '1.25rem',
+          fontFamily: 'Cormorant Garamond, serif',
+          fontSize: '4rem',
+          lineHeight: 1,
+          color: 'rgba(201,168,76,0.12)',
+          userSelect: 'none',
+        }}
+      >
+        &ldquo;
+      </div>
+
+      {/* Stars */}
+      <div className="flex gap-1 mb-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <span
+            key={i}
+            style={{ fontSize: '0.9rem', color: i < t.rating ? '#C9A84C' : '#e5e7eb' }}
+          >
+            ★
+          </span>
+        ))}
+      </div>
+
+      {/* Quote text */}
+      <p
+        style={{
+          fontFamily: 'Mulish, sans-serif',
+          fontWeight: 300,
+          fontStyle: 'italic',
+          fontSize: '0.95rem',
+          lineHeight: 1.7,
+          color: '#374151',
+          marginBottom: '1.5rem',
+        }}
+      >
+        &ldquo;{getText(t, lang)}&rdquo;
+      </p>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: 'rgba(201,168,76,0.2)', marginBottom: '1rem' }} />
+
+      {/* Author */}
+      <div>
+        <p style={{ fontFamily: 'Mulish, sans-serif', fontWeight: 700, fontSize: '0.9rem', color: '#0A2342' }}>
+          {t.name}
+        </p>
+        <p style={{ fontFamily: 'Mulish, sans-serif', fontWeight: 300, fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.2rem' }}>
+          {t.boatType} · {t.marina}
+        </p>
+      </div>
+    </div>
   );
 }

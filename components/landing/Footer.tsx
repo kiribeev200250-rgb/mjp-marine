@@ -31,39 +31,41 @@ const navByLang: Record<Lang, string[]> = {
 
 const navLinks = ['#services', '#how-it-works', '#contact'];
 
+const taglineByLang: Record<Lang, string> = {
+  en: 'Your boat fixed, at your marina. In 48 hours.',
+  es: 'Tu barco reparado, en tu marina. En 48 horas.',
+  ru: 'Ваша яхта отремонтирована прямо у причала. За 48 часов.',
+  uk: 'Ваш човен відремонтований у вашій марині. За 48 годин.',
+};
+
+const copyrightByLang: Record<Lang, string> = {
+  en: '© 2026 MJP Marine Service · Costa Blanca, España',
+  es: '© 2026 MJP Marine Service · Costa Blanca, España',
+  ru: '© 2026 MJP Marine Service · Коста Бланка, Испания',
+  uk: '© 2026 MJP Marine Service · Коста Бланка, Іспанія',
+};
+
 export default function Footer({ config }: { config: Config }) {
   const [lang, setLangState] = useState<Lang>('en');
-  const [tagline, setTagline] = useState('Your boat fixed, at your marina. In 48 hours.');
-  const [copyright, setCopyright] = useState('© 2026 MJP Marine Service · Costa Blanca, España');
 
   useEffect(() => {
-    const detected = detectLang();
-    setLangState(detected);
-
-    const observer = new MutationObserver(() => {
-      const stored = localStorage.getItem('lang') as Lang | null;
+    setLangState(detectLang());
+    const obs = new MutationObserver(() => {
+      const stored = localStorage.getItem('mjp_lang') as Lang | null;
       if (stored) setLangState(stored);
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-    return () => observer.disconnect();
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    return () => obs.disconnect();
   }, []);
 
-  useEffect(() => {
-    const taglineEl = document.querySelector('[data-i18n="footer.tagline"]');
-    const copyrightEl = document.querySelector('[data-i18n="footer.copyright"]');
-    if (taglineEl?.textContent) setTagline(taglineEl.textContent);
-    if (copyrightEl?.textContent) setCopyright(copyrightEl.textContent);
-  }, [lang]);
-
-  const whatsappHref = config.whatsappUrl
-    || (config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null);
+  const whatsappHref = config.whatsappUrl || (config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null);
 
   const socialLinks = [
-    { url: config.instagram, label: 'Instagram', hoverClass: 'hover:text-pink-400 hover:border-pink-400/40', Icon: InstagramIcon },
-    { url: config.facebook, label: 'Facebook', hoverClass: 'hover:text-blue-400 hover:border-blue-400/40', Icon: FacebookIcon },
-    { url: whatsappHref, label: 'WhatsApp', hoverClass: 'hover:text-[#25D366] hover:border-green-400/40', Icon: WhatsAppIcon },
-    { url: config.tiktok, label: 'TikTok', hoverClass: 'hover:text-white hover:border-white/40', Icon: TikTokIcon },
-    { url: config.youtube, label: 'YouTube', hoverClass: 'hover:text-red-500 hover:border-red-500/40', Icon: YouTubeIcon },
+    { url: config.instagram, label: 'Instagram', Icon: InstagramIcon },
+    { url: config.facebook, label: 'Facebook', Icon: FacebookIcon },
+    { url: whatsappHref, label: 'WhatsApp', Icon: WhatsAppIcon },
+    { url: config.tiktok, label: 'TikTok', Icon: TikTokIcon },
+    { url: config.youtube, label: 'YouTube', Icon: YouTubeIcon },
   ].filter((s) => s.url);
 
   let customLinks: CustomLink[] = [];
@@ -77,35 +79,54 @@ export default function Footer({ config }: { config: Config }) {
   const showNav = config.footerShowNav !== false;
   const showSocial = config.footerShowSocial !== false && (socialLinks.length > 0 || customLinks.length > 0);
 
-  const bgStyle = config.footerBgColor ? { backgroundColor: config.footerBgColor } : undefined;
+  const bgStyle = config.footerBgColor ? { backgroundColor: config.footerBgColor } : { backgroundColor: '#061729' };
 
   const visibleCols = [showBrand, showNav, showSocial].filter(Boolean).length;
-  const gridClass = visibleCols === 1 ? '' : visibleCols === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3';
+  const gridClass = visibleCols <= 1 ? '' : visibleCols === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3';
 
   return (
-    <footer className="bg-navy-dark border-t border-gold/10" style={bgStyle}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className={`grid ${gridClass} gap-8 mb-10`}>
+    <footer style={{ ...bgStyle, borderTop: '1px solid rgba(201,168,76,0.25)' }}>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 py-14">
+        <div className={`grid ${gridClass} gap-10 mb-12`}>
           {/* Brand */}
           {showBrand && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-4">
                 {config.logoUrl ? (
-                  <Image src={config.logoUrl} alt={config.companyName ?? 'Logo'} width={120} height={40} className="h-10 w-auto object-contain" />
+                  <Image
+                    src={config.logoUrl}
+                    alt={config.companyName ?? 'Logo'}
+                    width={120}
+                    height={40}
+                    className="h-9 w-auto object-contain"
+                  />
                 ) : (
-                  <>
-                    <span className="text-gold text-2xl">⚓</span>
-                    <span className="text-white font-heading text-xl font-bold">
-                      {config.companyName || 'MJP'}
-                    </span>
-                    {!config.companyName && (
-                      <span className="text-gold/60 text-xs uppercase tracking-widest">Marine Service</span>
-                    )}
-                  </>
+                  <span
+                    style={{
+                      fontFamily: 'Cormorant Garamond, serif',
+                      fontWeight: 700,
+                      fontSize: '1.75rem',
+                      color: '#C9A84C',
+                      letterSpacing: '-0.01em',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {config.companyName?.replace(' Service', '') ?? 'MJP'}
+                  </span>
                 )}
               </div>
-              <p className="text-gray-500 text-sm leading-relaxed max-w-xs" data-i18n="footer.tagline">
-                {tagline}
+              <p
+                style={{
+                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: '0.875rem',
+                  fontFamily: 'Mulish, sans-serif',
+                  fontWeight: 300,
+                  lineHeight: 1.6,
+                  maxWidth: '22rem',
+                }}
+                data-i18n="footer.tagline"
+              >
+                {taglineByLang[lang]}
               </p>
             </div>
           )}
@@ -113,15 +134,32 @@ export default function Footer({ config }: { config: Config }) {
           {/* Nav links */}
           {showNav && (
             <div>
-              <h4 className="text-white font-semibold text-sm uppercase tracking-wide mb-4">Navigation</h4>
-              <div className="flex flex-col gap-2">
+              <h4 className="label-caps mb-5" style={{ color: 'rgba(255,255,255,0.35)' }}>Navigation</h4>
+              <div className="flex flex-col gap-3">
                 {navLinks.map((href, i) => (
-                  <a key={href} href={href} className="text-gray-500 hover:text-gold transition-colors text-sm">
+                  <a
+                    key={href}
+                    href={href}
+                    style={{
+                      color: 'rgba(255,255,255,0.5)',
+                      fontFamily: 'Mulish, sans-serif',
+                      fontWeight: 400,
+                      fontSize: '0.9rem',
+                      textDecoration: 'none',
+                      transition: 'color 0.2s ease',
+                    }}
+                    className="hover-gold-link"
+                  >
                     {navByLang[lang][i]}
                   </a>
                 ))}
                 {customLinks.map((cl, i) => (
-                  <a key={i} href={cl.url} className="text-gray-500 hover:text-gold transition-colors text-sm">
+                  <a
+                    key={i}
+                    href={cl.url}
+                    style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'Mulish, sans-serif', fontWeight: 400, fontSize: '0.9rem', textDecoration: 'none', transition: 'color 0.2s ease' }}
+                    className="hover-gold-link"
+                  >
                     {cl.label}
                   </a>
                 ))}
@@ -132,18 +170,30 @@ export default function Footer({ config }: { config: Config }) {
           {/* Social */}
           {showSocial && (
             <div>
-              <h4 className="text-white font-semibold text-sm uppercase tracking-wide mb-4">Follow us</h4>
+              <h4 className="label-caps mb-5" style={{ color: 'rgba(255,255,255,0.35)' }}>Follow us</h4>
               <div className="flex gap-3 flex-wrap">
-                {socialLinks.map(({ url, label, hoverClass, Icon }) => (
+                {socialLinks.map(({ url, label, Icon }) => (
                   <a
                     key={label}
                     href={url!}
                     target="_blank"
                     rel="noreferrer"
                     aria-label={label}
-                    className={`w-10 h-10 bg-white/5 border border-white/10 rounded-lg flex items-center justify-center text-gray-400 transition-all ${hoverClass}`}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'rgba(255,255,255,0.45)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    className="footer-social-link"
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-4 h-4" />
                   </a>
                 ))}
               </div>
@@ -151,10 +201,21 @@ export default function Footer({ config }: { config: Config }) {
           )}
         </div>
 
-        <div className="border-t border-white/10 pt-6 text-center">
-          <p className="text-gray-500 text-xs" data-i18n="footer.copyright">{copyright}</p>
+        {/* Copyright */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem', textAlign: 'center' }}>
+          <p
+            style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.75rem', fontFamily: 'Mulish, sans-serif', letterSpacing: '0.05em' }}
+            data-i18n="footer.copyright"
+          >
+            {copyrightByLang[lang]}
+          </p>
         </div>
       </div>
+
+      <style>{`
+        .hover-gold-link:hover { color: #C9A84C !important; }
+        .footer-social-link:hover { border-color: rgba(201,168,76,0.4) !important; color: #C9A84C !important; }
+      `}</style>
     </footer>
   );
 }

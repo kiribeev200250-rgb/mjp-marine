@@ -5,16 +5,9 @@ import { detectLang, type Lang } from '@/lib/i18n';
 
 interface GalleryItem {
   id: number;
-  title: string;
-  titleEs: string;
-  titleRu: string;
-  titleUk: string;
-  description: string;
-  descEs: string;
-  descRu: string;
-  descUk: string;
-  beforeUrl: string;
-  afterUrl: string;
+  title: string; titleEs: string; titleRu: string; titleUk: string;
+  description: string; descEs: string; descRu: string; descUk: string;
+  beforeUrl: string; afterUrl: string;
   serviceTag: string;
 }
 
@@ -67,56 +60,48 @@ function BeforeAfterSlider({ item, labels }: { item: GalleryItem; labels: { befo
       window.removeEventListener('touchmove', onMove as EventListener);
       window.removeEventListener('touchend', onUp);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-video rounded-xl overflow-hidden cursor-col-resize select-none bg-navy-dark"
+      className="relative w-full aspect-video overflow-hidden cursor-col-resize select-none"
+      style={{ background: '#061729', borderRadius: 0 }}
       onMouseDown={(e) => { dragging.current = true; updatePos(e.clientX); }}
       onTouchStart={(e) => { dragging.current = true; updatePos(e.touches[0].clientX); }}
     >
-      {/* After image (full width base) */}
-      <img
-        src={item.afterUrl}
-        alt={`After: ${item.title}`}
-        className="absolute inset-0 w-full h-full object-cover"
-        draggable={false}
-      />
+      {/* After image */}
+      <img src={item.afterUrl} alt={`After: ${item.title}`} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
 
       {/* Before image (clipped) */}
-      <div
-        className="absolute inset-0 overflow-hidden"
-        style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
-      >
-        <img
-          src={item.beforeUrl}
-          alt={`Before: ${item.title}`}
-          className="absolute inset-0 w-full h-full object-cover"
-          draggable={false}
-        />
+      <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+        <img src={item.beforeUrl} alt={`Before: ${item.title}`} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
       </div>
 
       {/* Labels */}
-      <span className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded-md backdrop-blur-sm">
+      <span
+        className="absolute top-3 left-3 label-caps"
+        style={{ background: 'rgba(0,0,0,0.7)', color: 'rgba(255,255,255,0.8)', padding: '3px 8px', fontSize: '10px' }}
+      >
         {labels.before}
       </span>
-      <span className="absolute top-3 right-3 bg-gold/90 text-navy text-xs font-bold px-2 py-1 rounded-md">
+      <span
+        className="absolute top-3 right-3 label-caps"
+        style={{ background: 'rgba(201,168,76,0.9)', color: '#0A2342', padding: '3px 8px', fontSize: '10px' }}
+      >
         {labels.after}
       </span>
 
       {/* Divider line */}
-      <div
-        className="absolute top-0 bottom-0 w-0.5 bg-white/90 shadow-lg pointer-events-none"
-        style={{ left: `${pos}%` }}
-      />
+      <div className="absolute top-0 bottom-0 w-px shadow-lg pointer-events-none" style={{ left: `${pos}%`, background: 'rgba(255,255,255,0.8)' }} />
 
       {/* Handle */}
       <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-white shadow-xl flex items-center justify-center pointer-events-none z-10 border-2 border-gold"
-        style={{ left: `${pos}%` }}
+        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 flex items-center justify-center pointer-events-none z-10"
+        style={{ left: `${pos}%`, background: 'white', border: '2px solid #C9A84C', borderRadius: 0 }}
       >
-        <svg className="w-4 h-4 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" style={{ color: '#0A2342' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l-4 3 4 3M16 9l4 3-4 3" />
         </svg>
       </div>
@@ -135,7 +120,7 @@ export default function Gallery({ items, showAnimations }: GalleryProps) {
   useEffect(() => {
     setLang(detectLang());
     const obs = new MutationObserver(() => {
-      const stored = localStorage.getItem('lang') as Lang | null;
+      const stored = localStorage.getItem('mjp_lang') as Lang | null;
       if (stored) setLang(stored);
     });
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
@@ -143,15 +128,15 @@ export default function Gallery({ items, showAnimations }: GalleryProps) {
   }, []);
 
   useEffect(() => {
-    if (!animate) return;
+    if (!animate) { setTitleVisible(true); setGridVisible(true); return; }
     const observe = (el: HTMLElement | null, setter: (v: boolean) => void) => {
       if (!el) return;
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { setter(true); obs.disconnect(); } },
+      const io = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setter(true); io.disconnect(); } },
         { threshold: 0.1 }
       );
-      obs.observe(el);
-      return () => obs.disconnect();
+      io.observe(el);
+      return () => io.disconnect();
     };
     const d1 = observe(titleRef.current, setTitleVisible);
     const d2 = observe(gridRef.current, setGridVisible);
@@ -163,37 +148,65 @@ export default function Gallery({ items, showAnimations }: GalleryProps) {
   const labels = titleByLang[lang];
 
   return (
-    <section id="gallery" className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="gallery" style={{ background: '#0A2342', paddingTop: '5rem', paddingBottom: '5rem' }}>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
+        {/* Header */}
         <div
           ref={titleRef}
           className={`text-center mb-12 ${animate ? 'reveal' : ''} ${animate && titleVisible ? 'visible' : ''}`}
         >
-          <h2 className="section-title mb-3" data-i18n="gallery.title">{labels.title}</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-gold to-orange mx-auto rounded-full mb-4" />
-          <p className="text-gray-500 max-w-lg mx-auto" data-i18n="gallery.subtitle">{labels.subtitle}</p>
+          <p className="label-caps mb-3" style={{ color: 'rgba(201,168,76,0.7)' }}>Our work</p>
+          <h2
+            style={{
+              fontFamily: 'Cormorant Garamond, serif',
+              fontWeight: 600,
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+              color: '#FFFFFF',
+              lineHeight: 1.1,
+              marginBottom: '1rem',
+            }}
+            data-i18n="gallery.title"
+          >
+            {labels.title}
+          </h2>
+          <div style={{ width: 48, height: 1, background: '#C9A84C', margin: '0 auto 1rem' }} />
+          <p style={{ color: 'rgba(255,255,255,0.5)', maxWidth: '32rem', margin: '0 auto', fontFamily: 'Mulish, sans-serif', fontWeight: 300 }} data-i18n="gallery.subtitle">
+            {labels.subtitle}
+          </p>
         </div>
 
+        {/* Grid */}
         <div
           ref={gridRef}
-          className={`grid md:grid-cols-2 xl:grid-cols-3 gap-8 ${animate ? 'reveal-stagger' : ''} ${animate && gridVisible ? 'visible' : ''}`}
+          className={`grid md:grid-cols-2 xl:grid-cols-3 gap-6 ${animate ? 'reveal-stagger' : ''} ${animate && gridVisible ? 'visible' : ''}`}
         >
           {items.map((item) => (
-            <div key={item.id} className="group">
+            <div key={item.id}>
               <BeforeAfterSlider item={item} labels={labels} />
-              <div className="mt-3 px-1">
+              <div className="mt-3 px-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-heading text-base font-bold text-navy">
+                  <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 600, fontSize: '1.1rem', color: 'white' }}>
                     {getTitle(item, lang)}
                   </h3>
                   {item.serviceTag && (
-                    <span className="text-xs bg-gold/10 text-gold font-semibold px-2 py-0.5 rounded-full border border-gold/30">
+                    <span
+                      className="label-caps"
+                      style={{
+                        background: 'rgba(201,168,76,0.1)',
+                        color: '#C9A84C',
+                        padding: '2px 8px',
+                        border: '1px solid rgba(201,168,76,0.3)',
+                        fontSize: '10px',
+                      }}
+                    >
                       {item.serviceTag}
                     </span>
                   )}
                 </div>
                 {getDesc(item, lang) && (
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">{getDesc(item, lang)}</p>
+                  <p style={{ fontFamily: 'Mulish, sans-serif', fontWeight: 300, fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)', marginTop: '0.3rem', lineHeight: 1.6 }}>
+                    {getDesc(item, lang)}
+                  </p>
                 )}
               </div>
             </div>

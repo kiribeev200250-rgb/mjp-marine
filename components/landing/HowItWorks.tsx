@@ -1,41 +1,42 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { detectLang, type Lang } from '@/lib/i18n';
 
 const steps = [
   {
     num: '01',
-    icon: '📱',
     titleKey: 'hiw.1.title',
     descKey: 'hiw.1.desc',
-    titleDefault: 'Contact us',
-    descDefault: 'Call, WhatsApp, or fill in the form. We respond fast.',
+    titles: { en: 'Contact us', es: 'Contáctanos', ru: 'Свяжитесь с нами', uk: "Зв'яжіться з нами" },
+    descs: { en: 'Call, WhatsApp, or fill in the form. We respond fast.', es: 'Llama, por WhatsApp o rellena el formulario. Respondemos rápido.', ru: 'Позвоните, напишите в WhatsApp или заполните форму.', uk: 'Зателефонуйте, напишіть у WhatsApp або заповніть форму.' },
   },
   {
     num: '02',
-    icon: '📋',
     titleKey: 'hiw.2.title',
     descKey: 'hiw.2.desc',
-    titleDefault: 'Quote in 2 hours',
-    descDefault: 'You receive a clear, itemised quote with no surprises.',
+    titles: { en: 'Quote in 2 hours', es: 'Presupuesto en 2 horas', ru: 'Смета за 2 часа', uk: 'Кошторис за 2 години' },
+    descs: { en: 'You receive a clear, itemised quote with no surprises.', es: 'Recibes un presupuesto detallado y sin sorpresas.', ru: 'Вы получаете чёткую детализированную смету без сюрпризов.', uk: 'Ви отримуєте чіткий детальний кошторис без сюрпризів.' },
   },
   {
     num: '03',
-    icon: '🚐',
     titleKey: 'hiw.3.title',
     descKey: 'hiw.3.desc',
-    titleDefault: 'We come to your marina',
-    descDefault: 'Our certified technician arrives at your berth at the agreed time.',
+    titles: { en: 'We come to your marina', es: 'Vamos a tu marina', ru: 'Приезжаем к вам', uk: 'Приїжджаємо до вас' },
+    descs: { en: 'Our certified technician arrives at your berth at the agreed time.', es: 'Nuestro técnico certificado llega a tu amarre a la hora acordada.', ru: 'Наш сертифицированный специалист прибывает в назначенное время.', uk: 'Наш сертифікований технік прибуває у призначений час.' },
   },
   {
     num: '04',
-    icon: '✅',
     titleKey: 'hiw.4.title',
     descKey: 'hiw.4.desc',
-    titleDefault: 'Job done. Back to sea.',
-    descDefault: "We test everything, clean up, and you're ready to sail.",
+    titles: { en: 'Job done. Back to sea.', es: 'Trabajo terminado. De vuelta al mar.', ru: 'Работа выполнена. Снова в море.', uk: 'Роботу виконано. Знову у море.' },
+    descs: { en: "We test everything, clean up, and you're ready to sail.", es: 'Lo probamos todo, recogemos y estás listo para navegar.', ru: 'Проверяем всё, убираем за собой — вы готовы к плаванию.', uk: 'Перевіряємо все, прибираємо за собою — ви готові до плавання.' },
   },
 ];
+
+const sectionTitles: Record<Lang, string> = {
+  en: 'How It Works', es: 'Cómo Funciona', ru: 'Как это работает', uk: 'Як це працює',
+};
 
 interface HowItWorksProps {
   showAnimations?: boolean | null;
@@ -43,72 +44,143 @@ interface HowItWorksProps {
 
 export default function HowItWorks({ showAnimations }: HowItWorksProps) {
   const animate = showAnimations !== false;
+  const [lang, setLang] = useState<Lang>('en');
   const titleRef = useRef<HTMLDivElement>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
   const [titleVisible, setTitleVisible] = useState(false);
   const [stepsVisible, setStepsVisible] = useState(false);
+  const [lineVisible, setLineVisible] = useState(false);
 
   useEffect(() => {
-    if (!animate) return;
+    setLang(detectLang());
+    const obs = new MutationObserver(() => {
+      const stored = localStorage.getItem('mjp_lang') as Lang | null;
+      if (stored) setLang(stored);
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!animate) { setTitleVisible(true); setStepsVisible(true); setLineVisible(true); return; }
     const observe = (el: HTMLElement | null, setter: (v: boolean) => void) => {
       if (!el) return;
-      const obs = new IntersectionObserver(
-        ([e]) => { if (e.isIntersecting) { setter(true); obs.disconnect(); } },
-        { threshold: 0.1 }
+      const io = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setter(true); io.disconnect(); } },
+        { threshold: 0.12 }
       );
-      obs.observe(el);
-      return () => obs.disconnect();
+      io.observe(el);
+      return () => io.disconnect();
     };
     const d1 = observe(titleRef.current, setTitleVisible);
-    const d2 = observe(stepsRef.current, setStepsVisible);
+    const d2 = observe(stepsRef.current, (v) => { setStepsVisible(v); setLineVisible(v); });
     return () => { d1?.(); d2?.(); };
   }, [animate]);
 
   return (
-    <section id="how-it-works" className="py-20 bg-navy-dark">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="how-it-works" style={{ background: '#0A2342', paddingTop: '5rem', paddingBottom: '5rem' }}>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
+        {/* Header */}
         <div
           ref={titleRef}
-          className={`text-center mb-14 ${animate ? 'reveal' : ''} ${animate && titleVisible ? 'visible' : ''}`}
+          className={`text-center mb-16 ${animate ? 'reveal' : ''} ${animate && titleVisible ? 'visible' : ''}`}
         >
-          <h2 className="font-heading text-3xl md:text-4xl font-bold text-gray-100 mb-3" data-i18n="hiw.title">
-            How It Works
+          <p className="label-caps mb-3" style={{ color: 'rgba(201,168,76,0.7)' }}>The process</p>
+          <h2
+            style={{
+              fontFamily: 'Cormorant Garamond, serif',
+              fontWeight: 600,
+              fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+              color: '#FFFFFF',
+              lineHeight: 1.1,
+              marginBottom: '1rem',
+            }}
+            data-i18n="hiw.title"
+          >
+            {sectionTitles[lang]}
           </h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-gold to-orange mx-auto rounded-full" />
+          <div style={{ width: 48, height: 1, background: '#C9A84C', margin: '0 auto' }} />
         </div>
 
-        <div
-          ref={stepsRef}
-          className={`grid md:grid-cols-4 gap-6 relative ${animate ? 'reveal-stagger' : ''} ${animate && stepsVisible ? 'visible' : ''}`}
-        >
-          {/* Connector line */}
-          <div className="hidden md:block absolute top-10 left-[12.5%] right-[12.5%] h-px bg-gold/20" />
+        {/* Steps */}
+        <div ref={stepsRef} className="relative">
+          {/* Animated connecting line (desktop) */}
+          <div className="hidden md:block absolute top-8 left-[12.5%] right-[12.5%] h-px overflow-hidden" style={{ zIndex: 0 }}>
+            <div
+              style={{
+                height: '100%',
+                background: 'linear-gradient(to right, transparent, #C9A84C, transparent)',
+                transformOrigin: 'left',
+                transform: lineVisible ? 'scaleX(1)' : 'scaleX(0)',
+                transition: lineVisible ? 'transform 1.2s ease 0.3s' : 'none',
+                opacity: 0.5,
+              }}
+            />
+          </div>
 
-          {steps.map((step, i) => (
-            <div key={step.num} className="relative flex flex-col items-center text-center">
-              <div className="relative z-10 w-20 h-20 rounded-full border-2 border-gold/50 bg-navy-light flex flex-col items-center justify-center mb-5 hover:border-gold hover:scale-105 transition-all duration-300">
-                <span className="text-orange text-xs font-bold tracking-widest">{step.num}</span>
-                <span className="text-2xl">{step.icon}</span>
+          <div
+            className={`grid md:grid-cols-4 gap-8 md:gap-6 relative z-10 ${animate ? 'reveal-stagger' : ''} ${animate && stepsVisible ? 'visible' : ''}`}
+          >
+            {steps.map((step, i) => (
+              <div key={step.num} className="flex flex-col items-center text-center relative">
+                {/* Step number circle */}
+                <div
+                  className="w-16 h-16 flex items-center justify-center mb-6 shrink-0"
+                  style={{
+                    background: 'rgba(201,168,76,0.08)',
+                    border: '1px solid rgba(201,168,76,0.4)',
+                    borderRadius: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'Space Mono, monospace',
+                      fontWeight: 700,
+                      fontSize: '1.2rem',
+                      color: '#C9A84C',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    {step.num}
+                  </span>
+                </div>
+
+                <h3
+                  style={{
+                    fontFamily: 'Cormorant Garamond, serif',
+                    fontWeight: 600,
+                    fontSize: '1.3rem',
+                    color: '#FFFFFF',
+                    marginBottom: '0.75rem',
+                    lineHeight: 1.2,
+                  }}
+                  data-i18n={step.titleKey}
+                >
+                  {step.titles[lang]}
+                </h3>
+                <p
+                  style={{
+                    fontFamily: 'Mulish, sans-serif',
+                    fontWeight: 300,
+                    fontSize: '0.9rem',
+                    color: 'rgba(255,255,255,0.55)',
+                    lineHeight: 1.65,
+                  }}
+                  data-i18n={step.descKey}
+                >
+                  {step.descs[lang]}
+                </p>
+
+                {/* Mobile connector */}
+                {i < steps.length - 1 && (
+                  <div
+                    className="md:hidden mt-6"
+                    style={{ width: 1, height: 32, background: 'rgba(201,168,76,0.3)', margin: '1.5rem auto 0' }}
+                  />
+                )}
               </div>
-
-              <h3
-                className="font-heading text-lg font-bold text-gray-100 mb-2"
-                data-i18n={step.titleKey}
-              >
-                {step.titleDefault}
-              </h3>
-              <p
-                className="text-gray-400 text-sm leading-relaxed"
-                data-i18n={step.descKey}
-              >
-                {step.descDefault}
-              </p>
-
-              {i < steps.length - 1 && (
-                <div className="md:hidden mt-4 text-gold/40 text-2xl">↓</div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

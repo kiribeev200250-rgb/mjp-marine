@@ -4,9 +4,11 @@ export type Lang = 'en' | 'es' | 'ru' | 'uk';
 
 export const LANGS: Lang[] = ['en', 'es', 'ru', 'uk'];
 
+const STORAGE_KEY = 'mjp_lang';
+
 export function detectLang(): Lang {
   if (typeof window === 'undefined') return 'en';
-  const stored = localStorage.getItem('lang') as Lang | null;
+  const stored = localStorage.getItem(STORAGE_KEY) as Lang | null;
   if (stored && LANGS.includes(stored)) return stored;
   const nav = navigator.language.slice(0, 2).toLowerCase();
   if (nav === 'es') return 'es';
@@ -17,7 +19,7 @@ export function detectLang(): Lang {
 
 export function setLang(lang: Lang) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('lang', lang);
+  localStorage.setItem(STORAGE_KEY, lang);
   document.documentElement.lang = lang;
   applyTranslations(lang);
 }
@@ -84,6 +86,12 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       btn2: 'View services',
     },
     stats: { response: '48h response', fee: '€0 marina visit fee', marinas: '20+ marinas', services: '50+ service types' },
+    trust: {
+      badge1: 'Licensed & Insured',
+      badge2: '5+ Years Experience',
+      badge3: '48h Guarantee',
+      badge4: '20+ Marinas',
+    },
     why: {
       title: 'Why choose MJP?',
       1: { title: 'We come to your marina', desc: 'No need to move the boat. Our mobile team comes directly to your berth.' },
@@ -98,7 +106,18 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       3: { title: 'We come to your marina', desc: 'Our certified technician arrives at your berth at the agreed time.' },
       4: { title: 'Job done. Back to sea.', desc: "We test everything, clean up, and you're ready to sail." },
     },
+    map: {
+      title: 'Our Coverage',
+      popup: 'We service this port',
+      stats: '244km of coastline · 13 marinas · 1 team',
+    },
     testimonials: { title: 'What Our Clients Say' },
+    gallery: {
+      title: 'Before & After',
+      subtitle: 'See the transformation. Drag the slider to compare.',
+      before: 'Before',
+      after: 'After',
+    },
     contact: {
       title: 'Get a Quote',
       subtitle: 'We respond in under 2 hours. No spam.',
@@ -111,11 +130,17 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       message: 'Message',
       submit: 'Send Request',
       success: "Thanks! We'll be in touch within 2 hours.",
+      infoTitle: 'Contact Info',
+      hoursLabel: 'Working Hours',
+      coverageLabel: 'Coverage Area',
     },
     subscribe: {
       title: 'Stay Updated',
       desc: 'Get seasonal tips and maintenance reminders for your boat.',
+      name: 'Your name',
+      placeholder: 'your@email.com',
       btn: 'Subscribe',
+      success: "You're subscribed! Check your inbox.",
     },
     footer: {
       tagline: 'Your boat fixed, at your marina. In 48 hours.',
@@ -131,6 +156,12 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       btn2: 'Ver servicios',
     },
     stats: { response: 'Respuesta en 48h', fee: '€0 tarifa de visita', marinas: '20+ marinas', services: '50+ servicios' },
+    trust: {
+      badge1: 'Con Licencia y Seguro',
+      badge2: '5+ Años de Experiencia',
+      badge3: 'Garantía 48h',
+      badge4: '20+ Marinas',
+    },
     why: {
       title: '¿Por qué elegir MJP?',
       1: { title: 'Vamos a tu marina', desc: 'Sin necesidad de mover el barco. Nuestro equipo móvil viene a tu amarre.' },
@@ -145,7 +176,18 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       3: { title: 'Vamos a tu marina', desc: 'Nuestro técnico certificado llega a tu amarre a la hora acordada.' },
       4: { title: 'Trabajo terminado. De vuelta al mar.', desc: 'Lo probamos todo, recogemos y estás listo para navegar.' },
     },
+    map: {
+      title: 'Nuestra Cobertura',
+      popup: 'Atendemos este puerto',
+      stats: '244km de costa · 13 marinas · 1 equipo',
+    },
     testimonials: { title: 'Lo Que Dicen Nuestros Clientes' },
+    gallery: {
+      title: 'Antes y Después',
+      subtitle: 'Observa la transformación. Arrastra el deslizador para comparar.',
+      before: 'Antes',
+      after: 'Después',
+    },
     contact: {
       title: 'Solicitar Presupuesto',
       subtitle: 'Respondemos en menos de 2 horas. Sin spam.',
@@ -158,11 +200,17 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       message: 'Mensaje',
       submit: 'Enviar Solicitud',
       success: '¡Gracias! Te contactaremos en menos de 2 horas.',
+      infoTitle: 'Información de Contacto',
+      hoursLabel: 'Horario',
+      coverageLabel: 'Zona de Cobertura',
     },
     subscribe: {
       title: 'Mantente Informado',
       desc: 'Recibe consejos de temporada y recordatorios de mantenimiento.',
+      name: 'Tu nombre',
+      placeholder: 'tu@email.com',
       btn: 'Suscribirse',
+      success: '¡Suscrito! Revisa tu bandeja de entrada.',
     },
     footer: {
       tagline: 'Tu barco reparado, en tu marina. En 48 horas.',
@@ -178,6 +226,12 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       btn2: 'Посмотреть услуги',
     },
     stats: { response: 'Ответ за 48ч', fee: '€0 за выезд', marinas: '20+ марин', services: '50+ видов услуг' },
+    trust: {
+      badge1: 'Лицензированные',
+      badge2: '5+ Лет опыта',
+      badge3: 'Гарантия 48ч',
+      badge4: '20+ Марин',
+    },
     why: {
       title: 'Почему выбирают MJP?',
       1: { title: 'Приезжаем в вашу марину', desc: 'Не нужно никуда везти лодку. Наша мобильная бригада приезжает прямо к вашей стоянке.' },
@@ -192,7 +246,18 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       3: { title: 'Приезжаем к вам', desc: 'Наш сертифицированный специалист прибывает к вашему причалу в назначенное время.' },
       4: { title: 'Работа выполнена. Снова в море.', desc: 'Проверяем всё, убираем за собой — и вы готовы к плаванию.' },
     },
+    map: {
+      title: 'Наша зона покрытия',
+      popup: 'Обслуживаем эту марину',
+      stats: '244 км побережья · 13 марин · 1 команда',
+    },
     testimonials: { title: 'Отзывы наших клиентов' },
+    gallery: {
+      title: 'До и после',
+      subtitle: 'Смотрите трансформацию. Перетащите ползунок для сравнения.',
+      before: 'До',
+      after: 'После',
+    },
     contact: {
       title: 'Получить смету',
       subtitle: 'Ответим менее чем за 2 часа. Без спама.',
@@ -205,11 +270,17 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       message: 'Сообщение',
       submit: 'Отправить заявку',
       success: 'Спасибо! Мы свяжемся с вами в течение 2 часов.',
+      infoTitle: 'Контактная информация',
+      hoursLabel: 'Рабочие часы',
+      coverageLabel: 'Зона обслуживания',
     },
     subscribe: {
       title: 'Будьте в курсе',
       desc: 'Получайте сезонные советы и напоминания об обслуживании вашей яхты.',
+      name: 'Ваше имя',
+      placeholder: 'вы@example.com',
       btn: 'Подписаться',
+      success: 'Вы подписаны! Проверьте почту.',
     },
     footer: {
       tagline: 'Ваша яхта отремонтирована прямо у вашего причала. За 48 часов.',
@@ -225,6 +296,12 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       btn2: 'Переглянути послуги',
     },
     stats: { response: 'Відповідь за 48г', fee: '€0 за виїзд', marinas: '20+ марин', services: '50+ видів послуг' },
+    trust: {
+      badge1: 'Ліцензовані',
+      badge2: '5+ Років досвіду',
+      badge3: 'Гарантія 48г',
+      badge4: '20+ Марин',
+    },
     why: {
       title: 'Чому обирають MJP?',
       1: { title: 'Приїжджаємо у вашу марину', desc: 'Не потрібно нікуди везти човен. Наша мобільна бригада приїжджає прямо до вашого місця.' },
@@ -239,7 +316,18 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       3: { title: 'Приїжджаємо до вас', desc: 'Наш сертифікований технік прибуває до вашого місця у призначений час.' },
       4: { title: 'Роботу виконано. Знову у море.', desc: 'Перевіряємо все, прибираємо за собою — і ви готові до плавання.' },
     },
+    map: {
+      title: 'Наша зона покриття',
+      popup: 'Обслуговуємо цю марину',
+      stats: '244 км узбережжя · 13 марин · 1 команда',
+    },
     testimonials: { title: 'Відгуки наших клієнтів' },
+    gallery: {
+      title: 'До і після',
+      subtitle: 'Дивіться трансформацію. Перетягніть повзунок для порівняння.',
+      before: 'До',
+      after: 'Після',
+    },
     contact: {
       title: 'Отримати кошторис',
       subtitle: 'Відповімо менш ніж за 2 години. Без спаму.',
@@ -252,11 +340,17 @@ export const translations: Record<Lang, Record<string, unknown>> = {
       message: 'Повідомлення',
       submit: 'Надіслати запит',
       success: "Дякуємо! Ми зв'яжемося з вами протягом 2 годин.",
+      infoTitle: 'Контактна інформація',
+      hoursLabel: 'Робочі години',
+      coverageLabel: 'Зона обслуговування',
     },
     subscribe: {
       title: 'Будьте в курсі',
       desc: 'Отримуйте сезонні поради та нагадування про обслуговування вашого човна.',
+      name: "Ваше ім'я",
+      placeholder: 'ви@example.com',
       btn: 'Підписатися',
+      success: 'Ви підписані! Перевірте пошту.',
     },
     footer: {
       tagline: 'Ваш човен відремонтований у вашій марині. За 48 годин.',
