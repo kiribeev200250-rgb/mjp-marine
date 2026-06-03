@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { detectLang, setLang, loadTranslationsFromDB, LANGS, type Lang } from '@/lib/i18n';
+import { trackTikTokEvent } from '@/lib/tiktok';
 
 const LANG_LABELS: Record<Lang, string> = { en: 'EN', es: 'ES', ru: 'RU', uk: 'UK' };
 
@@ -125,7 +126,12 @@ export default function Navbar({ logoUrl }: { logoUrl?: string | null }) {
                   </span>
                 ))}
               </div>
-              <a href="#contact" className="btn-gold text-xs px-5 py-2.5" data-i18n="nav.quote">
+              <a
+                href="#contact"
+                className="btn-gold text-xs px-5 py-2.5"
+                data-i18n="nav.quote"
+                onClick={() => trackTikTokEvent('ClickButton', { content_name: 'Get Quote CTA Navbar' })}
+              >
                 {quoteLabel[lang]}
               </a>
             </div>
@@ -194,7 +200,7 @@ export default function Navbar({ logoUrl }: { logoUrl?: string | null }) {
             <a
               href="#contact"
               className="btn-gold mt-2 w-full max-w-xs text-center"
-              onClick={closeMenu}
+              onClick={() => { closeMenu(); trackTikTokEvent('ClickButton', { content_name: 'Get Quote CTA Navbar' }); }}
             >
               {quoteLabel[lang]}
             </a>

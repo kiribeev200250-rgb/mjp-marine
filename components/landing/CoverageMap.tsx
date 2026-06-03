@@ -3,32 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
 
-const COVERAGE_POLYGON: [number, number][] = [
-  [38.845, 0.112],   // Dénia north
-  [38.800, 0.175],   // Jávea cape
-  [38.730, 0.125],   // Cap de la Nau
-  [38.650, 0.048],   // Calpe
-  [38.600, -0.048],  // Altea
-  [38.545, -0.118],  // Benidorm
-  [38.510, -0.225],  // Villajoyosa
-  [38.420, -0.378],  // Campello
-  [38.335, -0.478],  // Alicante port
-  [38.280, -0.515],  // Alicante south
-  [38.190, -0.558],  // Santa Pola
-  [38.095, -0.645],  // Guardamar
-  [37.990, -0.688],  // Torrevieja
-  [37.950, -0.710],  // Punta Calnegre
-  [37.895, -0.735],  // Campoamor
-  [37.835, -0.785],  // San Pedro del Pinatar
-  [37.710, -0.812],  // Lo Pagán / Mar Menor
-  [37.640, -0.832],  // Cabo de Palos
-  [37.612, -0.900],  // coast to Cartagena
-  [37.592, -0.975],  // Cartagena
-  // inland return points to close polygon
-  [37.400, -1.200],
-  [37.400,  0.300],
-  [38.845,  0.112],
-];
 
 const MARINAS = [
   { name: 'Puerto Dénia',                          lat: 38.8418, lng:  0.1089 },
@@ -140,15 +114,6 @@ export default function CoverageMap() {
         { subdomains: 'abcd', maxZoom: 19 }
       ).addTo(map);
 
-      // Coastal coverage zone — no polyline between markers
-      L.polygon(COVERAGE_POLYGON, {
-        color: '#C9A84C',
-        weight: 1.5,
-        opacity: 0.7,
-        fillColor: '#C9A84C',
-        fillOpacity: 0.06,
-      }).addTo(map);
-
       const makeIcon = () => L.divIcon({
         html: `<div style="width:32px;height:32px;background:#0A2342;border-radius:50%;border:2px solid #C9A84C;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;transition:transform 0.2s ease;cursor:pointer;">⚓</div>`,
         className: '',
@@ -212,8 +177,18 @@ export default function CoverageMap() {
           <div style={{ width: 48, height: 1, background: '#C9A84C', margin: '0 auto' }} />
         </div>
 
-        <div style={{ border: '1px solid rgba(201,168,76,0.2)', overflow: 'hidden' }}>
+        <div style={{ border: '1px solid rgba(201,168,76,0.2)', overflow: 'hidden', position: 'relative' }}>
           <div ref={mapContainerRef} style={{ height: 520, width: '100%', background: '#061729' }} />
+          {/* Gold sea-side glow — above tiles (z 400) but below markers/popups (z 600+) */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to left, rgba(201,168,76,0.08) 0%, transparent 60%)',
+              pointerEvents: 'none',
+              zIndex: 400,
+            }}
+          />
         </div>
 
         <div className="mt-6 text-center">

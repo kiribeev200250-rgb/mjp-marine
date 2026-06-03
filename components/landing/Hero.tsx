@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
+import { trackTikTokEvent } from '@/lib/tiktok';
 
 interface HeroProps {
   heroBgUrl?: string | null;
@@ -176,7 +177,7 @@ export default function Hero({
           transitionDelay: '0.34s',
         }}
       >
-        <a href="#contact" className="btn-gold px-8 py-4 text-sm" data-i18n="hero.btn1">
+        <a href="#contact" className="btn-gold px-8 py-4 text-sm" data-i18n="hero.btn1" onClick={() => trackTikTokEvent('ClickButton', { content_name: 'Request Service Hero' })}>
           {lang === 'es' ? 'Solicitar servicio' : lang === 'ru' ? 'Заказать услугу' : lang === 'uk' ? 'Замовити послугу' : 'Request service'}
         </a>
         <a href="#services" className="btn-outline-white px-8 py-4 text-sm" data-i18n="hero.btn2">

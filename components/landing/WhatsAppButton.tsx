@@ -1,5 +1,7 @@
 'use client';
 
+import { trackTikTokEvent } from '@/lib/tiktok';
+
 export default function WhatsAppButton({ number }: { number: string }) {
   const clean = number.replace(/\D/g, '');
   if (!clean) return null;
@@ -28,9 +30,8 @@ export default function WhatsAppButton({ number }: { number: string }) {
       }}
       className="whatsapp-float"
       onClick={() => {
-        if (typeof window !== 'undefined' && window.ttq) {
-          window.ttq.track('ClickButton');
-        }
+        trackTikTokEvent('Contact', { content_name: 'WhatsApp Button' });
+        trackTikTokEvent('ClickButton', { content_name: 'WhatsApp' });
       }}
     >
       <svg

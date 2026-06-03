@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { trackTikTokEvent } from '@/lib/tiktok';
 
 interface Link {
   id: number;
@@ -33,7 +34,7 @@ function getTagline(config: Config | null, lang: Lang): string {
   return { en: config.taglineEn, es: config.taglineEs, ru: config.taglineRu, uk: config.taglineUk }[lang];
 }
 
-async function trackClick(linkId: number, label: string) {
+async function trackClick(linkId: number, platform: string) {
   try {
     await fetch('/api/presite/click', {
       method: 'POST',
@@ -41,10 +42,9 @@ async function trackClick(linkId: number, label: string) {
       body: JSON.stringify({ linkId }),
     });
   } catch { /* fire and forget */ }
-  if (typeof window !== 'undefined' && window.ttq) {
-    window.ttq.track('ClickButton', { content_name: label });
-    window.ttq.track('Contact');
-  }
+  const contentName = platform === 'whatsapp' ? 'Presite WhatsApp' : `Presite ${platform}`;
+  trackTikTokEvent('ClickButton', { content_name: contentName });
+  trackTikTokEvent('Contact', { content_name: contentName });
 }
 
 export default function GoClient({ links, config, siteConfig }: {
@@ -259,7 +259,7 @@ function LinkButton({ link, index, entered }: { link: Link; index: number; enter
     setRipple(true);
     setTimeout(() => {
       setRipple(false);
-      trackClick(link.id, link.label);
+      trackClick(link.id, link.platform);
       window.open(link.url, '_blank', 'noreferrer');
     }, 300);
   };

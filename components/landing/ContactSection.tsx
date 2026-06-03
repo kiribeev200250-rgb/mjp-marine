@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, FormEvent } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
+import { trackTikTokEvent } from '@/lib/tiktok';
 
 const MARINAS = [
   'Marina Dénia', 'Club Náutico Alicante', 'Puerto Torrevieja',
@@ -123,10 +124,8 @@ export default function ContactSection({ config, showAnimations }: ContactSectio
       if (!res.ok) throw new Error('Failed');
       setSubmitted(true);
       form.reset();
-      if (typeof window !== 'undefined' && window.ttq) {
-        window.ttq.track('SubmitForm');
-        window.ttq.track('Contact');
-      }
+      trackTikTokEvent('SubmitForm', { content_name: 'Contact Form' });
+      trackTikTokEvent('Lead', { content_name: 'Contact Form' });
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -137,11 +136,22 @@ export default function ContactSection({ config, showAnimations }: ContactSectio
   const waHref = config.whatsappUrl || (config.whatsapp ? `https://wa.me/${config.whatsapp.replace(/\D/g, '')}` : null);
 
   const contactCards = [
-    { condition: !!config.phone, icon: '📞', label: t.phoneLabel, value: config.phone, href: `tel:${config.phone}`, highlight: false },
-    { condition: !!config.whatsapp, icon: '💬', label: t.waLabel, value: config.whatsapp, href: waHref, highlight: true },
-    { condition: !!config.email, icon: '✉️', label: t.emailLabel, value: config.email, href: `mailto:${config.email}`, highlight: false },
-    { condition: !!config.hours, icon: '⏰', label: t.hoursLabel, value: config.hours, href: null, highlight: false },
-    { condition: !!config.coverage, icon: '📍', label: t.coverageLabel, value: config.coverage, href: null, highlight: false },
+    {
+      condition: !!config.phone, icon: '📞', label: t.phoneLabel, value: config.phone,
+      href: `tel:${config.phone}`, highlight: false,
+      trackFn: () => {
+        trackTikTokEvent('ClickButton', { content_name: 'Phone Number' });
+        trackTikTokEvent('Contact', { content_name: 'Phone Call' });
+      },
+    },
+    {
+      condition: !!config.whatsapp, icon: '💬', label: t.waLabel, value: config.whatsapp,
+      href: waHref, highlight: true,
+      trackFn: () => trackTikTokEvent('Contact', { content_name: 'WhatsApp Contact Section' }),
+    },
+    { condition: !!config.email, icon: '✉️', label: t.emailLabel, value: config.email, href: `mailto:${config.email}`, highlight: false, trackFn: undefined },
+    { condition: !!config.hours, icon: '⏰', label: t.hoursLabel, value: config.hours, href: null, highlight: false, trackFn: undefined },
+    { condition: !!config.coverage, icon: '📍', label: t.coverageLabel, value: config.coverage, href: null, highlight: false, trackFn: undefined },
   ].filter(c => c.condition);
 
   return (
@@ -244,7 +254,14 @@ export default function ContactSection({ config, showAnimations }: ContactSectio
               );
 
               return card.href ? (
-                <a key={i} href={card.href} target={card.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" style={{ display: 'block', textDecoration: 'none' }}>
+                <a
+                  key={i}
+                  href={card.href}
+                  target={card.href.startsWith('http') ? '_blank' : undefined}
+                  rel="noreferrer"
+                  style={{ display: 'block', textDecoration: 'none' }}
+                  onClick={card.trackFn}
+                >
                   {inner}
                 </a>
               ) : inner;
