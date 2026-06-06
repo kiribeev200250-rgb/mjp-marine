@@ -25,14 +25,6 @@ type PresiteConfig = {
   footerText: string;
 };
 
-type StatItem = {
-  id: number;
-  label: string;
-  platform: string;
-  total: number;
-  last7: number;
-  last30: number;
-};
 
 const PLATFORMS = ['phone', 'website', 'instagram', 'whatsapp', 'telegram', 'tiktok', 'youtube', 'facebook', 'other'];
 
@@ -491,25 +483,24 @@ function ContentTab({ T }: { T: Record<string, string> }) {
 }
 
 /* ─── Stats Tab ─── */
+type StatItem = { id: number; label: string; platform: string; count: number };
+
 function StatsTab({ T }: { T: Record<string, string> }) {
   const [stats, setStats] = useState<{ links: StatItem[]; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<'last7' | 'last30' | 'total'>('last7');
+  const [range, setRange] = useState<'7d' | '30d' | 'all'>('7d');
 
   useEffect(() => {
-    fetch('/api/admin/presite/stats')
+    setLoading(true);
+    fetch(`/api/admin/presite/stats?period=${range}`)
       .then((r) => r.json())
       .then((d) => { setStats(d); setLoading(false); });
-  }, []);
+  }, [range]);
 
-  if (loading) return <p className="text-gray-400 text-sm">{T.presite_loading}</p>;
-  if (!stats) return null;
-
-  const max = Math.max(...stats.links.map((l) => l[range]), 1);
   const rangeLabels: Record<typeof range, string> = {
-    last7: T.presite_last_7,
-    last30: T.presite_last_30,
-    total: T.presite_all_time,
+    '7d': T.presite_last_7,
+    '30d': T.presite_last_30,
+    all: T.presite_all_time,
   };
 
   return (
@@ -517,10 +508,10 @@ function StatsTab({ T }: { T: Record<string, string> }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-gray-400 text-xs uppercase tracking-wide">{T.presite_total_clicks}</p>
-          <p className="text-[#C9A84C] text-3xl font-bold">{stats.total}</p>
+          <p className="text-[#C9A84C] text-3xl font-bold">{loading ? '—' : (stats?.total ?? 0)}</p>
         </div>
         <div className="flex gap-1">
-          {(['last7', 'last30', 'total'] as const).map((r) => (
+          {(['7d', '30d', 'all'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
@@ -536,31 +527,35 @@ function StatsTab({ T }: { T: Record<string, string> }) {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {stats.links.length === 0 && (
-          <p className="text-gray-400 text-sm">{T.presite_none}</p>
-        )}
-        {stats.links.map((link) => {
-          const count = link[range];
-          const pct = max > 0 ? (count / max) * 100 : 0;
-          return (
-            <div key={link.id}>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-white text-sm">
-                  {getPlatformEmoji(link.platform)} {link.label}
-                </span>
-                <span className="text-[#C9A84C] font-bold text-sm">{count}</span>
+      {loading ? (
+        <p className="text-gray-400 text-sm">{T.presite_loading}</p>
+      ) : !stats ? null : (
+        <div className="space-y-4">
+          {stats.links.length === 0 && (
+            <p className="text-gray-400 text-sm">{T.presite_none}</p>
+          )}
+          {stats.links.map((link) => {
+            const max = Math.max(...stats.links.map((l) => l.count), 1);
+            const pct = max > 0 ? (link.count / max) * 100 : 0;
+            return (
+              <div key={link.id}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-white text-sm">
+                    {getPlatformEmoji(link.platform)} {link.label}
+                  </span>
+                  <span className="text-[#C9A84C] font-bold text-sm">{link.count}</span>
+                </div>
+                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#C9A84C] rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#C9A84C] rounded-full transition-all duration-500"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
