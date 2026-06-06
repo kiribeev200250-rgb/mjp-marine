@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { trackTikTokEvent } from '@/lib/tiktok';
+import { trackFBEvent } from '@/lib/facebook';
 
 interface Link {
   id: number;
@@ -42,9 +43,17 @@ async function trackClick(linkId: number, platform: string) {
       body: JSON.stringify({ linkId }),
     });
   } catch { /* fire and forget */ }
-  const contentName = platform === 'whatsapp' ? 'Presite WhatsApp' : `Presite ${platform}`;
+  const contentName = platform === 'whatsapp' ? 'Presite WhatsApp' : platform === 'phone' ? 'Presite Phone Call' : `Presite ${platform}`;
   trackTikTokEvent('ClickButton', { content_name: contentName });
   trackTikTokEvent('Contact', { content_name: contentName });
+  if (platform === 'whatsapp') {
+    trackFBEvent('Contact', { content_name: 'Presite WhatsApp' });
+  }
+  if (platform === 'phone') {
+    trackTikTokEvent('Contact', { content_name: 'Phone Call' });
+    trackFBEvent('Contact', { content_name: 'Presite Phone Call' });
+    trackFBEvent('Lead', { content_name: 'Phone Call' });
+  }
 }
 
 export default function GoClient({ links, config, siteConfig }: {
@@ -337,6 +346,8 @@ function LinkButton({ link, index, entered }: { link: Link; index: number; enter
 function PlatformIcon({ platform }: { platform: string }) {
   const s = { width: 20, height: 20 };
   switch (platform) {
+    case 'phone':
+      return <svg style={s} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.06 1.18 2 2 0 012 .06h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>;
     case 'website':
       return <svg style={s} fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" /></svg>;
     case 'instagram':

@@ -34,7 +34,7 @@ type StatItem = {
   last30: number;
 };
 
-const PLATFORMS = ['website', 'instagram', 'whatsapp', 'telegram', 'tiktok', 'youtube', 'facebook', 'other'];
+const PLATFORMS = ['phone', 'website', 'instagram', 'whatsapp', 'telegram', 'tiktok', 'youtube', 'facebook', 'other'];
 
 export default function PresiteAdminPage() {
   const { T } = useAdminT();
@@ -302,12 +302,15 @@ function LinksTab({ T }: { T: Record<string, string> }) {
                   {T.presite_url}
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={form.url}
                   onChange={(e) => setForm({ ...form, url: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
-                  placeholder="https://"
+                  placeholder={form.platform === 'phone' ? 'tel:+34600000000' : 'https://'}
                 />
+                {form.platform === 'phone' && (
+                  <p className="text-gray-500 text-xs mt-1">Format: tel:+34600000000</p>
+                )}
               </div>
 
               <label className="flex items-center gap-3 cursor-pointer">
@@ -565,6 +568,7 @@ function StatsTab({ T }: { T: Record<string, string> }) {
 /* ─── helpers ─── */
 function getPlatformEmoji(platform: string): string {
   const map: Record<string, string> = {
+    phone: '📞',
     website: '🌐',
     instagram: '📸',
     whatsapp: '💬',

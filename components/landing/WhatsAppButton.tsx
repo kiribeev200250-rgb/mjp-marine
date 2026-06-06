@@ -1,6 +1,7 @@
 'use client';
 
 import { trackTikTokEvent } from '@/lib/tiktok';
+import { trackFBEvent } from '@/lib/facebook';
 
 export default function WhatsAppButton({ number }: { number: string }) {
   const clean = number.replace(/\D/g, '');
@@ -32,6 +33,7 @@ export default function WhatsAppButton({ number }: { number: string }) {
       onClick={() => {
         trackTikTokEvent('Contact', { content_name: 'WhatsApp Button' });
         trackTikTokEvent('ClickButton', { content_name: 'WhatsApp' });
+        trackFBEvent('Contact', { content_name: 'WhatsApp' });
       }}
     >
       <svg

@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
 import { trackTikTokEvent } from '@/lib/tiktok';
+import { trackFBEvent } from '@/lib/facebook';
 
 const labels: Record<Lang, Record<string, string>> = {
   en: { title: 'Stay Updated', desc: 'Get seasonal tips and maintenance reminders for your boat.', name: 'Your name', placeholder: 'your@email.com', btn: 'Subscribe', success: "You're subscribed! Check your inbox." },
@@ -41,6 +42,7 @@ export default function Subscribe() {
       if (res.ok) {
         setDone(true);
         trackTikTokEvent('Subscribe', { content_name: 'Newsletter' });
+        trackFBEvent('Subscribe', { content_name: 'Newsletter' });
       }
     } finally {
       setLoading(false);

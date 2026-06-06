@@ -1,6 +1,7 @@
 declare global {
   interface Window {
-    ttq: any;
+    ttq: any
+    fbq: any
   }
 }
 

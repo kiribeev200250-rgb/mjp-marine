@@ -230,17 +230,18 @@ async function main() {
 
   // Presite links
   const presiteLinks = [
-    { platform: 'website',   label: 'Our Website', url: 'https://mjpmarine.es',      active: true,  sortOrder: 1 },
-    { platform: 'instagram', label: 'Instagram',   url: '',                           active: false, sortOrder: 2 },
-    { platform: 'whatsapp',  label: 'WhatsApp',    url: 'https://wa.me/34600000000', active: true,  sortOrder: 3 },
-    { platform: 'telegram',  label: 'Telegram',    url: '',                           active: false, sortOrder: 4 },
-    { platform: 'tiktok',    label: 'TikTok',      url: '',                           active: false, sortOrder: 5 },
+    { id: 0,  platform: 'phone',     label: 'Call us',     url: 'tel:+34600165680',           active: true,  sortOrder: 0 },
+    { id: 1,  platform: 'website',   label: 'Our Website', url: 'https://mjpmarine.es',       active: true,  sortOrder: 1 },
+    { id: 2,  platform: 'instagram', label: 'Instagram',   url: '',                            active: false, sortOrder: 2 },
+    { id: 3,  platform: 'whatsapp',  label: 'WhatsApp',    url: 'https://wa.me/34600000000',  active: true,  sortOrder: 3 },
+    { id: 4,  platform: 'telegram',  label: 'Telegram',    url: '',                            active: false, sortOrder: 4 },
+    { id: 5,  platform: 'tiktok',    label: 'TikTok',      url: '',                            active: false, sortOrder: 5 },
   ];
   for (const link of presiteLinks) {
     await prisma.presiteLink.upsert({
-      where: { id: link.sortOrder },
+      where: { id: link.id },
       update: {},
-      create: { id: link.sortOrder, ...link },
+      create: link,
     });
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, FormEvent } from 'react';
 import { detectLang, type Lang } from '@/lib/i18n';
 import { trackTikTokEvent } from '@/lib/tiktok';
+import { trackFBEvent } from '@/lib/facebook';
 
 const MARINAS = [
   'Marina Dénia', 'Club Náutico Alicante', 'Puerto Torrevieja',
@@ -126,6 +127,8 @@ export default function ContactSection({ config, showAnimations }: ContactSectio
       form.reset();
       trackTikTokEvent('SubmitForm', { content_name: 'Contact Form' });
       trackTikTokEvent('Lead', { content_name: 'Contact Form' });
+      trackFBEvent('Lead', { content_name: 'Contact Form' });
+      trackFBEvent('SubmitApplication');
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -142,6 +145,9 @@ export default function ContactSection({ config, showAnimations }: ContactSectio
       trackFn: () => {
         trackTikTokEvent('ClickButton', { content_name: 'Phone Number' });
         trackTikTokEvent('Contact', { content_name: 'Phone Call' });
+        trackTikTokEvent('Contact', { content_name: 'Phone Number Click' });
+        trackFBEvent('Contact', { content_name: 'Phone' });
+        trackFBEvent('Contact', { content_name: 'Phone Number Click' });
       },
     },
     {
