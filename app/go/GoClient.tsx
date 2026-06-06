@@ -49,18 +49,20 @@ async function recordClick(linkId: number) {
 }
 
 function firePixels(platform: string) {
-  const contentName = platform === 'whatsapp' ? 'Presite WhatsApp'
-    : platform === 'phone' ? 'Presite Phone Call'
-    : `Presite ${platform}`;
-  trackTikTokEvent('ClickButton', { content_name: contentName });
-  trackTikTokEvent('Contact', { content_name: contentName });
   if (platform === 'whatsapp') {
+    trackTikTokEvent('ClickButton', { content_name: 'Presite WhatsApp' });
+    trackTikTokEvent('Contact', { content_name: 'Presite WhatsApp' });
     trackFBEvent('Contact', { content_name: 'Presite WhatsApp' });
-  }
-  if (platform === 'phone') {
-    trackTikTokEvent('Contact', { content_name: 'Phone Call' });
+    trackFBEvent('Lead', { content_name: 'Presite WhatsApp' });
+  } else if (platform === 'phone') {
+    trackTikTokEvent('ClickButton', { content_name: 'Presite Phone' });
+    trackTikTokEvent('Contact', { content_name: 'Presite Phone Call' });
     trackFBEvent('Contact', { content_name: 'Presite Phone Call' });
     trackFBEvent('Lead', { content_name: 'Phone Call' });
+  } else {
+    const contentName = `Presite ${platform}`;
+    trackTikTokEvent('ClickButton', { content_name: contentName });
+    trackFBEvent('ClickButton', { content_name: contentName });
   }
 }
 
