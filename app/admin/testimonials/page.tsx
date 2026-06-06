@@ -104,7 +104,7 @@ export default function TestimonialsAdmin() {
                   <label className="block text-xs font-semibold text-gray-500 mb-1">{T.testimonials_rating}</label>
                   <div className="flex gap-1">
                     {[1,2,3,4,5].map((star) => (
-                      <button key={star} type="button" onClick={() => setEditing({ ...editing, rating: star })} className={`text-xl transition-colors ${star <= editing.rating ? 'text-gold' : 'text-gray-300'}`}>★</button>
+                      <button key={star} type="button" onClick={() => setEditing({ ...editing, rating: star })} className={`text-xl transition-colors ${star <= editing.rating ? 'text-gold' : 'text-gray-400'}`}>★</button>
                     ))}
                   </div>
                 </div>

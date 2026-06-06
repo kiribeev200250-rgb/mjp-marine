@@ -94,11 +94,11 @@ export default function SubscribersAdmin() {
                 <th className="py-3 px-4 w-10">
                   <input type="checkbox" onChange={(e) => toggleAll(e.target.checked)} checked={filtered.length > 0 && filtered.every((s) => selected.has(s.id))} className="rounded" />
                 </th>
-                <th className="text-left py-3 px-2 text-gray-400 font-medium">{T.subs_col_name}</th>
-                <th className="text-left py-3 px-2 text-gray-400 font-medium">{T.subs_col_email}</th>
-                <th className="text-left py-3 px-2 text-gray-400 font-medium">{T.subs_col_lang}</th>
-                <th className="text-left py-3 px-2 text-gray-400 font-medium">{T.subs_col_joined}</th>
-                <th className="text-left py-3 px-2 text-gray-400 font-medium">{T.subs_col_status}</th>
+                <th className="text-left py-3 px-2 text-gray-600 font-medium">{T.subs_col_name}</th>
+                <th className="text-left py-3 px-2 text-gray-600 font-medium">{T.subs_col_email}</th>
+                <th className="text-left py-3 px-2 text-gray-600 font-medium">{T.subs_col_lang}</th>
+                <th className="text-left py-3 px-2 text-gray-600 font-medium">{T.subs_col_joined}</th>
+                <th className="text-left py-3 px-2 text-gray-600 font-medium">{T.subs_col_status}</th>
                 <th className="py-3 px-4 w-10"></th>
               </tr>
             </thead>

@@ -96,11 +96,11 @@ export default function Dashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 text-gray-400 font-medium">{T.dash_col_name}</th>
-                      <th className="text-left py-2 text-gray-400 font-medium">{T.dash_col_phone}</th>
-                      <th className="text-left py-2 text-gray-400 font-medium">{T.dash_col_service}</th>
-                      <th className="text-left py-2 text-gray-400 font-medium">{T.dash_col_date}</th>
-                      <th className="text-left py-2 text-gray-400 font-medium">{T.dash_col_status}</th>
+                      <th className="text-left py-2 text-gray-600 font-medium">{T.dash_col_name}</th>
+                      <th className="text-left py-2 text-gray-600 font-medium">{T.dash_col_phone}</th>
+                      <th className="text-left py-2 text-gray-600 font-medium">{T.dash_col_service}</th>
+                      <th className="text-left py-2 text-gray-600 font-medium">{T.dash_col_date}</th>
+                      <th className="text-left py-2 text-gray-600 font-medium">{T.dash_col_status}</th>
                     </tr>
                   </thead>
                   <tbody>

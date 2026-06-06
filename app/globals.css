@@ -53,6 +53,11 @@
 }
 
 @layer components {
+  /* Admin card — white surface used throughout the admin panel */
+  .card {
+    @apply bg-white rounded-xl border border-gray-100 shadow-sm p-6;
+  }
+
   .btn-primary {
     @apply inline-flex items-center justify-center px-6 py-3 bg-gold text-navy font-semibold transition-all duration-200 text-sm uppercase tracking-wider;
     border-radius: 0;

@@ -41,7 +41,7 @@ export default function PresiteAdminPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-heading font-bold text-white">{T.presite_title}</h1>
+        <h1 className="text-2xl font-heading font-bold text-navy">{T.presite_title}</h1>
         <a
           href="/go"
           target="_blank"
@@ -52,7 +52,7 @@ export default function PresiteAdminPage() {
         </a>
       </div>
 
-      <div className="flex gap-1 mb-6 bg-white/5 rounded-xl p-1">
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -60,7 +60,7 @@ export default function PresiteAdminPage() {
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
               tab === t.key
                 ? 'bg-[#C9A84C] text-[#0A2342]'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             {t.label}
@@ -180,7 +180,7 @@ function LinksTab({ T }: { T: Record<string, string> }) {
     <>
       {ToastEl}
       <div className="flex justify-between items-center mb-4">
-        <span className="text-gray-400 text-sm">{links.length} {T.presite_links_count}</span>
+        <span className="text-gray-500 text-sm">{links.length} {T.presite_links_count}</span>
         <button
           onClick={openAdd}
           className="bg-[#C9A84C] hover:bg-[#b8933d] text-[#0A2342] font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
@@ -190,28 +190,28 @@ function LinksTab({ T }: { T: Record<string, string> }) {
       </div>
 
       {loading ? (
-        <p className="text-gray-400 text-sm">{T.presite_loading}</p>
+        <p className="text-gray-500 text-sm">{T.presite_loading}</p>
       ) : links.length === 0 ? (
-        <p className="text-gray-400 text-sm">{T.presite_none}</p>
+        <p className="text-gray-500 text-sm">{T.presite_none}</p>
       ) : (
         <div className="space-y-2">
           {links.map((link, i) => (
             <div
               key={link.id}
-              className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3 border border-white/10"
+              className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-gray-200 shadow-sm"
             >
               <div className="flex flex-col gap-0.5">
                 <button
                   onClick={() => handleMove(i, -1)}
                   disabled={i === 0}
-                  className="text-gray-500 hover:text-white disabled:opacity-20 text-xs leading-none"
+                  className="text-gray-400 hover:text-gray-900 disabled:opacity-20 text-xs leading-none"
                 >
                   ▲
                 </button>
                 <button
                   onClick={() => handleMove(i, 1)}
                   disabled={i === links.length - 1}
-                  className="text-gray-500 hover:text-white disabled:opacity-20 text-xs leading-none"
+                  className="text-gray-400 hover:text-gray-900 disabled:opacity-20 text-xs leading-none"
                 >
                   ▼
                 </button>
@@ -220,7 +220,7 @@ function LinksTab({ T }: { T: Record<string, string> }) {
               <span className="text-lg">{getPlatformEmoji(link.platform)}</span>
 
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium truncate">{link.label}</p>
+                <p className="text-gray-800 text-sm font-medium truncate">{link.label}</p>
                 <p className="text-gray-500 text-xs truncate">{link.url || '—'}</p>
               </div>
 
@@ -228,8 +228,8 @@ function LinksTab({ T }: { T: Record<string, string> }) {
                 onClick={() => handleToggleActive(link)}
                 className={`text-xs px-2 py-1 rounded-full font-medium transition-colors ${
                   link.active
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-white/10 text-gray-500'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
                 }`}
               >
                 {link.active ? T.presite_active : T.presite_inactive}
@@ -237,13 +237,13 @@ function LinksTab({ T }: { T: Record<string, string> }) {
 
               <button
                 onClick={() => openEdit(link)}
-                className="text-gray-400 hover:text-white transition-colors p-1"
+                className="text-gray-400 hover:text-gray-900 transition-colors p-1"
               >
                 <PencilIcon />
               </button>
               <button
                 onClick={() => handleDelete(link.id)}
-                className="text-gray-400 hover:text-red-400 transition-colors p-1"
+                className="text-gray-400 hover:text-red-500 transition-colors p-1"
               >
                 <TrashIcon />
               </button>
@@ -254,23 +254,23 @@ function LinksTab({ T }: { T: Record<string, string> }) {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0d2a45] rounded-2xl p-6 w-full max-w-md border border-white/10">
-            <h2 className="text-white font-bold text-lg mb-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md border border-gray-200 shadow-xl">
+            <h2 className="text-gray-900 font-bold text-lg mb-4">
               {editing ? T.presite_edit_link : T.presite_add_link}
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="text-gray-400 text-xs uppercase tracking-wide block mb-1">
+                <label className="text-gray-600 text-xs uppercase tracking-wide block mb-1">
                   {T.presite_platform}
                 </label>
                 <select
                   value={form.platform}
                   onChange={(e) => setForm({ ...form, platform: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none focus:border-[#C9A84C]"
                 >
                   {PLATFORMS.map((p) => (
-                    <option key={p} value={p} className="bg-[#0A2342]">
+                    <option key={p} value={p}>
                       {getPlatformEmoji(p)} {p.charAt(0).toUpperCase() + p.slice(1)}
                     </option>
                   ))}
@@ -278,26 +278,26 @@ function LinksTab({ T }: { T: Record<string, string> }) {
               </div>
 
               <div>
-                <label className="text-gray-400 text-xs uppercase tracking-wide block mb-1">
+                <label className="text-gray-600 text-xs uppercase tracking-wide block mb-1">
                   {T.presite_label}
                 </label>
                 <input
                   type="text"
                   value={form.label}
                   onChange={(e) => setForm({ ...form, label: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none focus:border-[#C9A84C]"
                 />
               </div>
 
               <div>
-                <label className="text-gray-400 text-xs uppercase tracking-wide block mb-1">
+                <label className="text-gray-600 text-xs uppercase tracking-wide block mb-1">
                   {T.presite_url}
                 </label>
                 <input
                   type="text"
                   value={form.url}
                   onChange={(e) => setForm({ ...form, url: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none focus:border-[#C9A84C]"
                   placeholder={form.platform === 'phone' ? 'tel:+34600000000' : 'https://'}
                 />
                 {form.platform === 'phone' && (
@@ -312,14 +312,14 @@ function LinksTab({ T }: { T: Record<string, string> }) {
                   onChange={(e) => setForm({ ...form, active: e.target.checked })}
                   className="w-4 h-4 accent-[#C9A84C]"
                 />
-                <span className="text-white text-sm">{T.presite_active_check}</span>
+                <span className="text-gray-700 text-sm">{T.presite_active_check}</span>
               </label>
             </div>
 
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 py-2 rounded-lg border border-white/10 text-gray-300 text-sm hover:bg-white/5 transition-colors"
+                className="flex-1 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
               >
                 {T.presite_cancel}
               </button>
@@ -384,7 +384,7 @@ function ContentTab({ T }: { T: Record<string, string> }) {
   };
 
   if (loading || !config) {
-    return <p className="text-gray-400 text-sm">{T.presite_loading}</p>;
+    return <p className="text-gray-500 text-sm">{T.presite_loading}</p>;
   }
 
   const taglineKey = `tagline${taglineLang}` as keyof PresiteConfig;
@@ -395,19 +395,19 @@ function ContentTab({ T }: { T: Record<string, string> }) {
       {ToastEl}
       <div className="space-y-6">
         <div>
-          <label className="text-gray-400 text-xs uppercase tracking-wide block mb-1">
+          <label className="text-gray-600 text-xs uppercase tracking-wide block mb-1">
             {T.presite_page_title}
           </label>
           <input
             type="text"
             value={config.pageTitle}
             onChange={(e) => setConfig({ ...config, pageTitle: e.target.value })}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
+            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none focus:border-[#C9A84C]"
           />
         </div>
 
         <div>
-          <label className="text-gray-400 text-xs uppercase tracking-wide block mb-2">
+          <label className="text-gray-600 text-xs uppercase tracking-wide block mb-2">
             {T.presite_tagline}
           </label>
           <div className="flex gap-1 mb-2">
@@ -418,7 +418,7 @@ function ContentTab({ T }: { T: Record<string, string> }) {
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                   taglineLang === l
                     ? 'bg-[#C9A84C] text-[#0A2342]'
-                    : 'bg-white/5 text-gray-400 hover:text-white'
+                    : 'bg-gray-100 text-gray-600 hover:text-gray-900'
                 }`}
               >
                 {l.toUpperCase()}
@@ -429,22 +429,22 @@ function ContentTab({ T }: { T: Record<string, string> }) {
             type="text"
             value={config[taglineKey] as string}
             onChange={(e) => setConfig({ ...config, [taglineKey]: e.target.value })}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
+            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none focus:border-[#C9A84C]"
           />
         </div>
 
         <div>
-          <label className="text-gray-400 text-xs uppercase tracking-wide block mb-1">
+          <label className="text-gray-600 text-xs uppercase tracking-wide block mb-1">
             {T.presite_bg_style}
           </label>
           <select
             value={config.bgStyle}
             onChange={(e) => setConfig({ ...config, bgStyle: e.target.value })}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
+            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none focus:border-[#C9A84C]"
           >
-            <option value="gradient" className="bg-[#0A2342]">Gradient</option>
-            <option value="solid" className="bg-[#0A2342]">Solid Navy</option>
-            <option value="dark" className="bg-[#0A2342]">Dark</option>
+            <option value="gradient">Gradient</option>
+            <option value="solid">Solid Navy</option>
+            <option value="dark">Dark</option>
           </select>
         </div>
 
@@ -455,18 +455,18 @@ function ContentTab({ T }: { T: Record<string, string> }) {
             onChange={(e) => setConfig({ ...config, showWave: e.target.checked })}
             className="w-4 h-4 accent-[#C9A84C]"
           />
-          <span className="text-white text-sm">{T.presite_show_wave}</span>
+          <span className="text-gray-700 text-sm">{T.presite_show_wave}</span>
         </label>
 
         <div>
-          <label className="text-gray-400 text-xs uppercase tracking-wide block mb-1">
+          <label className="text-gray-600 text-xs uppercase tracking-wide block mb-1">
             {T.presite_footer_text}
           </label>
           <input
             type="text"
             value={config.footerText}
             onChange={(e) => setConfig({ ...config, footerText: e.target.value })}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#C9A84C]"
+            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-sm focus:outline-none focus:border-[#C9A84C]"
           />
         </div>
 
@@ -507,8 +507,8 @@ function StatsTab({ T }: { T: Record<string, string> }) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">{T.presite_total_clicks}</p>
-          <p className="text-[#C9A84C] text-3xl font-bold">{loading ? '—' : (stats?.total ?? 0)}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide">{T.presite_total_clicks}</p>
+          <p className="text-gray-900 text-3xl font-bold">{loading ? '—' : (stats?.total ?? 0)}</p>
         </div>
         <div className="flex gap-1">
           {(['7d', '30d', 'all'] as const).map((r) => (
@@ -518,7 +518,7 @@ function StatsTab({ T }: { T: Record<string, string> }) {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 range === r
                   ? 'bg-[#C9A84C] text-[#0A2342]'
-                  : 'bg-white/5 text-gray-400 hover:text-white'
+                  : 'bg-gray-100 text-gray-600 hover:text-gray-900'
               }`}
             >
               {rangeLabels[r]}
@@ -528,11 +528,11 @@ function StatsTab({ T }: { T: Record<string, string> }) {
       </div>
 
       {loading ? (
-        <p className="text-gray-400 text-sm">{T.presite_loading}</p>
+        <p className="text-gray-500 text-sm">{T.presite_loading}</p>
       ) : !stats ? null : (
         <div className="space-y-4">
           {stats.links.length === 0 && (
-            <p className="text-gray-400 text-sm">{T.presite_none}</p>
+            <p className="text-gray-500 text-sm">{T.presite_none}</p>
           )}
           {stats.links.map((link) => {
             const max = Math.max(...stats.links.map((l) => l.count), 1);
@@ -540,12 +540,12 @@ function StatsTab({ T }: { T: Record<string, string> }) {
             return (
               <div key={link.id}>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-white text-sm">
+                  <span className="text-gray-700 text-sm">
                     {getPlatformEmoji(link.platform)} {link.label}
                   </span>
-                  <span className="text-[#C9A84C] font-bold text-sm">{link.count}</span>
+                  <span className="text-gray-900 font-bold text-sm">{link.count}</span>
                 </div>
-                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[#C9A84C] rounded-full transition-all duration-500"
                     style={{ width: `${pct}%` }}
