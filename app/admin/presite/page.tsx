@@ -484,11 +484,14 @@ function ContentTab({ T }: { T: Record<string, string> }) {
 
 /* ─── Stats Tab ─── */
 type StatItem = { id: number; label: string; platform: string; count: number };
+type QrStats = { today: number; week: number; month: number; total: number; conversionRate: number };
+type Range = 'today' | 'yesterday' | '7d' | '30d' | 'all';
 
 function StatsTab({ T }: { T: Record<string, string> }) {
   const [stats, setStats] = useState<{ links: StatItem[]; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<'7d' | '30d' | 'all'>('7d');
+  const [range, setRange] = useState<Range>('7d');
+  const [qrStats, setQrStats] = useState<QrStats | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -497,7 +500,16 @@ function StatsTab({ T }: { T: Record<string, string> }) {
       .then((d) => { setStats(d); setLoading(false); });
   }, [range]);
 
-  const rangeLabels: Record<typeof range, string> = {
+  useEffect(() => {
+    fetch('/api/admin/presite/qr-stats')
+      .then((r) => r.json())
+      .then((d) => setQrStats(d))
+      .catch(() => {});
+  }, []);
+
+  const rangeLabels: Record<Range, string> = {
+    today: T.presite_today,
+    yesterday: T.presite_yesterday,
     '7d': T.presite_last_7,
     '30d': T.presite_last_30,
     all: T.presite_all_time,
@@ -510,8 +522,8 @@ function StatsTab({ T }: { T: Record<string, string> }) {
           <p className="text-gray-500 text-xs uppercase tracking-wide">{T.presite_total_clicks}</p>
           <p className="text-gray-900 text-3xl font-bold">{loading ? '—' : (stats?.total ?? 0)}</p>
         </div>
-        <div className="flex gap-1">
-          {(['7d', '30d', 'all'] as const).map((r) => (
+        <div className="flex flex-wrap gap-1 justify-end">
+          {(['today', 'yesterday', '7d', '30d', 'all'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
@@ -556,6 +568,39 @@ function StatsTab({ T }: { T: Record<string, string> }) {
           })}
         </div>
       )}
+
+      {/* QR stats section */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <p className="text-gray-800 font-semibold text-sm uppercase tracking-wide mb-4">
+          📷 {T.presite_qr_section}
+        </p>
+        {qrStats ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-gray-500 text-xs mb-1">{T.presite_qr_today}</p>
+              <p className="text-gray-900 text-2xl font-bold">{qrStats.today}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-gray-500 text-xs mb-1">{T.presite_qr_week}</p>
+              <p className="text-gray-900 text-2xl font-bold">{qrStats.week}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-gray-500 text-xs mb-1">{T.presite_qr_month}</p>
+              <p className="text-gray-900 text-2xl font-bold">{qrStats.month}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-gray-500 text-xs mb-1">{T.presite_qr_total}</p>
+              <p className="text-gray-900 text-2xl font-bold">{qrStats.total}</p>
+            </div>
+            <div className="col-span-2 bg-[#0A2342]/5 rounded-xl p-4">
+              <p className="text-gray-500 text-xs mb-1">{T.presite_qr_conversion}</p>
+              <p className="text-[#C9A84C] text-2xl font-bold">{qrStats.conversionRate}%</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">{T.presite_loading}</p>
+        )}
+      </div>
     </div>
   );
 }

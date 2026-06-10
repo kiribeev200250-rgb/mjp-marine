@@ -39,11 +39,12 @@ function getTagline(config: Config | null, lang: Lang): string {
 }
 
 async function recordClick(linkId: number) {
+  const source = typeof window !== 'undefined' ? (localStorage.getItem('mjp_source') || 'direct') : 'direct';
   try {
     await fetch('/api/presite/click', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ linkId }),
+      body: JSON.stringify({ linkId, source }),
     });
   } catch { /* fire and forget */ }
 }
@@ -85,6 +86,17 @@ export default function GoClient({ links, config, siteConfig }: {
   useEffect(() => {
     setLangState(detectLang());
     const t = setTimeout(() => setEntered(true), 80);
+
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref === 'qr') {
+      localStorage.setItem('mjp_source', 'qr');
+      fetch('/api/presite/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linkId: null, source: 'qr' }),
+      }).catch(() => {});
+    }
+
     return () => clearTimeout(t);
   }, []);
 

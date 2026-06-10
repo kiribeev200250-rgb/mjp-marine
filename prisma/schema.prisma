@@ -157,5 +157,12 @@ model PresiteStat {
   id        Int         @id @default(autoincrement())
   linkId    Int
   link      PresiteLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  source    String      @default("direct")
   clickedAt DateTime    @default(now())
+}
+
+model PresiteScan {
+  id        Int      @id @default(autoincrement())
+  source    String   @default("qr")
+  scannedAt DateTime @default(now())
 }

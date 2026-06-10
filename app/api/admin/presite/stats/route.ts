@@ -11,8 +11,16 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const period = searchParams.get('period') || '7d';
 
+  const now = new Date();
   let dateFilter: object = {};
-  if (period === '7d') {
+  if (period === 'today') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    dateFilter = { clickedAt: { gte: start } };
+  } else if (period === 'yesterday') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    dateFilter = { clickedAt: { gte: start, lt: end } };
+  } else if (period === '7d') {
     dateFilter = { clickedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
   } else if (period === '30d') {
     dateFilter = { clickedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
