@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 
     if (!linkId && source === 'qr') {
       await prisma.presiteScan.create({ data: { source: 'qr' } });
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, type: 'qr_scan' });
     }
 
     if (!linkId) return NextResponse.json({ error: 'linkId required' }, { status: 400 });

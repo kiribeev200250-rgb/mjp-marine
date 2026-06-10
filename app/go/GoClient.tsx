@@ -87,14 +87,23 @@ export default function GoClient({ links, config, siteConfig }: {
     setLangState(detectLang());
     const t = setTimeout(() => setEntered(true), 80);
 
-    const ref = new URLSearchParams(window.location.search).get('ref');
-    if (ref === 'qr') {
-      localStorage.setItem('mjp_source', 'qr');
-      fetch('/api/presite/click', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linkId: null, source: 'qr' }),
-      }).catch(() => {});
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref');
+      console.log('Presite ref param:', ref);
+      if (ref === 'qr') {
+        localStorage.setItem('mjp_source', 'qr');
+        fetch('/api/presite/click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: 'qr', linkId: null }),
+        })
+          .then(r => r.json())
+          .then(d => console.log('QR scan recorded:', d))
+          .catch(e => console.error('QR scan error:', e));
+      }
+    } catch (e) {
+      console.error('QR tracking error:', e);
     }
 
     return () => clearTimeout(t);

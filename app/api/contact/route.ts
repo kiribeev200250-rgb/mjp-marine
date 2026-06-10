@@ -15,7 +15,9 @@ export async function POST(req: NextRequest) {
       data: { name, phone, email: email || null, marina: marina || null, boatType: boatType || null, service: service || null, message: message || null },
     });
 
-    await sendContactEmail({ name, phone, email, marina, boatType, service, message }).catch(() => {});
+    await sendContactEmail({ name, phone, email, marina, boatType, service, message }).catch((err) => {
+      console.error('sendContactEmail error:', err);
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

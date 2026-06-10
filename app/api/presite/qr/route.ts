@@ -9,8 +9,8 @@ const QR_OPTIONS = {
 
 export async function GET(req: NextRequest) {
   const format = req.nextUrl.searchParams.get('format') ?? 'png';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mjpmarine.com';
-  const qrUrl = `${siteUrl}/go?ref=qr`;
+  const qrUrl = 'https://mjpmarine.com/go?ref=qr';
+  console.log('QR URL:', qrUrl);
 
   if (format === 'svg') {
     const svg = await QRCode.toString(qrUrl, { ...QR_OPTIONS, type: 'svg' });

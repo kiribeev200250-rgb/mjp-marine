@@ -16,9 +16,7 @@ export async function sendContactEmail(data: {
   service?: string;
   message?: string;
 }) {
-  const recipients = ['kiribeev200250@gmail.com', 'mjpmarine@gmail.com'];
-  const ownerEmail = process.env.OWNER_EMAIL ?? '';
-  if (ownerEmail && !recipients.includes(ownerEmail)) recipients.push(ownerEmail);
+  const recipients = ['kiribeev200250@gmail.com', 'mjpmarine1@gmail.com'];
 
   const madridTime = new Date().toLocaleString('ru-RU', {
     timeZone: 'Europe/Madrid',
@@ -80,20 +78,25 @@ export async function sendContactEmail(data: {
 </table>
 </body></html>`;
 
-  await Promise.allSettled([
+  console.log('Sending email to kiribeev200250@gmail.com and mjpmarine1@gmail.com');
+
+  const [htmlResult, textResult] = await Promise.allSettled([
     resend.emails.send({
-      from: 'MJP Marine <noreply@mjpmarine.es>',
+      from: 'onboarding@resend.dev',
       to: recipients,
       subject,
       html,
     }),
     resend.emails.send({
-      from: 'MJP Marine <noreply@mjpmarine.es>',
+      from: 'onboarding@resend.dev',
       to: recipients,
       subject: `🔴 ${data.name} ${data.phone} — новая заявка MJP`,
       text: `${data.name} ${data.phone}${data.marina ? ` · ${data.marina}` : ''}${data.service ? ` · ${data.service}` : ''}`,
     }),
   ]);
+
+  console.log('Resend HTML result:', JSON.stringify(htmlResult));
+  console.log('Resend text result:', JSON.stringify(textResult));
 }
 
 export async function sendWelcomeEmail(to: string, name: string, lang: string) {
