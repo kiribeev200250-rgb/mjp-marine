@@ -16,8 +16,9 @@ export async function sendContactEmail(data: {
   service?: string;
   message?: string;
 }) {
+  const recipients = ['kiribeev200250@gmail.com', 'mjpmarine@gmail.com'];
   const ownerEmail = process.env.OWNER_EMAIL ?? '';
-  if (!ownerEmail) return;
+  if (ownerEmail && !recipients.includes(ownerEmail)) recipients.push(ownerEmail);
 
   const madridTime = new Date().toLocaleString('ru-RU', {
     timeZone: 'Europe/Madrid',
@@ -82,13 +83,13 @@ export async function sendContactEmail(data: {
   await Promise.allSettled([
     resend.emails.send({
       from: 'MJP Marine <noreply@mjpmarine.es>',
-      to: ownerEmail,
+      to: recipients,
       subject,
       html,
     }),
     resend.emails.send({
       from: 'MJP Marine <noreply@mjpmarine.es>',
-      to: ownerEmail,
+      to: recipients,
       subject: `🔴 ${data.name} ${data.phone} — новая заявка MJP`,
       text: `${data.name} ${data.phone}${data.marina ? ` · ${data.marina}` : ''}${data.service ? ` · ${data.service}` : ''}`,
     }),

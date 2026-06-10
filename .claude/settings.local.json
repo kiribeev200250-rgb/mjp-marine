@@ -1,5 +1,6 @@
 {
   "permissions": {
+
     "allow": [
       "Bash(npx ts-node *)",
       "Bash(mkdir -p /Users/anastasiakurac/Desktop/sayt/app/api/admin/contacts/\\\\[id\\\\])",
