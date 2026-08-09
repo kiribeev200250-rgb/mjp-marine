@@ -91,16 +91,20 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   return (
     <main style={{ minHeight: '100vh', background: '#f5f6f8', padding: '32px 16px' }}>
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
-        <div style={{ background: '#0A2342', borderRadius: 10, padding: '24px 28px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 14, marginBottom: 20 }}>
           {logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={companyName} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }} />
+            <div style={{ width: 76, background: '#fff', border: '1px solid #D6DCE5', borderRadius: 8, padding: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoUrl} alt={companyName} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            </div>
           )}
-          <div>
-            <p style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>{companyName}</p>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: '4px 0 0' }}>
-              {t.quote} #{quote.number}
-            </p>
+          <div style={{ flex: 1, background: '#0A2342', borderRadius: 10, padding: '24px 28px', display: 'flex', alignItems: 'center' }}>
+            <div>
+              <p style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>{companyName}</p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: '4px 0 0' }}>
+                {t.quote} #{quote.number}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -144,8 +148,8 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700, borderRight: '1px solid #D6DCE5' }}>{job.title}</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{job.laborHours?.toString() ?? '—'}</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</td>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>—</td>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>—</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{job.quantity?.toString() ?? '—'}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{job.unitPrice ? fmtMoney(job.unitPrice) : '—'}</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', fontWeight: 700 }}>{fmtMoney(job.laborCost)}</td>
                   </tr>
                   {job.materials.map((m, mi) => (

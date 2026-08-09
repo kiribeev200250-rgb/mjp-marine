@@ -14,6 +14,8 @@ export interface JobInput {
   title: string
   laborHours?: string | number | null
   laborRate?: string | number | null
+  quantity?: string | number | null
+  unitPrice?: string | number | null
   laborCost: string | number
   materials?: JobMaterialInput[]
 }
@@ -30,6 +32,8 @@ export interface ParsedJob {
   title: string
   laborHours: Decimal | null
   laborRate: Decimal | null
+  quantity: Decimal | null
+  unitPrice: Decimal | null
   laborCost: Decimal
   materials: ParsedMaterial[]
 }
@@ -47,10 +51,19 @@ export function parseJobsInput(jobs: JobInput[]): { jobs: ParsedJob[]; jobsTotal
     if (laborHours && laborHours.lt(0)) throw new Error('Часы не могут быть отрицательными')
     if (laborRate && laborRate.lt(0)) throw new Error('Норма часа не может быть отрицательной')
 
-    // Часы × ставка — если задано и то, и другое, считаем сами (не доверяем клиентскому расчёту).
-    // Иначе — фиксированная сумма за работу, введённая вручную.
+    const quantity  = j.quantity  != null && j.quantity  !== '' ? new Decimal(j.quantity)  : null
+    const unitPrice = j.unitPrice != null && j.unitPrice !== '' ? new Decimal(j.unitPrice) : null
+    if (quantity && quantity.lte(0)) throw new Error('Количество должно быть больше нуля')
+    if (unitPrice && unitPrice.lt(0)) throw new Error('Цена за ед. не может быть отрицательной')
+
+    // Три режима стоимости работы, в порядке приоритета (сервер считает сам,
+    // не доверяя клиентскому расчёту): часы × норма; количество × цена за ед.
+    // (напр. «свечи зажигания» 8 шт, «обслуживание сейлдрайвов» 2 шт);
+    // иначе — фиксированная сумма, введённая вручную.
     const laborCost = laborHours != null && laborRate != null
       ? laborHours.times(laborRate)
+      : quantity != null && unitPrice != null
+      ? quantity.times(unitPrice)
       : new Decimal(j.laborCost || 0)
     if (laborCost.lt(0)) throw new Error('Стоимость работы не может быть отрицательной')
 
@@ -73,6 +86,8 @@ export function parseJobsInput(jobs: JobInput[]): { jobs: ParsedJob[]; jobsTotal
       title: j.title.trim(),
       laborHours,
       laborRate,
+      quantity,
+      unitPrice,
       laborCost,
       materials,
     }
@@ -94,6 +109,8 @@ export function jobsToCreateInput(jobs: ParsedJob[]) {
     title: j.title,
     laborHours: j.laborHours,
     laborRate: j.laborRate,
+    quantity: j.quantity,
+    unitPrice: j.unitPrice,
     laborCost: j.laborCost,
     materials: {
       create: j.materials.map((m, mi) => ({

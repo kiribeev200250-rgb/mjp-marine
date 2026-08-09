@@ -18,9 +18,10 @@ const GRID = '#D6DCE5'
 
 const styles = StyleSheet.create({
   page:      { fontFamily: 'Roboto', fontSize: 9.5, padding: 36, color: '#1a1a2e' },
-  header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22, backgroundColor: NAVY, padding: 18, borderRadius: 6 },
-  headerLeft:  { flexDirection: 'row', alignItems: 'center' },
-  logo:        { width: 40, height: 40, marginRight: 12, borderRadius: 4 },
+  headerRow: { flexDirection: 'row', alignItems: 'stretch', marginBottom: 22 },
+  logoBox:   { width: 76, height: 76, backgroundColor: '#fff', borderWidth: 1, borderColor: GRID, borderRadius: 6, padding: 9, marginRight: 14, alignItems: 'center', justifyContent: 'center' },
+  logo:        { width: '100%', height: '100%', objectFit: 'contain' },
+  headerBar:   { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: NAVY, padding: 18, borderRadius: 6 },
   companyName: { color: '#fff', fontSize: 15, fontWeight: 700 },
   companySub:  { color: 'rgba(255,255,255,0.65)', fontSize: 8.5, marginTop: 2 },
   docBadge:    { color: GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 1 },
@@ -145,6 +146,8 @@ export interface PdfJob {
   title:      string
   laborHours?: string | null
   laborRate?:  string | null
+  quantity?:  string | null
+  unitPrice?: string | null
   laborCost:  string
   materials:  PdfMaterial[]
 }
@@ -194,9 +197,13 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {data.company.logoUrl ? <Image style={styles.logo} src={data.company.logoUrl} /> : null}
+        <View style={styles.headerRow}>
+          {data.company.logoUrl ? (
+            <View style={styles.logoBox}>
+              <Image style={styles.logo} src={data.company.logoUrl} />
+            </View>
+          ) : null}
+          <View style={styles.headerBar}>
             <View>
               <Text style={styles.companyName}>{data.company.legalName}</Text>
               <Text style={styles.companySub}>
@@ -205,10 +212,10 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
               </Text>
               <Text style={styles.companySub}>NIF: {data.company.nif}</Text>
             </View>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.docBadge}>{data.kind === 'invoice' ? t.invoice : t.quote}</Text>
-            <Text style={styles.docNumber}>#{data.number}</Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.docBadge}>{data.kind === 'invoice' ? t.invoice : t.quote}</Text>
+              <Text style={styles.docNumber}>#{data.number}</Text>
+            </View>
           </View>
         </View>
 
@@ -254,8 +261,8 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
                 <Text style={[styles.jobCell, styles.colDesc]}>{job.title}</Text>
                 <Text style={[styles.jobCell, styles.colHours]}>{job.laborHours ?? '—'}</Text>
                 <Text style={[styles.jobCell, styles.colRate]}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</Text>
-                <Text style={[styles.jobCell, styles.colQty]}>—</Text>
-                <Text style={[styles.jobCell, styles.colPrice]}>—</Text>
+                <Text style={[styles.jobCell, styles.colQty]}>{job.quantity ?? '—'}</Text>
+                <Text style={[styles.jobCell, styles.colPrice]}>{job.unitPrice ? fmtMoney(job.unitPrice) : '—'}</Text>
                 <Text style={[styles.jobCell, styles.colTotal]}>{fmtMoney(job.laborCost)}</Text>
               </View>
               {job.materials.map((mat, mi) => (

@@ -31,9 +31,11 @@ interface MaterialLine {
 
 interface JobLine {
   title: string
-  mode: 'fixed' | 'hours'
+  mode: 'fixed' | 'hours' | 'qty'
   laborHours: string
   laborRate: string
+  quantity: string
+  unitPrice: string
   laborCost: string
   materials: MaterialLine[]
 }
@@ -51,7 +53,7 @@ interface Props {
 }
 
 const EMPTY_MATERIAL: MaterialLine = { name: '', quantity: '1', unitPrice: '' }
-const EMPTY_JOB: JobLine = { title: '', mode: 'fixed', laborHours: '', laborRate: '', laborCost: '', materials: [] }
+const EMPTY_JOB: JobLine = { title: '', mode: 'fixed', laborHours: '', laborRate: '', quantity: '', unitPrice: '', laborCost: '', materials: [] }
 
 export function DocumentBuilder({
   kind, clients, inventoryItems, defaultIvaRate, defaultIrpfRate,
@@ -123,6 +125,8 @@ export function DocumentBuilder({
       const materialsSum = matRows.reduce((s, m) => s.plus(m.total), new Decimal(0))
       const laborCostDec = j.mode === 'hours'
         ? new Decimal(j.laborHours || 0).times(new Decimal(j.laborRate || 0))
+        : j.mode === 'qty'
+        ? new Decimal(j.quantity || 0).times(new Decimal(j.unitPrice || 0))
         : new Decimal(j.laborCost || 0)
       return { ...j, materials: matRows, laborCostDec, materialsSum }
     })
@@ -147,6 +151,8 @@ export function DocumentBuilder({
         title: j.title.trim(),
         laborHours: j.mode === 'hours' ? (j.laborHours || '0') : undefined,
         laborRate:  j.mode === 'hours' ? (j.laborRate  || '0') : undefined,
+        quantity:   j.mode === 'qty'   ? (j.quantity   || '0') : undefined,
+        unitPrice:  j.mode === 'qty'   ? (j.unitPrice  || '0') : undefined,
         laborCost:  j.mode === 'fixed' ? (j.laborCost  || '0') : '0',
         materials: j.materials
           .filter((m) => m.name.trim() && Number(m.unitPrice) >= 0 && Number(m.quantity) > 0)
@@ -267,6 +273,15 @@ export function DocumentBuilder({
                   >
                     Часы × ставка
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => updateJob(ji, { mode: 'qty' })}
+                    className={`px-2.5 py-1.5 text-label font-medium transition ${
+                      job.mode === 'qty' ? 'bg-navy text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    Кол-во × цена
+                  </button>
                 </div>
 
                 {job.mode === 'fixed' ? (
@@ -277,7 +292,7 @@ export function DocumentBuilder({
                     value={job.laborCost}
                     onChange={(e) => updateJob(ji, { laborCost: e.target.value })}
                   />
-                ) : (
+                ) : job.mode === 'hours' ? (
                   <>
                     <input
                       type="number" min="0" step="0.5"
@@ -293,6 +308,28 @@ export function DocumentBuilder({
                       placeholder="€/час"
                       value={job.laborRate}
                       onChange={(e) => updateJob(ji, { laborRate: e.target.value })}
+                    />
+                    <span className="text-gray-300 text-label">=</span>
+                    <span className="text-body font-semibold text-gray-900 tabular-nums">
+                      {formatMoney(computed.jobRows[ji]?.laborCostDec ?? 0)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="number" min="0" step="1"
+                      className="w-16 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                      placeholder="Кол-во"
+                      value={job.quantity}
+                      onChange={(e) => updateJob(ji, { quantity: e.target.value })}
+                    />
+                    <span className="text-gray-300 text-label">×</span>
+                    <input
+                      type="number" min="0" step="0.01"
+                      className="w-20 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                      placeholder="Цена, €"
+                      value={job.unitPrice}
+                      onChange={(e) => updateJob(ji, { unitPrice: e.target.value })}
                     />
                     <span className="text-gray-300 text-label">=</span>
                     <span className="text-body font-semibold text-gray-900 tabular-nums">
@@ -417,8 +454,10 @@ export function DocumentBuilder({
         <div className="p-5 border-b border-white/10 flex items-start justify-between">
           <div className="flex items-center gap-3">
             {companyLogoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={companyLogoUrl} alt={companyName} className="w-9 h-9 rounded object-cover" />
+              <div className="w-14 h-14 rounded-lg bg-white border border-white/20 shrink-0 flex items-center justify-center overflow-hidden p-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={companyLogoUrl} alt={companyName} className="max-w-full max-h-full object-contain" />
+              </div>
             )}
             <div>
               <p className="text-white font-bold text-subheading">{companyName}</p>
@@ -462,10 +501,10 @@ export function DocumentBuilder({
                 <div className="flex items-center py-1.5 border-b border-white/10 border-l-2 border-l-gold text-[11px] bg-white/[0.03] gap-0.5">
                   <span className="w-5 pl-1.5 text-gold font-semibold tabular-nums border-r border-white/10">{ji + 1}</span>
                   <span className="flex-1 pl-1 text-white font-semibold truncate pr-1 border-r border-white/10">{j.title}</span>
-                  <span className="w-8 text-right text-white/70 tabular-nums border-r border-white/10">{j.mode === 'hours' ? (j.laborHours || '0') : '—'}</span>
-                  <span className="w-10 text-right text-white/70 tabular-nums border-r border-white/10">{j.mode === 'hours' ? formatMoney(j.laborRate || 0) : '—'}</span>
-                  <span className="w-8 text-right text-white/25 tabular-nums border-r border-white/10">—</span>
-                  <span className="w-10 text-right text-white/25 tabular-nums border-r border-white/10">—</span>
+                  <span className={`w-8 text-right tabular-nums border-r border-white/10 ${j.mode === 'hours' ? 'text-white/70' : 'text-white/25'}`}>{j.mode === 'hours' ? (j.laborHours || '0') : '—'}</span>
+                  <span className={`w-10 text-right tabular-nums border-r border-white/10 ${j.mode === 'hours' ? 'text-white/70' : 'text-white/25'}`}>{j.mode === 'hours' ? formatMoney(j.laborRate || 0) : '—'}</span>
+                  <span className={`w-8 text-right tabular-nums border-r border-white/10 ${j.mode === 'qty' ? 'text-white/70' : 'text-white/25'}`}>{j.mode === 'qty' ? (j.quantity || '0') : '—'}</span>
+                  <span className={`w-10 text-right tabular-nums border-r border-white/10 ${j.mode === 'qty' ? 'text-white/70' : 'text-white/25'}`}>{j.mode === 'qty' ? formatMoney(j.unitPrice || 0) : '—'}</span>
                   <span className="w-14 text-right text-white font-semibold tabular-nums pr-2">{formatMoney(j.laborCostDec)}</span>
                 </div>
                 {j.materials.filter((m) => m.name.trim()).map((m, mi) => (

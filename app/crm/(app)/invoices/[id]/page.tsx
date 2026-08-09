@@ -38,7 +38,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <h1 className="text-heading font-bold text-gray-900 font-mono">{invoice.number}</h1>
           <Badge tone={INVOICE_TONE[invoice.status] ?? 'neutral'}>{INVOICE_STATUS_LABELS[invoice.status] ?? invoice.status}</Badge>
         </div>
-        <InvoiceActions id={invoice.id} status={invoice.status} hasEmail={!!invoice.client.email} />
+        <InvoiceActions id={invoice.id} status={invoice.status} hasEmail={!!invoice.client.email} isAdmin={session.user.role === 'ADMIN'} />
       </div>
 
       <div className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -107,8 +107,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                       <td className="px-2 py-2.5 text-body text-navy-900 font-bold border-r border-r-gray-200">{job.title}</td>
                       <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums border-r border-r-gray-200">{job.laborHours?.toString() ?? '—'}</td>
                       <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums border-r border-r-gray-200">{job.laborRate ? formatMoney(job.laborRate) : '—'}</td>
-                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
-                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
+                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums border-r border-r-gray-200">{job.quantity?.toString() ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums border-r border-r-gray-200">{job.unitPrice ? formatMoney(job.unitPrice) : '—'}</td>
                       <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums font-bold">{formatMoney(job.laborCost)}</td>
                     </tr>
                     {job.materials.map((m, mi) => (

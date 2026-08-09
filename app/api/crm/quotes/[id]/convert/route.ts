@@ -52,6 +52,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               title:      job.title,
               laborHours: job.laborHours,
               laborRate:  job.laborRate,
+              quantity:   job.quantity,
+              unitPrice:  job.unitPrice,
               laborCost:  job.laborCost,
               materials: {
                 create: job.materials.map((m) => ({

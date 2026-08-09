@@ -9,9 +9,10 @@ interface Props {
   id:          string
   status:      InvoiceStatus
   hasEmail:    boolean
+  isAdmin:     boolean
 }
 
-export function InvoiceActions({ id, status, hasEmail }: Props) {
+export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +49,16 @@ export function InvoiceActions({ id, status, hasEmail }: Props) {
     router.refresh()
   }
 
+  async function handlePurge() {
+    if (!confirm('Удалить счёт безвозвратно? Это нельзя отменить, и номер останется дырой в сквозной нумерации — для налоговой лучше «Отменить счёт», а не удалять.')) return
+    setBusy('purge'); setError(null)
+    const res = await fetch(`/api/crm/invoices/${id}/purge`, { method: 'DELETE' })
+    setBusy(null)
+    if (!res.ok) { setError((await res.json().catch(() => ({}))).error ?? 'Ошибка'); return }
+    router.push('/crm/invoices')
+    router.refresh()
+  }
+
   const isFinal = status === 'PAID' || status === 'CANCELLED'
 
   return (
@@ -74,6 +85,11 @@ export function InvoiceActions({ id, status, hasEmail }: Props) {
         {!isFinal && (
           <Button variant="danger" size="sm" loading={busy === 'cancel'} onClick={handleCancel}>
             Отменить счёт
+          </Button>
+        )}
+        {isAdmin && status !== 'PAID' && (
+          <Button variant="danger" size="sm" loading={busy === 'purge'} onClick={handlePurge}>
+            🗑 Удалить безвозвратно
           </Button>
         )}
       </div>

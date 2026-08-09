@@ -33,6 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       title:      j.title,
       laborHours: j.laborHours?.toString() ?? null,
       laborRate:  j.laborRate?.toString() ?? null,
+      quantity:   j.quantity?.toString() ?? null,
+      unitPrice:  j.unitPrice?.toString() ?? null,
       laborCost:  j.laborCost.toString(),
       materials: j.materials.map((m) => ({
         name:      m.name,
