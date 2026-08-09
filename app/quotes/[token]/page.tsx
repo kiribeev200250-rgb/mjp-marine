@@ -90,7 +90,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
 
   return (
     <main style={{ minHeight: '100vh', background: '#f5f6f8', padding: '32px 16px' }}>
-      <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto' }}>
         <div style={{ background: '#0A2342', borderRadius: 10, padding: '24px 28px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
           {logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -124,38 +124,38 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
             </div>
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16, border: '1px solid #D6DCE5', borderRadius: 6, overflow: 'hidden' }}>
             <thead>
-              <tr style={{ background: '#f5f6f8' }}>
-                <th style={{ textAlign: 'left', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px', width: 32 }}>№</th>
-                <th style={{ textAlign: 'left', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.description}</th>
-                <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.hours}</th>
-                <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.rate}</th>
-                <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.qty}</th>
-                <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.price}</th>
-                <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.total}</th>
+              <tr style={{ background: '#EEF1F5', borderBottom: '2px solid #0A2342' }}>
+                <th style={{ textAlign: 'left', fontSize: 10, color: '#0A2342', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, padding: '8px 6px', width: 32, borderRight: '1px solid #D6DCE5' }}>№</th>
+                <th style={{ textAlign: 'left', fontSize: 10, color: '#0A2342', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, padding: '8px 6px', borderRight: '1px solid #D6DCE5' }}>{t.description}</th>
+                <th style={{ textAlign: 'right', fontSize: 10, color: '#0A2342', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, padding: '8px 6px', borderRight: '1px solid #D6DCE5' }}>{t.hours}</th>
+                <th style={{ textAlign: 'right', fontSize: 10, color: '#0A2342', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, padding: '8px 6px', borderRight: '1px solid #D6DCE5' }}>{t.rate}</th>
+                <th style={{ textAlign: 'right', fontSize: 10, color: '#0A2342', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, padding: '8px 6px', borderRight: '1px solid #D6DCE5' }}>{t.qty}</th>
+                <th style={{ textAlign: 'right', fontSize: 10, color: '#0A2342', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, padding: '8px 6px', borderRight: '1px solid #D6DCE5' }}>{t.price}</th>
+                <th style={{ textAlign: 'right', fontSize: 10, color: '#0A2342', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, padding: '8px 6px' }}>{t.total}</th>
               </tr>
             </thead>
             <tbody>
               {quote.jobs.map((job, ji) => (
                 <Fragment key={job.id}>
-                  <tr style={{ borderBottom: '1px solid #eef0f3', background: '#eef2f7' }}>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700 }}>{ji + 1}</td>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700 }}>{job.title}</td>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right' }}>{job.laborHours?.toString() ?? '—'}</td>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right' }}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</td>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
-                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
+                  <tr style={{ borderBottom: '1px solid #D6DCE5', background: '#fff' }}>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700, borderRight: '1px solid #D6DCE5', borderLeft: '3px solid #C9A84C' }}>{ji + 1}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700, borderRight: '1px solid #D6DCE5' }}>{job.title}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{job.laborHours?.toString() ?? '—'}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>—</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>—</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', fontWeight: 700 }}>{fmtMoney(job.laborCost)}</td>
                   </tr>
                   {job.materials.map((m, mi) => (
-                    <tr key={m.id} style={{ borderBottom: '1px solid #eef0f3' }}>
-                      <td style={{ padding: '6px 6px', fontSize: 12, color: '#8892a6' }}>{ji + 1}.{mi + 1}</td>
-                      <td style={{ padding: '6px 6px 6px 20px', fontSize: 14, color: '#1a1a2e' }}>{m.name}</td>
-                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
-                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
-                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{m.quantity.toString()}</td>
-                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{fmtMoney(m.unitPrice)}</td>
+                    <tr key={m.id} style={{ borderBottom: '1px solid #D6DCE5', background: '#FAFBFC' }}>
+                      <td style={{ padding: '6px 6px', fontSize: 12, color: '#8892a6', borderRight: '1px solid #D6DCE5', borderLeft: '3px solid transparent' }}>{ji + 1}.{mi + 1}</td>
+                      <td style={{ padding: '6px 6px 6px 20px', fontSize: 14, color: '#1a1a2e', borderRight: '1px solid #D6DCE5' }}>{m.name}</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>—</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>—</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{m.quantity.toString()}</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right', borderRight: '1px solid #D6DCE5' }}>{fmtMoney(m.unitPrice)}</td>
                       <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right', fontWeight: 600 }}>{fmtMoney(m.total)}</td>
                     </tr>
                   ))}
@@ -164,25 +164,25 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
             </tbody>
           </table>
 
-          <div style={{ marginLeft: 'auto', width: 240 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '3px 0' }}>
+          <div style={{ marginLeft: 'auto', width: 260, border: '1px solid #D6DCE5', borderRadius: 6, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 10px', borderBottom: '1px solid #D6DCE5' }}>
               <span style={{ color: '#4a5568' }}>{t.jobsTotal}</span>
               <span style={{ color: '#1a1a2e' }}>{fmtMoney(quote.jobsTotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '3px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 10px', borderBottom: '1px solid #D6DCE5' }}>
               <span style={{ color: '#4a5568' }}>{t.materialsTotal}</span>
               <span style={{ color: '#1a1a2e' }}>{fmtMoney(quote.materialsTotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '3px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 10px', borderBottom: '1px solid #D6DCE5' }}>
               <span style={{ color: '#4a5568' }}>{t.subtotal}</span>
               <span style={{ color: '#1a1a2e' }}>{fmtMoney(quote.subtotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '3px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 10px', borderBottom: '1px solid #D6DCE5' }}>
               <span style={{ color: '#4a5568' }}>{t.iva} ({quote.ivaRate.toString()}%)</span>
               <span style={{ color: '#1a1a2e' }}>{fmtMoney(quote.ivaAmount)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700, padding: '10px 0 0', marginTop: 6, borderTop: '2px solid #0A2342', color: '#0A2342' }}>
-              <span>{t.grandTotal}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 18, fontWeight: 700, padding: '12px 10px', background: '#0A2342', borderTop: '2px solid #C9A84C', color: '#C9A84C' }}>
+              <span style={{ color: '#fff', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.grandTotal}</span>
               <span>{fmtMoney(quote.total)}</span>
             </div>
           </div>

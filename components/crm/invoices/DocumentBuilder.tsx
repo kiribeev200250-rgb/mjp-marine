@@ -445,69 +445,69 @@ export function DocumentBuilder({
             </div>
           </div>
 
-          <div>
-            <div className="flex text-white/40 text-[9px] uppercase tracking-wide pb-1.5 border-b border-white/10 gap-0.5">
-              <span className="w-5">№</span>
-              <span className="flex-1">Description</span>
-              <span className="w-8 text-right">Hrs</span>
-              <span className="w-10 text-right">Rate</span>
-              <span className="w-8 text-right">Qty</span>
-              <span className="w-10 text-right">Price</span>
-              <span className="w-14 text-right">Total</span>
+          <div className="border border-white/10 rounded-control overflow-hidden">
+            <div className="flex text-white/50 text-[9px] uppercase tracking-wide py-1.5 bg-white/5 border-b-2 border-b-gold/60 gap-0.5">
+              <span className="w-5 pl-2 border-r border-white/10">№</span>
+              <span className="flex-1 pl-1 border-r border-white/10">Description</span>
+              <span className="w-8 text-right border-r border-white/10">Hrs</span>
+              <span className="w-10 text-right border-r border-white/10">Rate</span>
+              <span className="w-8 text-right border-r border-white/10">Qty</span>
+              <span className="w-10 text-right border-r border-white/10">Price</span>
+              <span className="w-14 text-right pr-2">Total</span>
             </div>
             {computed.jobRows.filter((j) => j.title.trim()).length === 0 ? (
               <p className="text-white/30 text-label py-4 text-center">Нет позиций</p>
             ) : computed.jobRows.filter((j) => j.title.trim()).map((j, ji) => (
               <div key={ji}>
-                <div className="flex items-center py-1.5 border-b border-white/5 text-[11px] bg-white/5 gap-0.5">
-                  <span className="w-5 text-gold font-semibold tabular-nums">{ji + 1}</span>
-                  <span className="flex-1 text-white font-semibold truncate pr-1">{j.title}</span>
-                  <span className="w-8 text-right text-white/70 tabular-nums">{j.mode === 'hours' ? (j.laborHours || '0') : '—'}</span>
-                  <span className="w-10 text-right text-white/70 tabular-nums">{j.mode === 'hours' ? formatMoney(j.laborRate || 0) : '—'}</span>
-                  <span className="w-8 text-right text-white/30 tabular-nums">—</span>
-                  <span className="w-10 text-right text-white/30 tabular-nums">—</span>
-                  <span className="w-14 text-right text-white font-semibold tabular-nums">{formatMoney(j.laborCostDec)}</span>
+                <div className="flex items-center py-1.5 border-b border-white/10 border-l-2 border-l-gold text-[11px] bg-white/[0.03] gap-0.5">
+                  <span className="w-5 pl-1.5 text-gold font-semibold tabular-nums border-r border-white/10">{ji + 1}</span>
+                  <span className="flex-1 pl-1 text-white font-semibold truncate pr-1 border-r border-white/10">{j.title}</span>
+                  <span className="w-8 text-right text-white/70 tabular-nums border-r border-white/10">{j.mode === 'hours' ? (j.laborHours || '0') : '—'}</span>
+                  <span className="w-10 text-right text-white/70 tabular-nums border-r border-white/10">{j.mode === 'hours' ? formatMoney(j.laborRate || 0) : '—'}</span>
+                  <span className="w-8 text-right text-white/25 tabular-nums border-r border-white/10">—</span>
+                  <span className="w-10 text-right text-white/25 tabular-nums border-r border-white/10">—</span>
+                  <span className="w-14 text-right text-white font-semibold tabular-nums pr-2">{formatMoney(j.laborCostDec)}</span>
                 </div>
                 {j.materials.filter((m) => m.name.trim()).map((m, mi) => (
-                  <div key={mi} className="flex items-center py-1.5 border-b border-white/5 text-[11px] pl-5 gap-0.5">
-                    <span className="w-8 text-white/40 text-[9px] tabular-nums shrink-0">{ji + 1}.{mi + 1}</span>
-                    <span className="flex-1 text-white/80 truncate pr-1">{m.name}</span>
-                    <span className="w-8 text-right text-white/30 tabular-nums">—</span>
-                    <span className="w-10 text-right text-white/30 tabular-nums">—</span>
-                    <span className="w-8 text-right text-white/70 tabular-nums">{m.quantity}</span>
-                    <span className="w-10 text-right text-white/70 tabular-nums">{formatMoney(m.unitPrice || 0)}</span>
-                    <span className="w-14 text-right text-white/90 tabular-nums">{formatMoney(m.total)}</span>
+                  <div key={mi} className="flex items-center py-1.5 border-b border-white/10 border-l-2 border-l-transparent text-[11px] gap-0.5">
+                    <span className="w-5 pl-1.5 text-white/40 text-[9px] tabular-nums shrink-0 border-r border-white/10">·</span>
+                    <span className="flex-1 pl-4 text-white/80 truncate pr-1 border-r border-white/10">{m.name}</span>
+                    <span className="w-8 text-right text-white/25 tabular-nums border-r border-white/10">—</span>
+                    <span className="w-10 text-right text-white/25 tabular-nums border-r border-white/10">—</span>
+                    <span className="w-8 text-right text-white/70 tabular-nums border-r border-white/10">{m.quantity}</span>
+                    <span className="w-10 text-right text-white/70 tabular-nums border-r border-white/10">{formatMoney(m.unitPrice || 0)}</span>
+                    <span className="w-14 text-right text-white/90 tabular-nums pr-2">{formatMoney(m.total)}</span>
                   </div>
                 ))}
               </div>
             ))}
           </div>
 
-          <div className="pt-2 space-y-1.5">
-            <div className="flex justify-between text-body">
+          <div className="border border-white/10 rounded-control overflow-hidden">
+            <div className="flex justify-between text-body px-3 py-1.5 border-b border-white/10">
               <span className="text-white/50">Итого работа</span>
               <span className="text-white tabular-nums">{formatMoney(computed.jobsTotal)}</span>
             </div>
-            <div className="flex justify-between text-body">
+            <div className="flex justify-between text-body px-3 py-1.5 border-b border-white/10">
               <span className="text-white/50">Итого материалы</span>
               <span className="text-white tabular-nums">{formatMoney(computed.materialsTotal)}</span>
             </div>
-            <div className="flex justify-between text-body">
+            <div className="flex justify-between text-body px-3 py-1.5 border-b border-white/10">
               <span className="text-white/50">Subtotal</span>
               <span className="text-white tabular-nums">{formatMoney(computed.subtotal)}</span>
             </div>
-            <div className="flex justify-between text-body">
+            <div className="flex justify-between text-body px-3 py-1.5 border-b border-white/10">
               <span className="text-white/50">IVA ({ivaRate || 0}%)</span>
               <span className="text-white tabular-nums">{formatMoney(computed.ivaAmount)}</span>
             </div>
             {isInvoice && new Decimal(irpfRate || 0).gt(0) && (
-              <div className="flex justify-between text-body">
+              <div className="flex justify-between text-body px-3 py-1.5 border-b border-white/10">
                 <span className="text-white/50">IRPF ({irpfRate}%)</span>
                 <span className="text-white tabular-nums">−{formatMoney(computed.irpfAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between pt-2 mt-1 border-t border-white/15">
-              <span className="text-gold font-bold text-subheading">Total</span>
+            <div className="flex justify-between items-center px-3 py-2.5 bg-white/5 border-t-2 border-t-gold">
+              <span className="text-gold font-bold text-label uppercase tracking-wide">Total</span>
               <span className="text-gold font-bold text-subheading tabular-nums">{formatMoney(computed.total)}</span>
             </div>
           </div>

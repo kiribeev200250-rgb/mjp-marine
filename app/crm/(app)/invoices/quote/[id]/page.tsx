@@ -82,39 +82,39 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 overflow-hidden">
+          <div className="bg-white rounded-card shadow-e2 border border-gray-200 overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-2 py-2.5 text-left text-label text-gray-500 uppercase tracking-wide font-semibold w-10">№</th>
-                  <th className="px-2 py-2.5 text-left text-label text-gray-500 uppercase tracking-wide font-semibold">Описание</th>
-                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Часы</th>
-                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Норма/ч</th>
-                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Кол-во</th>
-                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Цена за ед.</th>
-                  <th className="px-4 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Сумма</th>
+                <tr className="bg-[#EEF1F5] border-b-2 border-b-navy">
+                  <th className="px-2 py-2.5 text-left text-label text-navy-900 uppercase tracking-wide font-bold border-r border-r-gray-200 w-10">№</th>
+                  <th className="px-2 py-2.5 text-left text-label text-navy-900 uppercase tracking-wide font-bold border-r border-r-gray-200">Описание</th>
+                  <th className="px-3 py-2.5 text-right text-label text-navy-900 uppercase tracking-wide font-bold border-r border-r-gray-200">Часы</th>
+                  <th className="px-3 py-2.5 text-right text-label text-navy-900 uppercase tracking-wide font-bold border-r border-r-gray-200">Норма/ч</th>
+                  <th className="px-3 py-2.5 text-right text-label text-navy-900 uppercase tracking-wide font-bold border-r border-r-gray-200">Кол-во</th>
+                  <th className="px-3 py-2.5 text-right text-label text-navy-900 uppercase tracking-wide font-bold border-r border-r-gray-200">Цена за ед.</th>
+                  <th className="px-4 py-2.5 text-right text-label text-navy-900 uppercase tracking-wide font-bold">Сумма</th>
                 </tr>
               </thead>
               <tbody>
                 {quote.jobs.map((job, ji) => (
                   <Fragment key={job.id}>
-                    <tr className="border-b border-gray-100 bg-navy-900/5">
-                      <td className="px-2 py-2.5 text-body text-navy-900 font-bold tabular-nums">{ji + 1}</td>
-                      <td className="px-2 py-2.5 text-body text-navy-900 font-bold">{job.title}</td>
-                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborHours?.toString() ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborRate ? formatMoney(job.laborRate) : '—'}</td>
-                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums">—</td>
-                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums">—</td>
+                    <tr className="bg-white border-b border-b-gray-200">
+                      <td className="px-2 py-2.5 text-body text-navy-900 font-bold tabular-nums border-r border-r-gray-200 border-l-[3px] border-l-gold">{ji + 1}</td>
+                      <td className="px-2 py-2.5 text-body text-navy-900 font-bold border-r border-r-gray-200">{job.title}</td>
+                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums border-r border-r-gray-200">{job.laborHours?.toString() ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums border-r border-r-gray-200">{job.laborRate ? formatMoney(job.laborRate) : '—'}</td>
+                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
+                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
                       <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums font-bold">{formatMoney(job.laborCost)}</td>
                     </tr>
                     {job.materials.map((m, mi) => (
-                      <tr key={m.id} className="border-b border-gray-100 last:border-0">
-                        <td className="px-2 py-2 text-label text-gray-500 tabular-nums">{ji + 1}.{mi + 1}</td>
-                        <td className="px-2 py-2 pl-6 text-body text-gray-700">{m.name}</td>
-                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums">—</td>
-                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums">—</td>
-                        <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums">{m.quantity.toString()}</td>
-                        <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.unitPrice)}</td>
+                      <tr key={m.id} className="bg-gray-50/40 border-b border-b-gray-200 last:border-0">
+                        <td className="px-2 py-2 text-label text-gray-500 tabular-nums border-r border-r-gray-200 border-l-[3px] border-l-transparent">{ji + 1}.{mi + 1}</td>
+                        <td className="px-2 py-2 pl-6 text-body text-gray-700 border-r border-r-gray-200">{m.name}</td>
+                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
+                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
+                        <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums border-r border-r-gray-200">{m.quantity.toString()}</td>
+                        <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums border-r border-r-gray-200">{formatMoney(m.unitPrice)}</td>
                         <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.total)}</td>
                       </tr>
                     ))}
@@ -123,26 +123,26 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
               </tbody>
             </table>
             <div className="px-4 py-4 border-t border-gray-200 bg-gray-50/50">
-              <div className="ml-auto w-64 space-y-1.5">
-                <div className="flex justify-between text-body">
+              <div className="ml-auto w-64 border border-gray-200 rounded-control overflow-hidden">
+                <div className="flex justify-between text-body px-3 py-2 border-b border-gray-200 bg-white">
                   <span className="text-gray-500">Итого работа</span>
                   <span className="text-gray-900 tabular-nums">{formatMoney(quote.jobsTotal)}</span>
                 </div>
-                <div className="flex justify-between text-body">
+                <div className="flex justify-between text-body px-3 py-2 border-b border-gray-200 bg-white">
                   <span className="text-gray-500">Итого материалы</span>
                   <span className="text-gray-900 tabular-nums">{formatMoney(quote.materialsTotal)}</span>
                 </div>
-                <div className="flex justify-between text-body">
+                <div className="flex justify-between text-body px-3 py-2 border-b border-gray-200 bg-white">
                   <span className="text-gray-500">База</span>
                   <span className="text-gray-900 tabular-nums">{formatMoney(quote.subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-body">
+                <div className="flex justify-between text-body px-3 py-2 border-b border-gray-200 bg-white">
                   <span className="text-gray-500">IVA ({quote.ivaRate.toString()}%)</span>
                   <span className="text-gray-900 tabular-nums">{formatMoney(quote.ivaAmount)}</span>
                 </div>
-                <div className="flex justify-between pt-2 mt-1 border-t border-gray-200">
-                  <span className="text-gray-900 font-bold text-subheading">Итого</span>
-                  <span className="text-gray-900 font-bold text-subheading tabular-nums">{formatMoney(quote.total)}</span>
+                <div className="flex justify-between items-center px-3 py-3 bg-navy-900 border-t-2 border-t-gold">
+                  <span className="text-white font-bold text-label uppercase tracking-wide">Итого</span>
+                  <span className="text-gold font-bold text-subheading tabular-nums">{formatMoney(quote.total)}</span>
                 </div>
               </div>
             </div>
