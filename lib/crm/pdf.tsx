@@ -36,12 +36,14 @@ const styles = StyleSheet.create({
   jobCell:   { fontSize: 9.5, color: NAVY, fontWeight: 700 },
   matRow:    { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#f5f6f8' },
   matCell:   { fontSize: 9, color: '#4a5568' },
-  colNum:    { width: 28 },
+  colNum:    { width: 22 },
   colDesc:   { flex: 1 },
   colDescMat:{ flex: 1, paddingLeft: 10 },
-  colQty:    { width: 42, textAlign: 'right' },
-  colPrice:  { width: 62, textAlign: 'right' },
-  colTotal:  { width: 68, textAlign: 'right' },
+  colHours:  { width: 32, textAlign: 'right' },
+  colRate:   { width: 44, textAlign: 'right' },
+  colQty:    { width: 32, textAlign: 'right' },
+  colPrice:  { width: 44, textAlign: 'right' },
+  colTotal:  { width: 58, textAlign: 'right' },
   totals:    { alignSelf: 'flex-end', width: 240, marginBottom: 20 },
   totalRow:  { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   totalLabel:{ fontSize: 9.5, color: '#4a5568' },
@@ -238,8 +240,10 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
           <View style={styles.tHeadRow}>
             <Text style={[styles.tHeadCell, styles.colNum]}> </Text>
             <Text style={[styles.tHeadCell, styles.colDesc]}>{t.description}</Text>
-            <Text style={[styles.tHeadCell, styles.colQty]}>{t.qty} / {t.hours}</Text>
-            <Text style={[styles.tHeadCell, styles.colPrice]}>{t.unitPrice} / {t.rate}</Text>
+            <Text style={[styles.tHeadCell, styles.colHours]}>{t.hours}</Text>
+            <Text style={[styles.tHeadCell, styles.colRate]}>{t.rate}</Text>
+            <Text style={[styles.tHeadCell, styles.colQty]}>{t.qty}</Text>
+            <Text style={[styles.tHeadCell, styles.colPrice]}>{t.unitPrice}</Text>
             <Text style={[styles.tHeadCell, styles.colTotal]}>{t.total}</Text>
           </View>
           {data.jobs.map((job, ji) => (
@@ -247,14 +251,18 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
               <View style={styles.jobRow}>
                 <Text style={[styles.jobCell, styles.colNum]}>{ji + 1}</Text>
                 <Text style={[styles.jobCell, styles.colDesc]}>{job.title}</Text>
-                <Text style={[styles.jobCell, styles.colQty]}>{job.laborHours ?? '—'}</Text>
-                <Text style={[styles.jobCell, styles.colPrice]}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</Text>
+                <Text style={[styles.jobCell, styles.colHours]}>{job.laborHours ?? '—'}</Text>
+                <Text style={[styles.jobCell, styles.colRate]}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</Text>
+                <Text style={[styles.jobCell, styles.colQty]}>—</Text>
+                <Text style={[styles.jobCell, styles.colPrice]}>—</Text>
                 <Text style={[styles.jobCell, styles.colTotal]}>{fmtMoney(job.laborCost)}</Text>
               </View>
               {job.materials.map((mat, mi) => (
                 <View key={mi} style={styles.matRow}>
                   <Text style={[styles.matCell, styles.colNum]}>{ji + 1}.{mi + 1}</Text>
                   <Text style={[styles.matCell, styles.colDescMat]}>{mat.name}</Text>
+                  <Text style={[styles.matCell, styles.colHours]}>—</Text>
+                  <Text style={[styles.matCell, styles.colRate]}>—</Text>
                   <Text style={[styles.matCell, styles.colQty]}>{mat.quantity}</Text>
                   <Text style={[styles.matCell, styles.colPrice]}>{fmtMoney(mat.unitPrice)}</Text>
                   <Text style={[styles.matCell, styles.colTotal]}>{fmtMoney(mat.total)}</Text>

@@ -446,31 +446,37 @@ export function DocumentBuilder({
           </div>
 
           <div>
-            <div className="flex text-white/40 text-[10px] uppercase tracking-wide pb-1.5 border-b border-white/10">
-              <span className="w-6">№</span>
+            <div className="flex text-white/40 text-[9px] uppercase tracking-wide pb-1.5 border-b border-white/10 gap-0.5">
+              <span className="w-5">№</span>
               <span className="flex-1">Description</span>
-              <span className="w-10 text-right">Qty</span>
-              <span className="w-16 text-right">Price</span>
-              <span className="w-20 text-right">Total</span>
+              <span className="w-8 text-right">Hrs</span>
+              <span className="w-10 text-right">Rate</span>
+              <span className="w-8 text-right">Qty</span>
+              <span className="w-10 text-right">Price</span>
+              <span className="w-14 text-right">Total</span>
             </div>
             {computed.jobRows.filter((j) => j.title.trim()).length === 0 ? (
               <p className="text-white/30 text-label py-4 text-center">Нет позиций</p>
             ) : computed.jobRows.filter((j) => j.title.trim()).map((j, ji) => (
               <div key={ji}>
-                <div className="flex items-center py-1.5 border-b border-white/5 text-body bg-white/5">
-                  <span className="w-6 text-gold font-semibold tabular-nums">{ji + 1}</span>
-                  <span className="flex-1 text-white font-semibold truncate pr-2">{j.title}</span>
-                  <span className="w-10 text-right text-white/50 tabular-nums text-[10px]">{j.mode === 'hours' ? j.laborHours || '0' : ''}</span>
-                  <span className="w-16 text-right text-white/50 tabular-nums text-[10px]">{j.mode === 'hours' ? formatMoney(j.laborRate || 0) : ''}</span>
-                  <span className="w-20 text-right text-white font-semibold tabular-nums">{formatMoney(j.laborCostDec)}</span>
+                <div className="flex items-center py-1.5 border-b border-white/5 text-[11px] bg-white/5 gap-0.5">
+                  <span className="w-5 text-gold font-semibold tabular-nums">{ji + 1}</span>
+                  <span className="flex-1 text-white font-semibold truncate pr-1">{j.title}</span>
+                  <span className="w-8 text-right text-white/70 tabular-nums">{j.mode === 'hours' ? (j.laborHours || '0') : '—'}</span>
+                  <span className="w-10 text-right text-white/70 tabular-nums">{j.mode === 'hours' ? formatMoney(j.laborRate || 0) : '—'}</span>
+                  <span className="w-8 text-right text-white/30 tabular-nums">—</span>
+                  <span className="w-10 text-right text-white/30 tabular-nums">—</span>
+                  <span className="w-14 text-right text-white font-semibold tabular-nums">{formatMoney(j.laborCostDec)}</span>
                 </div>
                 {j.materials.filter((m) => m.name.trim()).map((m, mi) => (
-                  <div key={mi} className="flex items-center py-1.5 border-b border-white/5 text-body pl-6">
-                    <span className="w-9 text-white/40 text-[10px] tabular-nums">{ji + 1}.{mi + 1}</span>
-                    <span className="flex-1 text-white/80 truncate pr-2">{m.name}</span>
-                    <span className="w-10 text-right text-white/60 tabular-nums">{m.quantity}</span>
-                    <span className="w-16 text-right text-white/60 tabular-nums">{formatMoney(m.unitPrice || 0)}</span>
-                    <span className="w-20 text-right text-white/90 tabular-nums">{formatMoney(m.total)}</span>
+                  <div key={mi} className="flex items-center py-1.5 border-b border-white/5 text-[11px] pl-5 gap-0.5">
+                    <span className="w-8 text-white/40 text-[9px] tabular-nums shrink-0">{ji + 1}.{mi + 1}</span>
+                    <span className="flex-1 text-white/80 truncate pr-1">{m.name}</span>
+                    <span className="w-8 text-right text-white/30 tabular-nums">—</span>
+                    <span className="w-10 text-right text-white/30 tabular-nums">—</span>
+                    <span className="w-8 text-right text-white/70 tabular-nums">{m.quantity}</span>
+                    <span className="w-10 text-right text-white/70 tabular-nums">{formatMoney(m.unitPrice || 0)}</span>
+                    <span className="w-14 text-right text-white/90 tabular-nums">{formatMoney(m.total)}</span>
                   </div>
                 ))}
               </div>

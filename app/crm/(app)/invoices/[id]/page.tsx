@@ -92,8 +92,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-2 py-2.5 text-left text-label text-gray-500 uppercase tracking-wide font-semibold w-10">№</th>
                   <th className="px-2 py-2.5 text-left text-label text-gray-500 uppercase tracking-wide font-semibold">Описание</th>
-                  <th className="px-4 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Кол-во</th>
-                  <th className="px-4 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Цена</th>
+                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Часы</th>
+                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Норма/ч</th>
+                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Кол-во</th>
+                  <th className="px-3 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Цена за ед.</th>
                   <th className="px-4 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Сумма</th>
                 </tr>
               </thead>
@@ -103,16 +105,20 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                     <tr className="border-b border-gray-100 bg-navy-900/5">
                       <td className="px-2 py-2.5 text-body text-navy-900 font-bold tabular-nums">{ji + 1}</td>
                       <td className="px-2 py-2.5 text-body text-navy-900 font-bold">{job.title}</td>
-                      <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborHours?.toString() ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborRate ? formatMoney(job.laborRate) : '—'}</td>
+                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborHours?.toString() ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborRate ? formatMoney(job.laborRate) : '—'}</td>
+                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums">—</td>
+                      <td className="px-3 py-2.5 text-body text-gray-300 text-right tabular-nums">—</td>
                       <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums font-bold">{formatMoney(job.laborCost)}</td>
                     </tr>
                     {job.materials.map((m, mi) => (
                       <tr key={m.id} className="border-b border-gray-100 last:border-0">
                         <td className="px-2 py-2 text-label text-gray-500 tabular-nums">{ji + 1}.{mi + 1}</td>
                         <td className="px-2 py-2 pl-6 text-body text-gray-700">{m.name}</td>
-                        <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{m.quantity.toString()}</td>
-                        <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.unitPrice)}</td>
+                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums">—</td>
+                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums">—</td>
+                        <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums">{m.quantity.toString()}</td>
+                        <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.unitPrice)}</td>
                         <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.total)}</td>
                       </tr>
                     ))}

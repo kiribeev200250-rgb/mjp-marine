@@ -9,7 +9,7 @@ type Lang = typeof LANGS[number]
 const T: Record<Lang, Record<string, string>> = {
   ru: {
     quote: 'Пресмет', billTo: 'Получатель', date: 'Дата', validUntil: 'Действителен до',
-    description: 'Описание', qty: 'Кол-во', price: 'Цена', total: 'Сумма', subtotal: 'База',
+    description: 'Описание', hours: 'Часы', rate: 'Норма/ч', qty: 'Кол-во', price: 'Цена за ед.', total: 'Сумма', subtotal: 'База',
     jobsTotal: 'Итого работа', materialsTotal: 'Итого материалы',
     iva: 'IVA', grandTotal: 'Итого', accept: 'Принять пресмет', reject: 'Отклонить',
     accepted: 'Пресмет принят! Мы свяжемся с вами для планирования работ.',
@@ -19,7 +19,7 @@ const T: Record<Lang, Record<string, string>> = {
   },
   en: {
     quote: 'Quote', billTo: 'Bill to', date: 'Date', validUntil: 'Valid until',
-    description: 'Description', qty: 'Qty', price: 'Price', total: 'Total', subtotal: 'Subtotal',
+    description: 'Description', hours: 'Hours', rate: 'Rate/h', qty: 'Qty', price: 'Unit price', total: 'Total', subtotal: 'Subtotal',
     jobsTotal: 'Labor total', materialsTotal: 'Materials total',
     iva: 'VAT', grandTotal: 'Total', accept: 'Accept quote', reject: 'Reject',
     accepted: 'Quote accepted! We will contact you to schedule the work.',
@@ -29,7 +29,7 @@ const T: Record<Lang, Record<string, string>> = {
   },
   es: {
     quote: 'Presupuesto', billTo: 'Cliente', date: 'Fecha', validUntil: 'Válido hasta',
-    description: 'Descripción', qty: 'Cant.', price: 'Precio', total: 'Importe', subtotal: 'Base',
+    description: 'Descripción', hours: 'Horas', rate: 'Tarifa/h', qty: 'Cant.', price: 'Precio/ud.', total: 'Importe', subtotal: 'Base',
     jobsTotal: 'Total mano de obra', materialsTotal: 'Total materiales',
     iva: 'IVA', grandTotal: 'Total', accept: 'Aceptar presupuesto', reject: 'Rechazar',
     accepted: '¡Presupuesto aceptado! Nos pondremos en contacto para planificar el trabajo.',
@@ -39,7 +39,7 @@ const T: Record<Lang, Record<string, string>> = {
   },
   uk: {
     quote: 'Кошторис', billTo: 'Отримувач', date: 'Дата', validUntil: 'Дійсний до',
-    description: 'Опис', qty: 'К-сть', price: 'Ціна', total: 'Сума', subtotal: 'База',
+    description: 'Опис', hours: 'Години', rate: 'Ставка/год', qty: 'К-сть', price: 'Ціна/од.', total: 'Сума', subtotal: 'База',
     jobsTotal: 'Разом роботи', materialsTotal: 'Разом матеріали',
     iva: 'ПДВ', grandTotal: 'Разом', accept: 'Прийняти кошторис', reject: 'Відхилити',
     accepted: 'Кошторис прийнято! Ми зв’яжемося з вами для планування робіт.',
@@ -49,7 +49,7 @@ const T: Record<Lang, Record<string, string>> = {
   },
   pl: {
     quote: 'Wycena', billTo: 'Nabywca', date: 'Data', validUntil: 'Ważne do',
-    description: 'Opis', qty: 'Ilość', price: 'Cena', total: 'Suma', subtotal: 'Podstawa',
+    description: 'Opis', hours: 'Godziny', rate: 'Stawka/h', qty: 'Ilość', price: 'Cena/szt.', total: 'Suma', subtotal: 'Podstawa',
     jobsTotal: 'Suma robocizny', materialsTotal: 'Suma materiałów',
     iva: 'VAT', grandTotal: 'Razem', accept: 'Zaakceptuj wycenę', reject: 'Odrzuć',
     accepted: 'Wycena zaakceptowana! Skontaktujemy się w sprawie planowania prac.',
@@ -129,6 +129,8 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
               <tr style={{ background: '#f5f6f8' }}>
                 <th style={{ textAlign: 'left', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px', width: 32 }}>№</th>
                 <th style={{ textAlign: 'left', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.description}</th>
+                <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.hours}</th>
+                <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.rate}</th>
                 <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.qty}</th>
                 <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.price}</th>
                 <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.total}</th>
@@ -142,12 +144,16 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700 }}>{job.title}</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right' }}>{job.laborHours?.toString() ?? '—'}</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right' }}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', fontWeight: 700 }}>{fmtMoney(job.laborCost)}</td>
                   </tr>
                   {job.materials.map((m, mi) => (
                     <tr key={m.id} style={{ borderBottom: '1px solid #eef0f3' }}>
                       <td style={{ padding: '6px 6px', fontSize: 12, color: '#8892a6' }}>{ji + 1}.{mi + 1}</td>
                       <td style={{ padding: '6px 6px 6px 20px', fontSize: 14, color: '#1a1a2e' }}>{m.name}</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#a0aec0', textAlign: 'right' }}>—</td>
                       <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{m.quantity.toString()}</td>
                       <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{fmtMoney(m.unitPrice)}</td>
                       <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right', fontWeight: 600 }}>{fmtMoney(m.total)}</td>
