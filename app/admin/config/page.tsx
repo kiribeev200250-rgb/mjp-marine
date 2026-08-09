@@ -135,7 +135,7 @@ export default function ConfigPage() {
     setConfig((c) => ({ ...c, footerCustomLinks: JSON.stringify(links) }));
   }
 
-  const ic = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy';
+  const ic = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy';
 
   const Field = ({ label, field, type = 'text', placeholder = '' }: { label: string; field: keyof Config; type?: string; placeholder?: string }) => (
     <div>
@@ -220,7 +220,7 @@ export default function ConfigPage() {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploadingField === uploadKey}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:border-navy transition-colors disabled:opacity-60"
+            className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-navy transition-colors disabled:opacity-60"
           >
             {uploadingField === uploadKey ? T.config_uploading : T.config_upload_btn}
           </button>
@@ -422,7 +422,7 @@ export default function ConfigPage() {
                       next[i] = { ...next[i], label: e.target.value };
                       setCustomLinks(next);
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy"
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy"
                     placeholder={T.config_footer_link_label}
                   />
                   <input
@@ -433,7 +433,7 @@ export default function ConfigPage() {
                       next[i] = { ...next[i], url: e.target.value };
                       setCustomLinks(next);
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy"
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy"
                     placeholder={T.config_footer_link_url}
                   />
                   <button

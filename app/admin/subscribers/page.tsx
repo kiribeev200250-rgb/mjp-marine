@@ -77,7 +77,7 @@ export default function SubscribersAdmin() {
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <input type="search" placeholder={T.subs_search} value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy" />
+        <input type="search" placeholder={T.subs_search} value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy" />
         {selected.size > 0 && (
           <button onClick={bulkDelete} className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>

@@ -71,7 +71,7 @@ export default function ServicesAdmin() {
     load();
   }
 
-  const ic = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy';
+  const ic = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy';
 
   return (
     <div>
@@ -93,15 +93,15 @@ export default function ServicesAdmin() {
                 <p className="text-sm text-gray-400">{s.priceLabel} · {T.services_order_label} {s.sortOrder}</p>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => move(i, 'up')} disabled={i === 0} className="p-1.5 rounded border border-gray-200 hover:border-navy disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="↑">
+                <button onClick={() => move(i, 'up')} disabled={i === 0} className="p-1.5 rounded border border-gray-200 text-gray-600 hover:border-navy disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="↑">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" /></svg>
                 </button>
-                <button onClick={() => move(i, 'down')} disabled={i === services.length - 1} className="p-1.5 rounded border border-gray-200 hover:border-navy disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="↓">
+                <button onClick={() => move(i, 'down')} disabled={i === services.length - 1} className="p-1.5 rounded border border-gray-200 text-gray-600 hover:border-navy disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="↓">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                 </button>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setEditing(s); setActiveLang('En'); }} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:border-navy transition-colors">{T.services_edit}</button>
+                <button onClick={() => { setEditing(s); setActiveLang('En'); }} className="text-sm text-gray-700 px-3 py-1.5 border border-gray-200 rounded-lg hover:border-navy transition-colors">{T.services_edit}</button>
                 <button onClick={() => del(s.id!)} className="p-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
@@ -152,7 +152,7 @@ export default function ServicesAdmin() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={save} className="btn-primary flex-1 py-2.5">{T.services_save}</button>
-              <button onClick={() => setEditing(null)} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">{T.services_cancel}</button>
+              <button onClick={() => setEditing(null)} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">{T.services_cancel}</button>
             </div>
           </div>
         </div>

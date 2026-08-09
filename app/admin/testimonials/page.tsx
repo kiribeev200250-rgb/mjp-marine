@@ -56,7 +56,7 @@ export default function TestimonialsAdmin() {
     load();
   }
 
-  const ic = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy';
+  const ic = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy';
 
   return (
     <div>
@@ -79,7 +79,7 @@ export default function TestimonialsAdmin() {
                 <button onClick={() => toggleVisible(t)} className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${t.visible ? 'border-green-200 text-green-600 hover:bg-green-50' : 'border-gray-200 text-gray-400 hover:bg-gray-50'}`}>
                   {t.visible ? T.testimonials_visible : T.testimonials_hidden}
                 </button>
-                <button onClick={() => { setEditing(t); setActiveLang('En'); }} className="text-sm px-3 py-1.5 border border-gray-200 rounded-lg hover:border-navy transition-colors">{T.testimonials_edit}</button>
+                <button onClick={() => { setEditing(t); setActiveLang('En'); }} className="text-sm text-gray-700 px-3 py-1.5 border border-gray-200 rounded-lg hover:border-navy transition-colors">{T.testimonials_edit}</button>
                 <button onClick={() => del(t.id!)} className="p-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
@@ -140,7 +140,7 @@ export default function TestimonialsAdmin() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={save} className="btn-primary flex-1 py-2.5">{T.testimonials_save}</button>
-              <button onClick={() => setEditing(null)} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">{T.testimonials_cancel}</button>
+              <button onClick={() => setEditing(null)} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">{T.testimonials_cancel}</button>
             </div>
           </div>
         </div>

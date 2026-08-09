@@ -120,7 +120,7 @@ export default function TextsAdmin() {
                           value={t[lang]}
                           onChange={(e) => update(t.key, lang, e.target.value)}
                           rows={t[lang].length > 80 ? 3 : 2}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy resize-y"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy resize-y"
                         />
                       </div>
                     ))}

@@ -45,7 +45,7 @@ export default function AdminLogin() {
               type="email"
               required
               defaultValue="admin@mjpmarine.es"
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy"
             />
           </div>
           <div>
@@ -54,7 +54,7 @@ export default function AdminLogin() {
               name="password"
               type="password"
               required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-navy"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-navy"
             />
           </div>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}

@@ -93,7 +93,7 @@ export function TgInput({
       placeholder={placeholder}
       autoComplete="off"
       className={cn(
-        'w-full rounded-control border border-gray-200 px-3 py-2 text-sm',
+        'w-full rounded-control border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white',
         'focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold',
         className,
       )}
@@ -114,7 +114,7 @@ export function TgSelect({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
-        'w-full rounded-control border border-gray-200 px-3 py-2 text-sm bg-white',
+        'w-full rounded-control border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white',
         'focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold',
         className,
       )}
