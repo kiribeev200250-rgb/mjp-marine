@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useAdminT } from '@/components/admin/AdminProviders';
 
 export default function AdminSidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const [unread, setUnread] = useState(0);
   const { T, lang, setLang } = useAdminT();
 

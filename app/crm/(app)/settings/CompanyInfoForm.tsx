@@ -1,0 +1,75 @@
+'use client'
+
+import { useState } from 'react'
+import type { CompanyInfo } from '@prisma/client'
+import { Input, Button } from '@/components/crm/ui'
+
+interface Props { companyId: string; data: CompanyInfo | null }
+
+export function CompanyInfoForm({ companyId, data }: Props) {
+  const [saving,  setSaving]  = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error,   setError]   = useState('')
+
+  const isPlaceholder = data?.legalName === 'ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ'
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setSaving(true); setSuccess(false); setError('')
+    const body = Object.fromEntries(new FormData(e.currentTarget).entries())
+    const res  = await fetch('/api/crm/settings/company-info', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body:   JSON.stringify({ companyId, ...body }),
+    })
+    setSaving(false)
+    if (res.ok) { setSuccess(true); setTimeout(() => setSuccess(false), 3000) }
+    else         setError('Ошибка сохранения')
+  }
+
+  return (
+    <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-6">
+      {isPlaceholder && (
+        <div className="bg-warning/10 border border-warning/30 rounded-control px-4 py-3 mb-5 text-body text-warning">
+          ⚠ Реквизиты не заполнены — счета нельзя выпускать до заполнения NIF и адреса.
+          <br />
+          <span className="text-gray-500 text-label">Сверьтесь с gestором (бухгалтером) перед первым выставлением счёта.</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Юридическое название" name="legalName" defaultValue={data?.legalName ?? ''} />
+        <Field label="NIF / CIF"            name="nif"       defaultValue={data?.nif       ?? ''} />
+        <Field label="Адрес"                name="address"   defaultValue={data?.address   ?? ''} />
+        <Field label="Город"                name="city"      defaultValue={data?.city      ?? ''} />
+        <Field label="Почтовый индекс"      name="postalCode" defaultValue={data?.postalCode ?? ''} />
+        <Field label="Страна"               name="country"   defaultValue={data?.country   ?? 'España'} />
+        <Field label="Email компании"       name="email"     defaultValue={data?.email     ?? ''} type="email" />
+        <Field label="Телефон"              name="phone"     defaultValue={data?.phone     ?? ''} />
+        <div className="md:col-span-2">
+          <Field label="IBAN" name="bankAccount" defaultValue={data?.bankAccount ?? ''} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Ставка IVA (%)"  name="ivaRate"  defaultValue={data?.ivaRate?.toString()  ?? '21'} type="number" />
+          <Field label="Ставка IRPF (%)" name="irpfRate" defaultValue={data?.irpfRate?.toString() ?? '0'}  type="number" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Префикс счётов"   name="invoicePrefix" defaultValue={data?.invoicePrefix ?? 'F'} />
+          <Field label="Префикс пресметов" name="quotePrefix"  defaultValue={data?.quotePrefix   ?? 'P'} />
+        </div>
+
+        <div className="md:col-span-2 flex items-center gap-4 pt-2">
+          <Button type="submit" loading={saving}>Сохранить</Button>
+          {success && <span className="text-success text-body">Сохранено ✓</span>}
+          {error   && <span className="text-danger text-body">{error}</span>}
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function Field({ label, name, defaultValue, type = 'text' }: {
+  label: string; name: string; defaultValue: string; type?: string
+}) {
+  return <Input label={label} name={name} type={type} defaultValue={defaultValue} />
+}

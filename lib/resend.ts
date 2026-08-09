@@ -99,6 +99,79 @@ export async function sendContactEmail(data: {
   console.log('Resend text result:', JSON.stringify(textResult));
 }
 
+// ─── CRM: пресметы и счета ──────────────────────────────────────────────────
+
+async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+const CRM_SUBJECTS: Record<'quote' | 'invoice', Record<string, (n: string) => string>> = {
+  quote: {
+    ru: (n) => `Пресмет ${n} — MJP Marine Service`,
+    en: (n) => `Quote ${n} — MJP Marine Service`,
+    es: (n) => `Presupuesto ${n} — MJP Marine Service`,
+    uk: (n) => `Кошторис ${n} — MJP Marine Service`,
+    pl: (n) => `Wycena ${n} — MJP Marine Service`,
+  },
+  invoice: {
+    ru: (n) => `Счёт ${n} — MJP Marine Service`,
+    en: (n) => `Invoice ${n} — MJP Marine Service`,
+    es: (n) => `Factura ${n} — MJP Marine Service`,
+    uk: (n) => `Рахунок ${n} — MJP Marine Service`,
+    pl: (n) => `Faktura ${n} — MJP Marine Service`,
+  },
+};
+
+const CRM_BODIES: Record<'quote' | 'invoice', Record<string, (name: string, total: string, link?: string) => string>> = {
+  quote: {
+    ru: (name, total, link) => `<p>Здравствуйте, ${esc(name)}!</p><p>Прикладываем пресмет на сумму <b>${total}</b>.</p>${link ? `<p><a href="${link}" style="color:#C9A84C;">Посмотреть и принять пресмет онлайн →</a></p>` : ''}<p>— MJP Marine Service</p>`,
+    en: (name, total, link) => `<p>Hello ${esc(name)},</p><p>Please find attached your quote for <b>${total}</b>.</p>${link ? `<p><a href="${link}" style="color:#C9A84C;">View and accept the quote online →</a></p>` : ''}<p>— MJP Marine Service</p>`,
+    es: (name, total, link) => `<p>Hola ${esc(name)},</p><p>Adjuntamos su presupuesto por <b>${total}</b>.</p>${link ? `<p><a href="${link}" style="color:#C9A84C;">Ver y aceptar el presupuesto online →</a></p>` : ''}<p>— MJP Marine Service</p>`,
+    uk: (name, total, link) => `<p>Вітаємо, ${esc(name)}!</p><p>Додаємо кошторис на суму <b>${total}</b>.</p>${link ? `<p><a href="${link}" style="color:#C9A84C;">Переглянути та прийняти кошторис онлайн →</a></p>` : ''}<p>— MJP Marine Service</p>`,
+    pl: (name, total, link) => `<p>Witaj, ${esc(name)}!</p><p>W załączniku przesyłamy wycenę na kwotę <b>${total}</b>.</p>${link ? `<p><a href="${link}" style="color:#C9A84C;">Zobacz i zaakceptuj wycenę online →</a></p>` : ''}<p>— MJP Marine Service</p>`,
+  },
+  invoice: {
+    ru: (name, total) => `<p>Здравствуйте, ${esc(name)}!</p><p>Прикладываем счёт на сумму <b>${total}</b>.</p><p>— MJP Marine Service</p>`,
+    en: (name, total) => `<p>Hello ${esc(name)},</p><p>Please find attached your invoice for <b>${total}</b>.</p><p>— MJP Marine Service</p>`,
+    es: (name, total) => `<p>Hola ${esc(name)},</p><p>Adjuntamos su factura por <b>${total}</b>.</p><p>— MJP Marine Service</p>`,
+    uk: (name, total) => `<p>Вітаємо, ${esc(name)}!</p><p>Додаємо рахунок на суму <b>${total}</b>.</p><p>— MJP Marine Service</p>`,
+    pl: (name, total) => `<p>Witaj, ${esc(name)}!</p><p>W załączniku przesyłamy fakturę na kwotę <b>${total}</b>.</p><p>— MJP Marine Service</p>`,
+  },
+};
+
+export async function sendDocumentEmail(params: {
+  kind: 'quote' | 'invoice';
+  to: string;
+  clientName: string;
+  number: string;
+  totalFormatted: string;
+  language: string;
+  pdfStream: NodeJS.ReadableStream;
+  publicLink?: string;
+}) {
+  const lang = ['ru', 'en', 'es', 'uk', 'pl'].includes(params.language) ? params.language : 'ru';
+  const subject = (CRM_SUBJECTS[params.kind][lang] ?? CRM_SUBJECTS[params.kind].ru)(params.number);
+  const html = (CRM_BODIES[params.kind][lang] ?? CRM_BODIES[params.kind].ru)(params.clientName, params.totalFormatted, params.publicLink);
+  const pdfBuffer = await streamToBuffer(params.pdfStream);
+
+  return resend.emails.send({
+    from: 'MJP Marine <noreply@mjpmarine.es>',
+    to: params.to,
+    subject,
+    html,
+    attachments: [
+      {
+        filename: `${params.number}.pdf`,
+        content: pdfBuffer,
+      },
+    ],
+  });
+}
+
 export async function sendWelcomeEmail(to: string, name: string, lang: string) {
   const subjects: Record<string, string> = {
     en: 'Welcome to MJP Marine Service updates!',
