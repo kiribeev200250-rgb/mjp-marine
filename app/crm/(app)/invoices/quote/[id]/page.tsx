@@ -99,8 +99,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                     <tr className="border-b border-gray-100 bg-navy-900/5">
                       <td className="px-2 py-2.5 text-body text-navy-900 font-bold tabular-nums">{ji + 1}</td>
                       <td className="px-2 py-2.5 text-body text-navy-900 font-bold">{job.title}</td>
-                      <td className="px-4 py-2.5" />
-                      <td className="px-4 py-2.5" />
+                      <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborHours?.toString() ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums">{job.laborRate ? formatMoney(job.laborRate) : '—'}</td>
                       <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums font-bold">{formatMoney(job.laborCost)}</td>
                     </tr>
                     {job.materials.map((m, mi) => (

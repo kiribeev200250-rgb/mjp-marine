@@ -41,7 +41,17 @@ export function parseJobsInput(jobs: JobInput[]): { jobs: ParsedJob[]; jobsTotal
 
   const parsed: ParsedJob[] = jobs.map((j) => {
     if (!j.title?.trim()) throw new Error('Укажите название работы')
-    const laborCost = new Decimal(j.laborCost || 0)
+
+    const laborHours = j.laborHours != null && j.laborHours !== '' ? new Decimal(j.laborHours) : null
+    const laborRate  = j.laborRate  != null && j.laborRate  !== '' ? new Decimal(j.laborRate)  : null
+    if (laborHours && laborHours.lt(0)) throw new Error('Часы не могут быть отрицательными')
+    if (laborRate && laborRate.lt(0)) throw new Error('Норма часа не может быть отрицательной')
+
+    // Часы × ставка — если задано и то, и другое, считаем сами (не доверяем клиентскому расчёту).
+    // Иначе — фиксированная сумма за работу, введённая вручную.
+    const laborCost = laborHours != null && laborRate != null
+      ? laborHours.times(laborRate)
+      : new Decimal(j.laborCost || 0)
     if (laborCost.lt(0)) throw new Error('Стоимость работы не может быть отрицательной')
 
     const materials: ParsedMaterial[] = (j.materials ?? []).map((m) => {
@@ -61,8 +71,8 @@ export function parseJobsInput(jobs: JobInput[]): { jobs: ParsedJob[]; jobsTotal
 
     return {
       title: j.title.trim(),
-      laborHours: j.laborHours != null && j.laborHours !== '' ? new Decimal(j.laborHours) : null,
-      laborRate: j.laborRate != null && j.laborRate !== '' ? new Decimal(j.laborRate) : null,
+      laborHours,
+      laborRate,
       laborCost,
       materials,
     }

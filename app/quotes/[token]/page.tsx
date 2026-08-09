@@ -140,8 +140,8 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
                   <tr style={{ borderBottom: '1px solid #eef0f3', background: '#eef2f7' }}>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700 }}>{ji + 1}</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700 }}>{job.title}</td>
-                    <td style={{ padding: '8px 6px' }} />
-                    <td style={{ padding: '8px 6px' }} />
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right' }}>{job.laborHours?.toString() ?? '—'}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right' }}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</td>
                     <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', fontWeight: 700 }}>{fmtMoney(job.laborCost)}</td>
                   </tr>
                   {job.materials.map((m, mi) => (

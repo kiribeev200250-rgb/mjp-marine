@@ -69,6 +69,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     invoice: 'СЧЁТ', quote: 'ПРЕСМЕТ', billTo: 'Получатель', date: 'Дата',
     dueDate: 'Срок оплаты', validUntil: 'Действителен до', description: 'Описание',
     qty: 'Кол-во', unitPrice: 'Цена', total: 'Сумма', subtotal: 'База',
+    hours: 'Часы', rate: 'Норма/ч',
     jobsTotal: 'Итого работа', materialsTotal: 'Итого материалы',
     iva: 'IVA', irpf: 'IRPF', grandTotal: 'Итого', paymentMethod: 'Способ оплаты',
     bankAccount: 'Банковский счёт', notes: 'Примечания', signature: 'Подпись клиента',
@@ -78,6 +79,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     invoice: 'INVOICE', quote: 'QUOTE', billTo: 'Bill to', date: 'Date',
     dueDate: 'Due date', validUntil: 'Valid until', description: 'Description',
     qty: 'Qty', unitPrice: 'Unit price', total: 'Total', subtotal: 'Subtotal',
+    hours: 'Hours', rate: 'Rate/h',
     jobsTotal: 'Labor total', materialsTotal: 'Materials total',
     iva: 'VAT', irpf: 'IRPF', grandTotal: 'Total', paymentMethod: 'Payment method',
     bankAccount: 'Bank account', notes: 'Notes', signature: 'Client signature',
@@ -87,6 +89,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     invoice: 'FACTURA', quote: 'PRESUPUESTO', billTo: 'Cliente', date: 'Fecha',
     dueDate: 'Vencimiento', validUntil: 'Válido hasta', description: 'Descripción',
     qty: 'Cant.', unitPrice: 'Precio', total: 'Importe', subtotal: 'Base imponible',
+    hours: 'Horas', rate: 'Tarifa/h',
     jobsTotal: 'Total mano de obra', materialsTotal: 'Total materiales',
     iva: 'IVA', irpf: 'IRPF', grandTotal: 'Total', paymentMethod: 'Forma de pago',
     bankAccount: 'Cuenta bancaria', notes: 'Notas', signature: 'Conforme el cliente',
@@ -96,6 +99,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     invoice: 'РАХУНОК', quote: 'КОШТОРИС', billTo: 'Отримувач', date: 'Дата',
     dueDate: 'Термін оплати', validUntil: 'Дійсний до', description: 'Опис',
     qty: 'К-сть', unitPrice: 'Ціна', total: 'Сума', subtotal: 'База',
+    hours: 'Години', rate: 'Ставка/год',
     jobsTotal: 'Разом роботи', materialsTotal: 'Разом матеріали',
     iva: 'ПДВ', irpf: 'IRPF', grandTotal: 'Разом', paymentMethod: 'Спосіб оплати',
     bankAccount: 'Банківський рахунок', notes: 'Примітки', signature: 'Підпис клієнта',
@@ -105,6 +109,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     invoice: 'FAKTURA', quote: 'WYCENA', billTo: 'Nabywca', date: 'Data',
     dueDate: 'Termin płatności', validUntil: 'Ważne do', description: 'Opis',
     qty: 'Ilość', unitPrice: 'Cena', total: 'Suma', subtotal: 'Podstawa',
+    hours: 'Godziny', rate: 'Stawka/h',
     jobsTotal: 'Suma robocizny', materialsTotal: 'Suma materiałów',
     iva: 'VAT', irpf: 'IRPF', grandTotal: 'Razem', paymentMethod: 'Sposób płatności',
     bankAccount: 'Konto bankowe', notes: 'Uwagi', signature: 'Podpis klienta',
@@ -134,9 +139,11 @@ export interface PdfMaterial {
 }
 
 export interface PdfJob {
-  title:     string
-  laborCost: string
-  materials: PdfMaterial[]
+  title:      string
+  laborHours?: string | null
+  laborRate?:  string | null
+  laborCost:  string
+  materials:  PdfMaterial[]
 }
 
 export interface PdfCompanyInfo {
@@ -231,8 +238,8 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
           <View style={styles.tHeadRow}>
             <Text style={[styles.tHeadCell, styles.colNum]}> </Text>
             <Text style={[styles.tHeadCell, styles.colDesc]}>{t.description}</Text>
-            <Text style={[styles.tHeadCell, styles.colQty]}>{t.qty}</Text>
-            <Text style={[styles.tHeadCell, styles.colPrice]}>{t.unitPrice}</Text>
+            <Text style={[styles.tHeadCell, styles.colQty]}>{t.qty} / {t.hours}</Text>
+            <Text style={[styles.tHeadCell, styles.colPrice]}>{t.unitPrice} / {t.rate}</Text>
             <Text style={[styles.tHeadCell, styles.colTotal]}>{t.total}</Text>
           </View>
           {data.jobs.map((job, ji) => (
@@ -240,8 +247,8 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
               <View style={styles.jobRow}>
                 <Text style={[styles.jobCell, styles.colNum]}>{ji + 1}</Text>
                 <Text style={[styles.jobCell, styles.colDesc]}>{job.title}</Text>
-                <Text style={[styles.jobCell, styles.colQty]}> </Text>
-                <Text style={[styles.jobCell, styles.colPrice]}> </Text>
+                <Text style={[styles.jobCell, styles.colQty]}>{job.laborHours ?? '—'}</Text>
+                <Text style={[styles.jobCell, styles.colPrice]}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</Text>
                 <Text style={[styles.jobCell, styles.colTotal]}>{fmtMoney(job.laborCost)}</Text>
               </View>
               {job.materials.map((mat, mi) => (

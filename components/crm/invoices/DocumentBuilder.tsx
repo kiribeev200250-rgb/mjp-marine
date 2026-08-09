@@ -31,6 +31,7 @@ interface MaterialLine {
 
 interface JobLine {
   title: string
+  mode: 'fixed' | 'hours'
   laborHours: string
   laborRate: string
   laborCost: string
@@ -50,7 +51,7 @@ interface Props {
 }
 
 const EMPTY_MATERIAL: MaterialLine = { name: '', quantity: '1', unitPrice: '' }
-const EMPTY_JOB: JobLine = { title: '', laborHours: '', laborRate: '', laborCost: '', materials: [] }
+const EMPTY_JOB: JobLine = { title: '', mode: 'fixed', laborHours: '', laborRate: '', laborCost: '', materials: [] }
 
 export function DocumentBuilder({
   kind, clients, inventoryItems, defaultIvaRate, defaultIrpfRate,
@@ -120,7 +121,10 @@ export function DocumentBuilder({
         return { ...m, total: qty.times(price) }
       })
       const materialsSum = matRows.reduce((s, m) => s.plus(m.total), new Decimal(0))
-      return { ...j, materials: matRows, laborCostDec: new Decimal(j.laborCost || 0), materialsSum }
+      const laborCostDec = j.mode === 'hours'
+        ? new Decimal(j.laborHours || 0).times(new Decimal(j.laborRate || 0))
+        : new Decimal(j.laborCost || 0)
+      return { ...j, materials: matRows, laborCostDec, materialsSum }
     })
     const jobsTotal      = jobRows.reduce((s, j) => s.plus(j.laborCostDec), new Decimal(0))
     const materialsTotal = jobRows.reduce((s, j) => s.plus(j.materialsSum), new Decimal(0))
@@ -141,9 +145,9 @@ export function DocumentBuilder({
       .filter((j) => j.title.trim())
       .map((j) => ({
         title: j.title.trim(),
-        laborHours: j.laborHours || undefined,
-        laborRate:  j.laborRate  || undefined,
-        laborCost:  j.laborCost || '0',
+        laborHours: j.mode === 'hours' ? (j.laborHours || '0') : undefined,
+        laborRate:  j.mode === 'hours' ? (j.laborRate  || '0') : undefined,
+        laborCost:  j.mode === 'fixed' ? (j.laborCost  || '0') : '0',
         materials: j.materials
           .filter((m) => m.name.trim() && Number(m.unitPrice) >= 0 && Number(m.quantity) > 0)
           .map((m) => ({ name: m.name.trim(), quantity: m.quantity, unitPrice: m.unitPrice, inventoryItemId: m.inventoryItemId })),
@@ -232,13 +236,6 @@ export function DocumentBuilder({
                   value={job.title}
                   onChange={(e) => updateJob(ji, { title: e.target.value })}
                 />
-                <input
-                  type="number" min="0" step="0.01"
-                  className="w-28 rounded-control border border-gray-200 bg-white px-2 py-2 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
-                  placeholder="Стоимость труда"
-                  value={job.laborCost}
-                  onChange={(e) => updateJob(ji, { laborCost: e.target.value })}
-                />
                 <button
                   type="button"
                   onClick={() => removeJob(ji)}
@@ -247,6 +244,62 @@ export function DocumentBuilder({
                 >
                   ✕
                 </button>
+              </div>
+
+              {/* Расчёт стоимости труда: фиксированная сумма ИЛИ часы × ставка */}
+              <div className="pl-7 flex items-center gap-2 flex-wrap">
+                <div className="flex rounded-control overflow-hidden border border-gray-200 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => updateJob(ji, { mode: 'fixed' })}
+                    className={`px-2.5 py-1.5 text-label font-medium transition ${
+                      job.mode === 'fixed' ? 'bg-navy text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    Сумма
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateJob(ji, { mode: 'hours' })}
+                    className={`px-2.5 py-1.5 text-label font-medium transition ${
+                      job.mode === 'hours' ? 'bg-navy text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    Часы × ставка
+                  </button>
+                </div>
+
+                {job.mode === 'fixed' ? (
+                  <input
+                    type="number" min="0" step="0.01"
+                    className="w-32 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                    placeholder="Стоимость работы, €"
+                    value={job.laborCost}
+                    onChange={(e) => updateJob(ji, { laborCost: e.target.value })}
+                  />
+                ) : (
+                  <>
+                    <input
+                      type="number" min="0" step="0.5"
+                      className="w-16 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                      placeholder="Часы"
+                      value={job.laborHours}
+                      onChange={(e) => updateJob(ji, { laborHours: e.target.value })}
+                    />
+                    <span className="text-gray-300 text-label">×</span>
+                    <input
+                      type="number" min="0" step="0.01"
+                      className="w-20 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                      placeholder="€/час"
+                      value={job.laborRate}
+                      onChange={(e) => updateJob(ji, { laborRate: e.target.value })}
+                    />
+                    <span className="text-gray-300 text-label">=</span>
+                    <span className="text-body font-semibold text-gray-900 tabular-nums">
+                      {formatMoney(computed.jobRows[ji]?.laborCostDec ?? 0)}
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Материалы работы */}
@@ -407,8 +460,8 @@ export function DocumentBuilder({
                 <div className="flex items-center py-1.5 border-b border-white/5 text-body bg-white/5">
                   <span className="w-6 text-gold font-semibold tabular-nums">{ji + 1}</span>
                   <span className="flex-1 text-white font-semibold truncate pr-2">{j.title}</span>
-                  <span className="w-10" />
-                  <span className="w-16" />
+                  <span className="w-10 text-right text-white/50 tabular-nums text-[10px]">{j.mode === 'hours' ? j.laborHours || '0' : ''}</span>
+                  <span className="w-16 text-right text-white/50 tabular-nums text-[10px]">{j.mode === 'hours' ? formatMoney(j.laborRate || 0) : ''}</span>
                   <span className="w-20 text-right text-white font-semibold tabular-nums">{formatMoney(j.laborCostDec)}</span>
                 </div>
                 {j.materials.filter((m) => m.name.trim()).map((m, mi) => (

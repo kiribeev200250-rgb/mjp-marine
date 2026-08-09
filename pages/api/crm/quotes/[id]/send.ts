@@ -36,8 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     company:    { ...companyInfo, logoUrl: companyInfo.logoUrl },
     clientName: `${quote.client.firstName} ${quote.client.lastName}`.trim(),
     jobs: quote.jobs.map((j) => ({
-      title:     j.title,
-      laborCost: j.laborCost.toString(),
+      title:      j.title,
+      laborHours: j.laborHours?.toString() ?? null,
+      laborRate:  j.laborRate?.toString() ?? null,
+      laborCost:  j.laborCost.toString(),
       materials: j.materials.map((m) => ({
         name:      m.name,
         quantity:  m.quantity.toString(),
