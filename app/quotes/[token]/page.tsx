@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { QuotePublicActions } from './QuotePublicActions'
@@ -9,6 +10,7 @@ const T: Record<Lang, Record<string, string>> = {
   ru: {
     quote: 'Пресмет', billTo: 'Получатель', date: 'Дата', validUntil: 'Действителен до',
     description: 'Описание', qty: 'Кол-во', price: 'Цена', total: 'Сумма', subtotal: 'База',
+    jobsTotal: 'Итого работа', materialsTotal: 'Итого материалы',
     iva: 'IVA', grandTotal: 'Итого', accept: 'Принять пресмет', reject: 'Отклонить',
     accepted: 'Пресмет принят! Мы свяжемся с вами для планирования работ.',
     rejected: 'Пресмет отклонён.', confirmReject: 'Отклонить этот пресмет?',
@@ -18,6 +20,7 @@ const T: Record<Lang, Record<string, string>> = {
   en: {
     quote: 'Quote', billTo: 'Bill to', date: 'Date', validUntil: 'Valid until',
     description: 'Description', qty: 'Qty', price: 'Price', total: 'Total', subtotal: 'Subtotal',
+    jobsTotal: 'Labor total', materialsTotal: 'Materials total',
     iva: 'VAT', grandTotal: 'Total', accept: 'Accept quote', reject: 'Reject',
     accepted: 'Quote accepted! We will contact you to schedule the work.',
     rejected: 'Quote rejected.', confirmReject: 'Reject this quote?',
@@ -27,6 +30,7 @@ const T: Record<Lang, Record<string, string>> = {
   es: {
     quote: 'Presupuesto', billTo: 'Cliente', date: 'Fecha', validUntil: 'Válido hasta',
     description: 'Descripción', qty: 'Cant.', price: 'Precio', total: 'Importe', subtotal: 'Base',
+    jobsTotal: 'Total mano de obra', materialsTotal: 'Total materiales',
     iva: 'IVA', grandTotal: 'Total', accept: 'Aceptar presupuesto', reject: 'Rechazar',
     accepted: '¡Presupuesto aceptado! Nos pondremos en contacto para planificar el trabajo.',
     rejected: 'Presupuesto rechazado.', confirmReject: '¿Rechazar este presupuesto?',
@@ -36,6 +40,7 @@ const T: Record<Lang, Record<string, string>> = {
   uk: {
     quote: 'Кошторис', billTo: 'Отримувач', date: 'Дата', validUntil: 'Дійсний до',
     description: 'Опис', qty: 'К-сть', price: 'Ціна', total: 'Сума', subtotal: 'База',
+    jobsTotal: 'Разом роботи', materialsTotal: 'Разом матеріали',
     iva: 'ПДВ', grandTotal: 'Разом', accept: 'Прийняти кошторис', reject: 'Відхилити',
     accepted: 'Кошторис прийнято! Ми зв’яжемося з вами для планування робіт.',
     rejected: 'Кошторис відхилено.', confirmReject: 'Відхилити цей кошторис?',
@@ -45,6 +50,7 @@ const T: Record<Lang, Record<string, string>> = {
   pl: {
     quote: 'Wycena', billTo: 'Nabywca', date: 'Data', validUntil: 'Ważne do',
     description: 'Opis', qty: 'Ilość', price: 'Cena', total: 'Suma', subtotal: 'Podstawa',
+    jobsTotal: 'Suma robocizny', materialsTotal: 'Suma materiałów',
     iva: 'VAT', grandTotal: 'Razem', accept: 'Zaakceptuj wycenę', reject: 'Odrzuć',
     accepted: 'Wycena zaakceptowana! Skontaktujemy się w sprawie planowania prac.',
     rejected: 'Wycena odrzucona.', confirmReject: 'Odrzucić tę wycenę?',
@@ -70,7 +76,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const quote = await prisma.quote.findUnique({
     where:   { publicToken: token },
     include: {
-      items:   { orderBy: { sortOrder: 'asc' } },
+      jobs:    { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } },
       client:  { select: { firstName: true, lastName: true } },
       company: { include: { companyInfo: true } },
     },
@@ -80,15 +86,22 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const lang = resolveLang(quote.language)
   const t = T[lang]
   const companyName = quote.company.companyInfo?.legalName ?? quote.company.name
+  const logoUrl = quote.company.companyInfo?.logoUrl
 
   return (
     <main style={{ minHeight: '100vh', background: '#f5f6f8', padding: '32px 16px' }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
-        <div style={{ background: '#0A2342', borderRadius: 10, padding: '24px 28px', marginBottom: 20 }}>
-          <p style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>{companyName}</p>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: '4px 0 0' }}>
-            {t.quote} #{quote.number}
-          </p>
+        <div style={{ background: '#0A2342', borderRadius: 10, padding: '24px 28px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt={companyName} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover' }} />
+          )}
+          <div>
+            <p style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>{companyName}</p>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: '4px 0 0' }}>
+              {t.quote} #{quote.number}
+            </p>
+          </div>
         </div>
 
         <div style={{ background: '#fff', borderRadius: 10, padding: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
@@ -114,6 +127,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
             <thead>
               <tr style={{ background: '#f5f6f8' }}>
+                <th style={{ textAlign: 'left', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px', width: 32 }}>№</th>
                 <th style={{ textAlign: 'left', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.description}</th>
                 <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.qty}</th>
                 <th style={{ textAlign: 'right', fontSize: 10, color: '#8892a6', textTransform: 'uppercase', padding: '8px 6px' }}>{t.price}</th>
@@ -121,18 +135,38 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
               </tr>
             </thead>
             <tbody>
-              {quote.items.map((item) => (
-                <tr key={item.id} style={{ borderBottom: '1px solid #eef0f3' }}>
-                  <td style={{ padding: '8px 6px', fontSize: 14, color: '#1a1a2e' }}>{item.description}</td>
-                  <td style={{ padding: '8px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{item.quantity.toString()}</td>
-                  <td style={{ padding: '8px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{fmtMoney(item.unitPrice)}</td>
-                  <td style={{ padding: '8px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right', fontWeight: 600 }}>{fmtMoney(item.total)}</td>
-                </tr>
+              {quote.jobs.map((job, ji) => (
+                <Fragment key={job.id}>
+                  <tr style={{ borderBottom: '1px solid #eef0f3', background: '#eef2f7' }}>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700 }}>{ji + 1}</td>
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', fontWeight: 700 }}>{job.title}</td>
+                    <td style={{ padding: '8px 6px' }} />
+                    <td style={{ padding: '8px 6px' }} />
+                    <td style={{ padding: '8px 6px', fontSize: 14, color: '#0A2342', textAlign: 'right', fontWeight: 700 }}>{fmtMoney(job.laborCost)}</td>
+                  </tr>
+                  {job.materials.map((m, mi) => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid #eef0f3' }}>
+                      <td style={{ padding: '6px 6px', fontSize: 12, color: '#8892a6' }}>{ji + 1}.{mi + 1}</td>
+                      <td style={{ padding: '6px 6px 6px 20px', fontSize: 14, color: '#1a1a2e' }}>{m.name}</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{m.quantity.toString()}</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right' }}>{fmtMoney(m.unitPrice)}</td>
+                      <td style={{ padding: '6px 6px', fontSize: 14, color: '#1a1a2e', textAlign: 'right', fontWeight: 600 }}>{fmtMoney(m.total)}</td>
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>
 
           <div style={{ marginLeft: 'auto', width: 240 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '3px 0' }}>
+              <span style={{ color: '#4a5568' }}>{t.jobsTotal}</span>
+              <span style={{ color: '#1a1a2e' }}>{fmtMoney(quote.jobsTotal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '3px 0' }}>
+              <span style={{ color: '#4a5568' }}>{t.materialsTotal}</span>
+              <span style={{ color: '#1a1a2e' }}>{fmtMoney(quote.materialsTotal)}</span>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '3px 0' }}>
               <span style={{ color: '#4a5568' }}>{t.subtotal}</span>
               <span style={{ color: '#1a1a2e' }}>{fmtMoney(quote.subtotal)}</span>

@@ -4,6 +4,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
+import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
 import { prisma } from '@/lib/prisma'
 import type { QuoteStatus } from '@prisma/client'
 
@@ -37,8 +38,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(quotes)
 }
 
-interface ItemInput { description: string; quantity: string | number; unitPrice: string | number }
-
 // POST /api/crm/quotes — создать пресмет
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
@@ -46,32 +45,28 @@ export async function POST(req: NextRequest) {
   requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'CREATE')
 
   const body = await req.json()
-  const { clientId, language, validUntil, ivaRate, notes, items } = body as {
+  const { clientId, language, validUntil, ivaRate, notes, jobs } = body as {
     clientId: string
     language?: string
     validUntil?: string
     ivaRate?: string | number
     notes?: string
-    items: ItemInput[]
+    jobs: JobInput[]
   }
 
   if (!clientId) return NextResponse.json({ error: 'Выберите клиента' }, { status: 400 })
-  if (!Array.isArray(items) || items.length === 0) {
-    return NextResponse.json({ error: 'Добавьте хотя бы одну позицию' }, { status: 400 })
-  }
 
   const client = await prisma.client.findFirst({ where: { id: clientId, companyId: session.user.companyId } })
   if (!client) return NextResponse.json({ error: 'Клиент не найден' }, { status: 404 })
 
-  const parsedItems = items.map((it) => {
-    const qty   = new Decimal(it.quantity || 0)
-    const price = new Decimal(it.unitPrice || 0)
-    if (!it.description?.trim()) throw new Error('Заполните описание позиции')
-    if (qty.lte(0)) throw new Error('Количество должно быть больше нуля')
-    return { description: it.description.trim(), quantity: qty, unitPrice: price, total: qty.times(price) }
-  })
+  let parsedJobs, jobsTotal, materialsTotal
+  try {
+    ;({ jobs: parsedJobs, jobsTotal, materialsTotal } = parseJobsInput(jobs))
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректные позиции' }, { status: 400 })
+  }
 
-  const subtotal = parsedItems.reduce((s, it) => s.plus(it.total), new Decimal(0))
+  const subtotal  = jobsTotal.plus(materialsTotal)
   const rate      = new Decimal(ivaRate ?? 21)
   const ivaAmount = subtotal.times(rate).div(100)
   const total     = subtotal.plus(ivaAmount)
@@ -88,21 +83,15 @@ export async function POST(req: NextRequest) {
           language:   language || client.language || 'ru',
           validUntil: validUntil ? new Date(validUntil) : null,
           ivaRate:    rate,
+          jobsTotal,
+          materialsTotal,
           subtotal,
           ivaAmount,
           total,
           notes:      notes ?? '',
-          items: {
-            create: parsedItems.map((it, i) => ({
-              description: it.description,
-              quantity:    it.quantity,
-              unitPrice:   it.unitPrice,
-              total:       it.total,
-              sortOrder:   i,
-            })),
-          },
+          jobs: { create: jobsToCreateInput(parsedJobs) },
         },
-        include: { items: true, client: true },
+        include: { jobs: { include: { materials: true } }, client: true },
       })
 
       await tx.auditLog.create({

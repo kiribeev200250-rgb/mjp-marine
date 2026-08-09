@@ -13,13 +13,18 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
   if (!session) redirect('/crm/login')
   requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'CREATE')
 
-  const [clients, companyInfo] = await Promise.all([
+  const [clients, companyInfo, inventoryItems] = await Promise.all([
     prisma.client.findMany({
       where:   { companyId: session.user.companyId, active: true },
       select:  { id: true, firstName: true, lastName: true, phone: true, marina: true, language: true },
       orderBy: { firstName: 'asc' },
     }),
     prisma.companyInfo.findUnique({ where: { companyId: session.user.companyId } }),
+    prisma.inventoryItem.findMany({
+      where:   { companyId: session.user.companyId, active: true },
+      select:  { id: true, name: true, unit: true, sellPrice: true },
+      orderBy: { name: 'asc' },
+    }),
   ])
 
   return (
@@ -34,10 +39,12 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
         <DocumentBuilder
           kind="invoice"
           clients={clients}
+          inventoryItems={inventoryItems.map((i) => ({ id: i.id, name: i.name, unit: i.unit, sellPrice: i.sellPrice.toString() }))}
           defaultIvaRate={String(companyInfo?.ivaRate ?? 21)}
           defaultIrpfRate={String(companyInfo?.irpfRate ?? 0)}
           companyName={companyInfo?.legalName ?? 'MJP Marine Service'}
           companyLocation={[companyInfo?.city, companyInfo?.country].filter(Boolean).join(', ') || 'Costa Blanca, Spain'}
+          companyLogoUrl={companyInfo?.logoUrl}
           initialClientId={sp.clientId}
         />
       </div>

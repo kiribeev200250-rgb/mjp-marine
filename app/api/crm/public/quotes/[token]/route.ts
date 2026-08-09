@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   const quote = await prisma.quote.findUnique({
     where: { publicToken: token },
     include: {
-      items: { orderBy: { sortOrder: 'asc' } },
+      jobs: { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } },
       client: { select: { firstName: true, lastName: true } },
       company: { include: { companyInfo: true } },
     },
@@ -16,20 +16,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   if (!quote) return NextResponse.json({ error: 'Пресмет не найден' }, { status: 404 })
 
   return NextResponse.json({
-    number:      quote.number,
-    status:      quote.status,
-    language:    quote.language,
-    validUntil:  quote.validUntil,
-    createdAt:   quote.createdAt,
-    acceptedAt:  quote.acceptedAt,
-    clientName:  `${quote.client.firstName} ${quote.client.lastName}`.trim(),
-    items:       quote.items,
-    subtotal:    quote.subtotal,
-    ivaRate:     quote.ivaRate,
-    ivaAmount:   quote.ivaAmount,
-    total:       quote.total,
-    notes:       quote.notes,
-    companyName: quote.company.companyInfo?.legalName ?? quote.company.name,
+    number:         quote.number,
+    status:         quote.status,
+    language:       quote.language,
+    validUntil:     quote.validUntil,
+    createdAt:      quote.createdAt,
+    acceptedAt:     quote.acceptedAt,
+    clientName:     `${quote.client.firstName} ${quote.client.lastName}`.trim(),
+    jobs:           quote.jobs,
+    jobsTotal:      quote.jobsTotal,
+    materialsTotal: quote.materialsTotal,
+    subtotal:       quote.subtotal,
+    ivaRate:        quote.ivaRate,
+    ivaAmount:      quote.ivaAmount,
+    total:          quote.total,
+    notes:          quote.notes,
+    companyName:    quote.company.companyInfo?.legalName ?? quote.company.name,
   })
 }
 

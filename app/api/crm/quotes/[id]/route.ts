@@ -13,7 +13,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const quote = await prisma.quote.findFirst({
     where: { id, companyId: session.user.companyId },
-    include: { items: { orderBy: { sortOrder: 'asc' } }, client: true, invoices: { select: { id: true, number: true } } },
+    include: {
+      jobs: { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } },
+      client: true,
+      invoices: { select: { id: true, number: true } },
+    },
   })
   if (!quote) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 

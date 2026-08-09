@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCrmSession } from '@/lib/crm/session'
@@ -20,7 +21,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const quote = await prisma.quote.findFirst({
     where:   { id, companyId: session.user.companyId },
     include: {
-      items: { orderBy: { sortOrder: 'asc' } },
+      jobs: { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } },
       client: true,
       invoices: { select: { id: true, number: true } },
     },
@@ -85,25 +86,46 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-2.5 text-left text-label text-gray-500 uppercase tracking-wide font-semibold">Описание</th>
+                  <th className="px-2 py-2.5 text-left text-label text-gray-500 uppercase tracking-wide font-semibold w-10">№</th>
+                  <th className="px-2 py-2.5 text-left text-label text-gray-500 uppercase tracking-wide font-semibold">Описание</th>
                   <th className="px-4 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Кол-во</th>
                   <th className="px-4 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Цена</th>
                   <th className="px-4 py-2.5 text-right text-label text-gray-500 uppercase tracking-wide font-semibold">Сумма</th>
                 </tr>
               </thead>
               <tbody>
-                {quote.items.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100 last:border-0">
-                    <td className="px-4 py-2.5 text-body text-gray-900">{item.description}</td>
-                    <td className="px-4 py-2.5 text-body text-gray-900 text-right tabular-nums">{item.quantity.toString()}</td>
-                    <td className="px-4 py-2.5 text-body text-gray-900 text-right tabular-nums">{formatMoney(item.unitPrice)}</td>
-                    <td className="px-4 py-2.5 text-body text-gray-900 text-right tabular-nums font-medium">{formatMoney(item.total)}</td>
-                  </tr>
+                {quote.jobs.map((job, ji) => (
+                  <Fragment key={job.id}>
+                    <tr className="border-b border-gray-100 bg-navy-900/5">
+                      <td className="px-2 py-2.5 text-body text-navy-900 font-bold tabular-nums">{ji + 1}</td>
+                      <td className="px-2 py-2.5 text-body text-navy-900 font-bold">{job.title}</td>
+                      <td className="px-4 py-2.5" />
+                      <td className="px-4 py-2.5" />
+                      <td className="px-4 py-2.5 text-body text-navy-900 text-right tabular-nums font-bold">{formatMoney(job.laborCost)}</td>
+                    </tr>
+                    {job.materials.map((m, mi) => (
+                      <tr key={m.id} className="border-b border-gray-100 last:border-0">
+                        <td className="px-2 py-2 text-label text-gray-500 tabular-nums">{ji + 1}.{mi + 1}</td>
+                        <td className="px-2 py-2 pl-6 text-body text-gray-700">{m.name}</td>
+                        <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{m.quantity.toString()}</td>
+                        <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.unitPrice)}</td>
+                        <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.total)}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
             <div className="px-4 py-4 border-t border-gray-200 bg-gray-50/50">
               <div className="ml-auto w-64 space-y-1.5">
+                <div className="flex justify-between text-body">
+                  <span className="text-gray-500">Итого работа</span>
+                  <span className="text-gray-900 tabular-nums">{formatMoney(quote.jobsTotal)}</span>
+                </div>
+                <div className="flex justify-between text-body">
+                  <span className="text-gray-500">Итого материалы</span>
+                  <span className="text-gray-900 tabular-nums">{formatMoney(quote.materialsTotal)}</span>
+                </div>
                 <div className="flex justify-between text-body">
                   <span className="text-gray-500">База</span>
                   <span className="text-gray-900 tabular-nums">{formatMoney(quote.subtotal)}</span>

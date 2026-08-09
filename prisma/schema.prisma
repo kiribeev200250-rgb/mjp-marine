@@ -9,41 +9,41 @@ datasource db {
 }
 
 model SiteConfig {
-  id                Int      @id @default(1)
-  companyName       String   @default("MJP Marine Service")
-  phone             String   @default("")
-  whatsapp          String   @default("")
-  email             String   @default("")
-  hours             String   @default("")
-  coverage          String   @default("")
-  instagram         String   @default("")
-  facebook          String   @default("")
-  whatsappUrl       String   @default("")
-  tiktok            String   @default("")
-  youtube           String   @default("")
-  logoUrl           String?
-  heroBgUrl         String?
-  heroOverlayOpacity Float   @default(0.75)
-  faviconUrl        String?
-  colorPrimary      String   @default("#0A2342")
-  colorAccent       String   @default("#C9A84C")
-  colorText         String   @default("#FFFFFF")
-  showHeroStats     Boolean  @default(true)
-  heroAnimation     String   @default("none")
-  servicesBgColor   String?
-  servicesCardStyle String   @default("bordered")
-  showPriceLabel    Boolean  @default(true)
-  footerBgColor     String?
-  footerShowBrand   Boolean  @default(true)
-  footerShowNav     Boolean  @default(true)
-  footerShowSocial  Boolean  @default(true)
-  footerCustomLinks String   @default("[]")
-  showGallery       Boolean  @default(false)
-  showAnimations    Boolean  @default(true)
-  showWave          Boolean  @default(true)
-  metaTitle         String   @default("MJP Marine Service — Mobile Yacht Repair Costa Blanca")
-  metaDesc          String   @default("Mobile yacht repair & maintenance in Costa Blanca. We come to your marina. 48h response. Alicante · Dénia · Torrevieja.")
-  updatedAt         DateTime @updatedAt
+  id                 Int      @id @default(1)
+  companyName        String   @default("MJP Marine Service")
+  phone              String   @default("")
+  whatsapp           String   @default("")
+  email              String   @default("")
+  hours              String   @default("")
+  coverage           String   @default("")
+  instagram          String   @default("")
+  facebook           String   @default("")
+  whatsappUrl        String   @default("")
+  tiktok             String   @default("")
+  youtube            String   @default("")
+  logoUrl            String?
+  heroBgUrl          String?
+  heroOverlayOpacity Float    @default(0.75)
+  faviconUrl         String?
+  colorPrimary       String   @default("#0A2342")
+  colorAccent        String   @default("#C9A84C")
+  colorText          String   @default("#FFFFFF")
+  showHeroStats      Boolean  @default(true)
+  heroAnimation      String   @default("none")
+  servicesBgColor    String?
+  servicesCardStyle  String   @default("bordered")
+  showPriceLabel     Boolean  @default(true)
+  footerBgColor      String?
+  footerShowBrand    Boolean  @default(true)
+  footerShowNav      Boolean  @default(true)
+  footerShowSocial   Boolean  @default(true)
+  footerCustomLinks  String   @default("[]")
+  showGallery        Boolean  @default(false)
+  showAnimations     Boolean  @default(true)
+  showWave           Boolean  @default(true)
+  metaTitle          String   @default("MJP Marine Service — Mobile Yacht Repair Costa Blanca")
+  metaDesc           String   @default("Mobile yacht repair & maintenance in Costa Blanca. We come to your marina. 48h response. Alicante · Dénia · Torrevieja.")
+  updatedAt          DateTime @updatedAt
 }
 
 model GalleryItem {
@@ -142,15 +142,15 @@ model PresiteLink {
 }
 
 model PresiteConfig {
-  id          Int     @id @default(1)
-  taglineEn   String  @default("Mobile Yacht Repair · Costa Blanca")
-  taglineEs   String  @default("Reparación Náutica Móvil · Costa Blanca")
-  taglineRu   String  @default("Мобильный яхтенный сервис · Коста Бланка")
-  taglineUk   String  @default("Мобільний яхтовий сервіс · Коста Бланка")
-  pageTitle   String  @default("MJP Marine Service")
-  showWave    Boolean @default(true)
-  bgStyle     String  @default("gradient")
-  footerText  String  @default("© 2026 MJP Marine Service · Costa Blanca, España")
+  id         Int     @id @default(1)
+  taglineEn  String  @default("Mobile Yacht Repair · Costa Blanca")
+  taglineEs  String  @default("Reparación Náutica Móvil · Costa Blanca")
+  taglineRu  String  @default("Мобильный яхтенный сервис · Коста Бланка")
+  taglineUk  String  @default("Мобільний яхтовий сервіс · Коста Бланка")
+  pageTitle  String  @default("MJP Marine Service")
+  showWave   Boolean @default(true)
+  bgStyle    String  @default("gradient")
+  footerText String  @default("© 2026 MJP Marine Service · Costa Blanca, España")
 }
 
 model PresiteStat {
@@ -179,38 +179,38 @@ model Company {
   name      String
   createdAt DateTime @default(now())
 
-  users      CrmUser[]
-  clients    Client[]
-  tasks      Task[]
-  inventory  InventoryItem[]
-  finances   FinanceEntry[]
-  capitals   CapitalEntry[]
-  invoices   Invoice[]
-  quotes     Quote[]
-  references ReferenceItem[]
-  auditLogs  AuditLog[]
+  users       CrmUser[]
+  clients     Client[]
+  tasks       Task[]
+  inventory   InventoryItem[]
+  finances    FinanceEntry[]
+  capitals    CapitalEntry[]
+  invoices    Invoice[]
+  quotes      Quote[]
+  references  ReferenceItem[]
+  auditLogs   AuditLog[]
   companyInfo CompanyInfo?
-  goals      KpiGoal[]
-  reminders  Reminder[]
+  goals       KpiGoal[]
+  reminders   Reminder[]
 }
 
 model CrmUser {
-  id          String   @id @default(cuid())
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  email       String   @unique
-  password    String
-  name        String
-  role        CrmRole  @default(EMPLOYEE)
+  id                    String    @id @default(cuid())
+  companyId             String
+  company               Company   @relation(fields: [companyId], references: [id])
+  email                 String    @unique
+  password              String
+  name                  String
+  role                  CrmRole   @default(EMPLOYEE)
   // Матрица прав: { "CLIENTS": ["VIEW","CREATE"], "FINANCE": ["VIEW"] }
-  permissions Json     @default("{}")
-  telegramId  String?  @unique
+  permissions           Json      @default("{}")
+  telegramId            String?   @unique
   // Код для привязки Telegram (/link <код>) — одноразовый, с истечением
   telegramLinkCode      String?   @unique
   telegramLinkExpiresAt DateTime?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active                Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   assignedTasks Task[]     @relation("TaskAssignee")
   auditLogs     AuditLog[]
@@ -243,8 +243,8 @@ model CompanyInfo {
   phone          String  @default("")
   bankAccount    String  @default("")
   logoUrl        String?
-  ivaRate        Decimal @default(21)  @db.Decimal(5, 2)
-  irpfRate       Decimal @default(0)   @db.Decimal(5, 2)
+  ivaRate        Decimal @default(21) @db.Decimal(5, 2)
+  irpfRate       Decimal @default(0) @db.Decimal(5, 2)
   invoicePrefix  String  @default("F")
   quotePrefix    String  @default("P")
   nextInvoiceNum Int     @default(1)
@@ -265,8 +265,8 @@ model AuditLog {
   company   Company  @relation(fields: [companyId], references: [id])
   userId    String?
   user      CrmUser? @relation(fields: [userId], references: [id])
-  action    String   // CREATE | UPDATE | DELETE | STATUS_CHANGE | STOCK_MOVE
-  entity    String   // FinanceEntry | StockMovement | Invoice | Task | ...
+  action    String // CREATE | UPDATE | DELETE | STATUS_CHANGE | STOCK_MOVE
+  entity    String // FinanceEntry | StockMovement | Invoice | Task | ...
   entityId  String
   oldValue  Json?
   newValue  Json?
@@ -280,22 +280,22 @@ model AuditLog {
 // ─── КЛИЕНТЫ И ВОРОНКА ──────────────────────────────────────────
 
 model Client {
-  id          String        @id @default(cuid())
+  id          String       @id @default(cuid())
   companyId   String
-  company     Company       @relation(fields: [companyId], references: [id])
+  company     Company      @relation(fields: [companyId], references: [id])
   firstName   String
   lastName    String
-  phone       String        @default("")
-  email       String        @default("")
-  source      ClientSource  @default(MANUAL)
-  language    String        @default("ru")
-  marina      String        @default("")
-  notes       String        @default("")
-  funnelStage FunnelStage   @default(NEW_LEAD)
-  active      Boolean       @default(true)
+  phone       String       @default("")
+  email       String       @default("")
+  source      ClientSource @default(MANUAL)
+  language    String       @default("ru")
+  marina      String       @default("")
+  notes       String       @default("")
+  funnelStage FunnelStage  @default(NEW_LEAD)
+  active      Boolean      @default(true)
   fbLeadId    String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   yachts       Yacht[]
   quotes       Quote[]
@@ -318,13 +318,13 @@ enum ClientSource {
 }
 
 enum FunnelStage {
-  NEW_LEAD        // Новый лид
-  CONTACT_MADE    // Контакт установлен
-  QUOTE_SENT      // Предварительная оценка (пресмет)
-  WORK_SCHEDULED  // Работа запланирована
-  WORK_DONE       // Выполнено
-  INVOICE_SENT    // Счёт выставлен
-  PAID            // Оплачено
+  NEW_LEAD // Новый лид
+  CONTACT_MADE // Контакт установлен
+  QUOTE_SENT // Предварительная оценка (пресмет)
+  WORK_SCHEDULED // Работа запланирована
+  WORK_DONE // Выполнено
+  INVOICE_SENT // Счёт выставлен
+  PAID // Оплачено
 }
 
 model FunnelHistory {
@@ -351,26 +351,28 @@ model Yacht {
 // ─── ПРЕСМЕТЫ (QUOTES) ──────────────────────────────────────────
 
 model Quote {
-  id          String      @id @default(cuid())
-  companyId   String
-  company     Company     @relation(fields: [companyId], references: [id])
-  clientId    String
-  client      Client      @relation(fields: [clientId], references: [id])
-  number      String
-  status      QuoteStatus @default(DRAFT)
-  language    String      @default("ru")
-  validUntil  DateTime?
-  publicToken String      @unique @default(cuid())
-  acceptedAt  DateTime?
-  ivaRate     Decimal     @default(21)  @db.Decimal(5, 2)
-  subtotal    Decimal     @default(0)   @db.Decimal(12, 2)
-  ivaAmount   Decimal     @default(0)   @db.Decimal(12, 2)
-  total       Decimal     @default(0)   @db.Decimal(12, 2)
-  notes       String      @default("")
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  companyId      String
+  company        Company     @relation(fields: [companyId], references: [id])
+  clientId       String
+  client         Client      @relation(fields: [clientId], references: [id])
+  number         String
+  status         QuoteStatus @default(DRAFT)
+  language       String      @default("ru")
+  validUntil     DateTime?
+  publicToken    String      @unique @default(cuid())
+  acceptedAt     DateTime?
+  ivaRate        Decimal     @default(21) @db.Decimal(5, 2)
+  jobsTotal      Decimal     @default(0) @db.Decimal(12, 2) // Итого работа
+  materialsTotal Decimal     @default(0) @db.Decimal(12, 2) // Итого материалы
+  subtotal       Decimal     @default(0) @db.Decimal(12, 2) // База = jobsTotal + materialsTotal
+  ivaAmount      Decimal     @default(0) @db.Decimal(12, 2)
+  total          Decimal     @default(0) @db.Decimal(12, 2)
+  notes          String      @default("")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  items    QuoteItem[]
+  jobs     QuoteJob[]
   tasks    Task[]
   invoices Invoice[]
 }
@@ -382,47 +384,64 @@ enum QuoteStatus {
   REJECTED
 }
 
-model QuoteItem {
-  id          String  @id @default(cuid())
-  quoteId     String
-  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  description String
-  quantity    Decimal @db.Decimal(10, 3)
-  unitPrice   Decimal @db.Decimal(12, 2)
-  total       Decimal @db.Decimal(12, 2)
-  sortOrder   Int     @default(0)
+// Работа (родительская строка сметы) — нумеруется 1, 2, 3…
+model QuoteJob {
+  id         String   @id @default(cuid())
+  quoteId    String
+  quote      Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  sortOrder  Int      @default(0)
+  title      String
+  laborHours Decimal? @db.Decimal(6, 2)
+  laborRate  Decimal? @db.Decimal(8, 2)
+  laborCost  Decimal  @db.Decimal(12, 2)
+
+  materials QuoteMaterial[]
+}
+
+// Материал (дочерняя строка внутри работы) — нумеруется 1.1, 1.2…
+model QuoteMaterial {
+  id              String         @id @default(cuid())
+  jobId           String
+  job             QuoteJob       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  sortOrder       Int            @default(0)
+  name            String
+  quantity        Decimal        @db.Decimal(10, 3)
+  unitPrice       Decimal        @db.Decimal(12, 2)
+  total           Decimal        @db.Decimal(12, 2)
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
 }
 
 // ─── ЗАДАЧИ / РАБОТЫ ────────────────────────────────────────────
 
 model Task {
-  id          String     @id @default(cuid())
-  companyId   String
-  company     Company    @relation(fields: [companyId], references: [id])
-  title       String
-  description String     @default("")
-  clientId    String?
-  client      Client?    @relation(fields: [clientId], references: [id])
-  quoteId     String?
-  quote       Quote?     @relation(fields: [quoteId], references: [id])
-  assigneeId  String?
-  assignee    CrmUser?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  marina      String     @default("")
-  status      TaskStatus @default(NEW)
-  scheduledAt DateTime?
-  startTime   DateTime?
-  endTime     DateTime?
-  isBacklog   Boolean    @default(false)
-  checklist   Json       @default("[]")
-  photosBefore String[]
-  photosAfter  String[]
+  id                  String     @id @default(cuid())
+  companyId           String
+  company             Company    @relation(fields: [companyId], references: [id])
+  title               String
+  description         String     @default("")
+  clientId            String?
+  client              Client?    @relation(fields: [clientId], references: [id])
+  quoteId             String?
+  quote               Quote?     @relation(fields: [quoteId], references: [id])
+  assigneeId          String?
+  assignee            CrmUser?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  marina              String     @default("")
+  status              TaskStatus @default(NEW)
+  scheduledAt         DateTime?
+  startTime           DateTime?
+  endTime             DateTime?
+  isBacklog           Boolean    @default(false)
+  checklist           Json       @default("[]")
+  photosBefore        String[]
+  photosAfter         String[]
   // Материалы, привязанные к задаче: [{ itemId, name, unit, qty }] — снапшот на момент привязки.
   // Списываются со склада (StockMovement WRITE_OFF) автоматически при переходе в DONE.
-  plannedMaterials    Json    @default("[]")
-  materialsWrittenOff Boolean @default(false)
-  completedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  plannedMaterials    Json       @default("[]")
+  materialsWrittenOff Boolean    @default(false)
+  completedAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   stockUsage StockMovement[]
   reminders  Reminder[]
@@ -443,24 +462,26 @@ enum TaskStatus {
 // ─── СКЛАД ──────────────────────────────────────────────────────
 
 model InventoryItem {
-  id           String   @id @default(cuid())
-  companyId    String
-  company      Company  @relation(fields: [companyId], references: [id])
-  name         String
-  category     String   @default("")
-  unit         String   @default("шт")
-  qtyInStock   Decimal  @default(0) @db.Decimal(10, 3)
-  qtyOrdered   Decimal  @default(0) @db.Decimal(10, 3)
-  qtyMinAlert  Decimal  @default(0) @db.Decimal(10, 3)
-  costPrice    Decimal  @default(0) @db.Decimal(12, 2)
-  sellPrice    Decimal  @default(0) @db.Decimal(12, 2)
-  supplier     String   @default("")
-  notes        String   @default("")
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  name        String
+  category    String   @default("")
+  unit        String   @default("шт")
+  qtyInStock  Decimal  @default(0) @db.Decimal(10, 3)
+  qtyOrdered  Decimal  @default(0) @db.Decimal(10, 3)
+  qtyMinAlert Decimal  @default(0) @db.Decimal(10, 3)
+  costPrice   Decimal  @default(0) @db.Decimal(12, 2)
+  sellPrice   Decimal  @default(0) @db.Decimal(12, 2)
+  supplier    String   @default("")
+  notes       String   @default("")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  movements StockMovement[]
+  movements        StockMovement[]
+  quoteMaterials   QuoteMaterial[]
+  invoiceMaterials InvoiceMaterial[]
 
   @@index([companyId])
 }
@@ -484,46 +505,46 @@ model StockMovement {
 }
 
 enum StockMovementType {
-  RECEIVE    // Приёмка
-  WRITE_OFF  // Списание в работу
-  SELL       // Продажа
-  ADJUST     // Корректировка
-  ORDER      // Заказ (в пути)
+  RECEIVE // Приёмка
+  WRITE_OFF // Списание в работу
+  SELL // Продажа
+  ADJUST // Корректировка
+  ORDER // Заказ (в пути)
 }
 
 // ─── ФИНАНСЫ ────────────────────────────────────────────────────
 
 // Операционные записи: входят в P&L и в кассу
 model FinanceEntry {
-  id              String           @id @default(cuid())
-  companyId       String
-  company         Company          @relation(fields: [companyId], references: [id])
-  autoId          String           @unique // EXP-2025-001 | INC-... | SAL-...
-  type            FinanceEntryType
-  date            DateTime
-  category        String
+  id             String           @id @default(cuid())
+  companyId      String
+  company        Company          @relation(fields: [companyId], references: [id])
+  autoId         String           @unique // EXP-2025-001 | INC-... | SAL-...
+  type           FinanceEntryType
+  date           DateTime
+  category       String
   // Поле поддерживает арифметику: "168.23/2" — хранится и выражение, и результат
-  amountExpr      String           @default("")
-  amount          Decimal          @db.Decimal(12, 2)
-  paymentMethod   String           @default("")
-  description     String           @default("")
-  clientId        String?
-  client          Client?          @relation(fields: [clientId], references: [id])
-  invoiceId       String?
-  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
-  receiptUrl      String?
-  receiptDriveId  String?
-  sheetsSynced    Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  amountExpr     String           @default("")
+  amount         Decimal          @db.Decimal(12, 2)
+  paymentMethod  String           @default("")
+  description    String           @default("")
+  clientId       String?
+  client         Client?          @relation(fields: [clientId], references: [id])
+  invoiceId      String?
+  invoice        Invoice?         @relation(fields: [invoiceId], references: [id])
+  receiptUrl     String?
+  receiptDriveId String?
+  sheetsSynced   Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([companyId, type, date])
 }
 
 enum FinanceEntryType {
-  INCOME   // Доход
-  EXPENSE  // Расход
-  SALARY   // Зарплата
+  INCOME // Доход
+  EXPENSE // Расход
+  SALARY // Зарплата
 }
 
 // Вложения — НЕ входят в P&L никогда
@@ -546,46 +567,48 @@ model CapitalEntry {
 
 // Три типа вложений — строго
 enum CapitalEntryType {
-  REINVESTMENT  // Доинвестиции → попадают в кассу
+  REINVESTMENT // Доинвестиции → попадают в кассу
   STARTUP_ASSET // Стартовые → актив (фургон, залог)
-  STARTUP_SUNK  // Стартовые невозвратные (риелтор, аренда при въезде)
+  STARTUP_SUNK // Стартовые невозвратные (риелтор, аренда при въезде)
 }
 
 // ─── СЧЕТА (FACTURAS) ────────────────────────────────────────────
 
 model Invoice {
-  id            String        @id @default(cuid())
-  companyId     String
-  company       Company       @relation(fields: [companyId], references: [id])
-  clientId      String
-  client        Client        @relation(fields: [clientId], references: [id])
-  quoteId       String?
-  quote         Quote?        @relation(fields: [quoteId], references: [id])
-  number        String        // F2025-001
-  year          Int
-  sequenceNum   Int
-  status        InvoiceStatus @default(ISSUED)
-  language      String        @default("ru")
-  date          DateTime      @default(now())
-  dueDate       DateTime?
-  paymentMethod String        @default("")
-  paidAt        DateTime?
-  ivaRate       Decimal       @default(21) @db.Decimal(5, 2)
-  irpfRate      Decimal       @default(0)  @db.Decimal(5, 2)
-  subtotal      Decimal       @db.Decimal(12, 2)
-  ivaAmount     Decimal       @db.Decimal(12, 2)
-  irpfAmount    Decimal       @default(0)  @db.Decimal(12, 2)
-  total         Decimal       @db.Decimal(12, 2)
+  id             String        @id @default(cuid())
+  companyId      String
+  company        Company       @relation(fields: [companyId], references: [id])
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id])
+  quoteId        String?
+  quote          Quote?        @relation(fields: [quoteId], references: [id])
+  number         String // F2025-001
+  year           Int
+  sequenceNum    Int
+  status         InvoiceStatus @default(ISSUED)
+  language       String        @default("ru")
+  date           DateTime      @default(now())
+  dueDate        DateTime?
+  paymentMethod  String        @default("")
+  paidAt         DateTime?
+  ivaRate        Decimal       @default(21) @db.Decimal(5, 2)
+  irpfRate       Decimal       @default(0) @db.Decimal(5, 2)
+  jobsTotal      Decimal       @default(0) @db.Decimal(12, 2) // Итого работа
+  materialsTotal Decimal       @default(0) @db.Decimal(12, 2) // Итого материалы
+  subtotal       Decimal       @db.Decimal(12, 2) // База = jobsTotal + materialsTotal
+  ivaAmount      Decimal       @db.Decimal(12, 2)
+  irpfAmount     Decimal       @default(0) @db.Decimal(12, 2)
+  total          Decimal       @db.Decimal(12, 2)
   // Снапшот реквизитов клиента на момент выпуска
-  clientName    String
-  clientNif     String        @default("")
-  clientAddress String        @default("")
-  notes         String        @default("")
-  pdfUrl        String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  clientName     String
+  clientNif      String        @default("")
+  clientAddress  String        @default("")
+  notes          String        @default("")
+  pdfUrl         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  items    InvoiceItem[]
+  jobs     InvoiceJob[]
   finances FinanceEntry[]
 
   @@unique([companyId, year, sequenceNum])
@@ -600,15 +623,32 @@ enum InvoiceStatus {
   CANCELLED
 }
 
-model InvoiceItem {
-  id          String  @id @default(cuid())
-  invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  description String
-  quantity    Decimal @db.Decimal(10, 3)
-  unitPrice   Decimal @db.Decimal(12, 2)
-  total       Decimal @db.Decimal(12, 2)
-  sortOrder   Int     @default(0)
+// Работа (родительская строка счёта) — нумеруется 1, 2, 3…
+model InvoiceJob {
+  id         String   @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sortOrder  Int      @default(0)
+  title      String
+  laborHours Decimal? @db.Decimal(6, 2)
+  laborRate  Decimal? @db.Decimal(8, 2)
+  laborCost  Decimal  @db.Decimal(12, 2)
+
+  materials InvoiceMaterial[]
+}
+
+// Материал (дочерняя строка внутри работы) — нумеруется 1.1, 1.2…
+model InvoiceMaterial {
+  id              String         @id @default(cuid())
+  jobId           String
+  job             InvoiceJob     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  sortOrder       Int            @default(0)
+  name            String
+  quantity        Decimal        @db.Decimal(10, 3)
+  unitPrice       Decimal        @db.Decimal(12, 2)
+  total           Decimal        @db.Decimal(12, 2)
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
 }
 
 // ─── СПРАВОЧНИКИ ────────────────────────────────────────────────

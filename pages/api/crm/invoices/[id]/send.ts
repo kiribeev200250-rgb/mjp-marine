@@ -17,7 +17,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const id = String(req.query.id)
   const invoice = await prisma.invoice.findFirst({
     where: { id, companyId: session.user.companyId },
-    include: { items: { orderBy: { sortOrder: 'asc' } }, client: true },
+    include: {
+      jobs: { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } },
+      client: true,
+    },
   })
   if (!invoice) return res.status(404).json({ error: 'Не найдено' })
   if (!invoice.client.email) return res.status(400).json({ error: 'У клиента не указан email' })
@@ -30,16 +33,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     date:       invoice.date,
     dueDate:    invoice.dueDate,
     language:   invoice.language,
-    company:    companyInfo,
+    company:    { ...companyInfo, logoUrl: companyInfo.logoUrl },
     clientName: invoice.clientName,
     clientNif:  invoice.clientNif,
     clientAddress: invoice.clientAddress,
-    items:      invoice.items.map((it) => ({
-      description: it.description,
-      quantity:    it.quantity.toString(),
-      unitPrice:   it.unitPrice.toString(),
-      total:       it.total.toString(),
+    jobs: invoice.jobs.map((j) => ({
+      title:     j.title,
+      laborCost: j.laborCost.toString(),
+      materials: j.materials.map((m) => ({
+        name:      m.name,
+        quantity:  m.quantity.toString(),
+        unitPrice: m.unitPrice.toString(),
+        total:     m.total.toString(),
+      })),
     })),
+    jobsTotal:      invoice.jobsTotal.toString(),
+    materialsTotal: invoice.materialsTotal.toString(),
     subtotal:      invoice.subtotal.toString(),
     ivaRate:       invoice.ivaRate.toString(),
     ivaAmount:     invoice.ivaAmount.toString(),

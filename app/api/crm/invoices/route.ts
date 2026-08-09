@@ -3,6 +3,7 @@ import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
+import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
 import { prisma } from '@/lib/prisma'
 import type { InvoiceStatus } from '@prisma/client'
 
@@ -35,8 +36,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(invoices)
 }
 
-interface ItemInput { description: string; quantity: string | number; unitPrice: string | number }
-
 // POST /api/crm/invoices — создать счёт вручную (не из пресмета)
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
@@ -45,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const {
-    clientId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, items,
+    clientId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
     clientNif, clientAddress,
   } = body as {
     clientId: string
@@ -55,15 +54,12 @@ export async function POST(req: NextRequest) {
     irpfRate?: string | number
     paymentMethod?: string
     notes?: string
-    items: ItemInput[]
+    jobs: JobInput[]
     clientNif?: string
     clientAddress?: string
   }
 
   if (!clientId) return NextResponse.json({ error: 'Выберите клиента' }, { status: 400 })
-  if (!Array.isArray(items) || items.length === 0) {
-    return NextResponse.json({ error: 'Добавьте хотя бы одну позицию' }, { status: 400 })
-  }
 
   const client = await prisma.client.findFirst({ where: { id: clientId, companyId: session.user.companyId } })
   if (!client) return NextResponse.json({ error: 'Клиент не найден' }, { status: 404 })
@@ -73,20 +69,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Заполните реквизиты компании в настройках перед выставлением счёта' }, { status: 400 })
   }
 
-  let parsedItems
+  let parsedJobs, jobsTotal, materialsTotal
   try {
-    parsedItems = items.map((it) => {
-      const qty   = new Decimal(it.quantity || 0)
-      const price = new Decimal(it.unitPrice || 0)
-      if (!it.description?.trim()) throw new Error('Заполните описание позиции')
-      if (qty.lte(0)) throw new Error('Количество должно быть больше нуля')
-      return { description: it.description.trim(), quantity: qty, unitPrice: price, total: qty.times(price) }
-    })
+    ;({ jobs: parsedJobs, jobsTotal, materialsTotal } = parseJobsInput(jobs))
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректные позиции' }, { status: 400 })
   }
 
-  const subtotal   = parsedItems.reduce((s, it) => s.plus(it.total), new Decimal(0))
+  const subtotal   = jobsTotal.plus(materialsTotal)
   const iva        = new Decimal(ivaRate ?? 21)
   const irpf       = new Decimal(irpfRate ?? 0)
   const ivaAmount  = subtotal.times(iva).div(100)
@@ -107,22 +97,14 @@ export async function POST(req: NextRequest) {
           paymentMethod: paymentMethod ?? '',
           ivaRate:       iva,
           irpfRate:      irpf,
-          subtotal, ivaAmount, irpfAmount, total,
+          jobsTotal, materialsTotal, subtotal, ivaAmount, irpfAmount, total,
           clientName:    `${client.firstName} ${client.lastName}`.trim(),
           clientNif:     clientNif ?? '',
           clientAddress: clientAddress ?? '',
           notes:         notes ?? '',
-          items: {
-            create: parsedItems.map((it, i) => ({
-              description: it.description,
-              quantity:    it.quantity,
-              unitPrice:   it.unitPrice,
-              total:       it.total,
-              sortOrder:   i,
-            })),
-          },
+          jobs: { create: jobsToCreateInput(parsedJobs) },
         },
-        include: { items: true },
+        include: { jobs: { include: { materials: true } } },
       })
 
       await tx.client.update({ where: { id: clientId }, data: { funnelStage: 'INVOICE_SENT' } })

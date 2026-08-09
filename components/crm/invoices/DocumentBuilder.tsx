@@ -15,22 +15,46 @@ export interface BuilderClient {
   language:  string
 }
 
-interface LineItem { description: string; quantity: string; unitPrice: string }
+export interface BuilderInventoryItem {
+  id:        string
+  name:      string
+  unit:      string
+  sellPrice: string
+}
+
+interface MaterialLine {
+  name: string
+  quantity: string
+  unitPrice: string
+  inventoryItemId?: string
+}
+
+interface JobLine {
+  title: string
+  laborHours: string
+  laborRate: string
+  laborCost: string
+  materials: MaterialLine[]
+}
 
 interface Props {
-  kind:            'invoice' | 'quote'
-  clients:         BuilderClient[]
-  defaultIvaRate:  string
-  defaultIrpfRate: string
-  companyName:     string
-  companyLocation: string
+  kind:             'invoice' | 'quote'
+  clients:          BuilderClient[]
+  inventoryItems:   BuilderInventoryItem[]
+  defaultIvaRate:   string
+  defaultIrpfRate:  string
+  companyName:      string
+  companyLocation:  string
+  companyLogoUrl?:  string | null
   initialClientId?: string
 }
 
-const EMPTY_ITEM: LineItem = { description: '', quantity: '1', unitPrice: '' }
+const EMPTY_MATERIAL: MaterialLine = { name: '', quantity: '1', unitPrice: '' }
+const EMPTY_JOB: JobLine = { title: '', laborHours: '', laborRate: '', laborCost: '', materials: [] }
 
 export function DocumentBuilder({
-  kind, clients, defaultIvaRate, defaultIrpfRate, companyName, companyLocation, initialClientId,
+  kind, clients, inventoryItems, defaultIvaRate, defaultIrpfRate,
+  companyName, companyLocation, companyLogoUrl, initialClientId,
 }: Props) {
   const router = useRouter()
   const isInvoice = kind === 'invoice'
@@ -41,7 +65,8 @@ export function DocumentBuilder({
     initialClient ? `${initialClient.firstName} ${initialClient.lastName}` : '',
   )
   const [language,     setLanguage]     = useState(initialClient?.language || 'ru')
-  const [items,        setItems]        = useState<LineItem[]>([{ ...EMPTY_ITEM }])
+  const [jobs,          setJobs]         = useState<JobLine[]>([{ ...EMPTY_JOB, materials: [] }])
+  const [matSearch,     setMatSearch]    = useState<{ job: number; mat: number } | null>(null)
   const [ivaRate,       setIvaRate]      = useState(defaultIvaRate)
   const [irpfRate,      setIrpfRate]     = useState(defaultIrpfRate)
   const [dueDate,       setDueDate]      = useState('')
@@ -61,42 +86,76 @@ export function DocumentBuilder({
 
   const selectedClient = clients.find((c) => c.id === clientId)
 
-  function updateItem(i: number, patch: Partial<LineItem>) {
-    setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  function updateJob(i: number, patch: Partial<JobLine>) {
+    setJobs((prev) => prev.map((j, idx) => (idx === i ? { ...j, ...patch } : j)))
   }
-  function addItem() {
-    setItems((prev) => [...prev, { ...EMPTY_ITEM }])
+  function addJob() {
+    setJobs((prev) => [...prev, { ...EMPTY_JOB, materials: [] }])
   }
-  function removeItem(i: number) {
-    setItems((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))
+  function removeJob(i: number) {
+    setJobs((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))
+  }
+
+  function updateMaterial(ji: number, mi: number, patch: Partial<MaterialLine>) {
+    setJobs((prev) => prev.map((j, idx) => (
+      idx !== ji ? j : { ...j, materials: j.materials.map((m, midx) => (midx === mi ? { ...m, ...patch } : m)) }
+    )))
+  }
+  function addMaterial(ji: number) {
+    setJobs((prev) => prev.map((j, idx) => (idx !== ji ? j : { ...j, materials: [...j.materials, { ...EMPTY_MATERIAL }] })))
+  }
+  function removeMaterial(ji: number, mi: number) {
+    setJobs((prev) => prev.map((j, idx) => (idx !== ji ? j : { ...j, materials: j.materials.filter((_, midx) => midx !== mi) })))
+  }
+  function pickInventoryItem(ji: number, mi: number, item: BuilderInventoryItem) {
+    updateMaterial(ji, mi, { name: item.name, unitPrice: item.sellPrice, inventoryItemId: item.id })
+    setMatSearch(null)
   }
 
   const computed = useMemo(() => {
-    const rows = items.map((it) => {
-      const qty   = new Decimal(it.quantity || 0)
-      const price = new Decimal(it.unitPrice || 0)
-      return { ...it, total: qty.times(price) }
+    const jobRows = jobs.map((j) => {
+      const matRows = j.materials.map((m) => {
+        const qty   = new Decimal(m.quantity || 0)
+        const price = new Decimal(m.unitPrice || 0)
+        return { ...m, total: qty.times(price) }
+      })
+      const materialsSum = matRows.reduce((s, m) => s.plus(m.total), new Decimal(0))
+      return { ...j, materials: matRows, laborCostDec: new Decimal(j.laborCost || 0), materialsSum }
     })
-    const subtotal   = rows.reduce((s, r) => s.plus(r.total), new Decimal(0))
+    const jobsTotal      = jobRows.reduce((s, j) => s.plus(j.laborCostDec), new Decimal(0))
+    const materialsTotal = jobRows.reduce((s, j) => s.plus(j.materialsSum), new Decimal(0))
+    const subtotal   = jobsTotal.plus(materialsTotal)
     const iva        = new Decimal(ivaRate || 0)
     const irpf       = new Decimal(isInvoice ? irpfRate || 0 : 0)
     const ivaAmount  = subtotal.times(iva).div(100)
     const irpfAmount = subtotal.times(irpf).div(100)
     const total       = subtotal.plus(ivaAmount).minus(irpfAmount)
-    return { rows, subtotal, ivaAmount, irpfAmount, total }
-  }, [items, ivaRate, irpfRate, isInvoice])
+    return { jobRows, jobsTotal, materialsTotal, subtotal, ivaAmount, irpfAmount, total }
+  }, [jobs, ivaRate, irpfRate, isInvoice])
 
   async function handleSubmit() {
     setError(null)
     if (!clientId) { setError('Выберите клиента'); return }
-    const cleanItems = items.filter((it) => it.description.trim() && Number(it.unitPrice) > 0)
-    if (cleanItems.length === 0) { setError('Добавьте хотя бы одну позицию с ценой'); return }
+
+    const cleanJobs = jobs
+      .filter((j) => j.title.trim())
+      .map((j) => ({
+        title: j.title.trim(),
+        laborHours: j.laborHours || undefined,
+        laborRate:  j.laborRate  || undefined,
+        laborCost:  j.laborCost || '0',
+        materials: j.materials
+          .filter((m) => m.name.trim() && Number(m.unitPrice) >= 0 && Number(m.quantity) > 0)
+          .map((m) => ({ name: m.name.trim(), quantity: m.quantity, unitPrice: m.unitPrice, inventoryItemId: m.inventoryItemId })),
+      }))
+
+    if (cleanJobs.length === 0) { setError('Добавьте хотя бы одну работу'); return }
 
     setSaving(true)
     const endpoint = isInvoice ? '/api/crm/invoices' : '/api/crm/quotes'
     const payload = isInvoice
-      ? { clientId, language, dueDate: dueDate || undefined, ivaRate, irpfRate, paymentMethod, notes, items: cleanItems }
-      : { clientId, language, validUntil: validUntil || undefined, ivaRate, notes, items: cleanItems }
+      ? { clientId, language, dueDate: dueDate || undefined, ivaRate, irpfRate, paymentMethod, notes, jobs: cleanJobs }
+      : { clientId, language, validUntil: validUntil || undefined, ivaRate, notes, jobs: cleanJobs }
 
     const res = await fetch(endpoint, {
       method:  'POST',
@@ -114,7 +173,7 @@ export function DocumentBuilder({
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-5 items-start">
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_440px] gap-5 items-start">
       {/* Форма */}
       <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5 space-y-5">
         <h2 className="text-subheading font-bold text-gray-900">
@@ -130,7 +189,7 @@ export function DocumentBuilder({
               onChange={(e) => { setClientSearch(e.target.value); setClientId('') }}
             />
             {clientSearch && !clientId && (
-              <div className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-control shadow-e2">
+              <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-control shadow-e2">
                 {filteredClients.length === 0 ? (
                   <p className="px-3 py-2 text-label text-gray-500">Не найдено</p>
                 ) : filteredClients.map((c) => (
@@ -159,47 +218,107 @@ export function DocumentBuilder({
           </Select>
         </div>
 
-        {/* Позиции */}
-        <div className="space-y-2">
-          <label className="block text-label text-gray-500 uppercase tracking-wide">Позиции</label>
-          <div className="space-y-2">
-            {items.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
+        {/* Работы */}
+        <div className="space-y-3">
+          <label className="block text-label text-gray-500 uppercase tracking-wide">Работы и материалы</label>
+
+          {jobs.map((job, ji) => (
+            <div key={ji} className="border border-gray-200 rounded-control p-3 space-y-2 bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                <span className="w-5 text-label text-gray-500 font-semibold shrink-0">{ji + 1}</span>
                 <input
                   className="flex-1 rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
-                  placeholder="Описание работы / товара"
-                  value={item.description}
-                  onChange={(e) => updateItem(i, { description: e.target.value })}
+                  placeholder="Название работы"
+                  value={job.title}
+                  onChange={(e) => updateJob(ji, { title: e.target.value })}
                 />
                 <input
                   type="number" min="0" step="0.01"
-                  className="w-20 rounded-control border border-gray-200 bg-white px-2 py-2 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(i, { quantity: e.target.value })}
+                  className="w-28 rounded-control border border-gray-200 bg-white px-2 py-2 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                  placeholder="Стоимость труда"
+                  value={job.laborCost}
+                  onChange={(e) => updateJob(ji, { laborCost: e.target.value })}
                 />
-                <input
-                  type="number" min="0" step="0.01"
-                  className="w-24 rounded-control border border-gray-200 bg-white px-2 py-2 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
-                  placeholder="Цена"
-                  value={item.unitPrice}
-                  onChange={(e) => updateItem(i, { unitPrice: e.target.value })}
-                />
-                <span className="w-20 text-body text-gray-900 text-right tabular-nums shrink-0">
-                  {formatMoney(computed.rows[i]?.total ?? 0)}
-                </span>
                 <button
                   type="button"
-                  onClick={() => removeItem(i)}
+                  onClick={() => removeJob(ji)}
                   className="text-gray-200 hover:text-danger transition shrink-0 w-5"
-                  title="Удалить позицию"
+                  title="Удалить работу"
                 >
                   ✕
                 </button>
               </div>
-            ))}
-          </div>
-          <button type="button" onClick={addItem} className="text-info text-body font-medium hover:underline">
-            + Добавить позицию
+
+              {/* Материалы работы */}
+              <div className="pl-7 space-y-1.5">
+                {job.materials.map((mat, mi) => (
+                  <div key={mi} className="flex items-center gap-2 relative">
+                    <span className="w-9 text-label text-gray-500 shrink-0">{ji + 1}.{mi + 1}</span>
+                    <input
+                      className="flex-1 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                      placeholder="Материал: поиск по складу или ручной ввод"
+                      value={mat.name}
+                      onChange={(e) => {
+                        updateMaterial(ji, mi, { name: e.target.value, inventoryItemId: undefined })
+                        setMatSearch({ job: ji, mat: mi })
+                      }}
+                      onFocus={() => setMatSearch({ job: ji, mat: mi })}
+                      onBlur={() => setTimeout(() => setMatSearch(null), 150)}
+                    />
+                    <input
+                      type="number" min="0" step="0.001"
+                      className="w-16 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                      value={mat.quantity}
+                      onChange={(e) => updateMaterial(ji, mi, { quantity: e.target.value })}
+                    />
+                    <input
+                      type="number" min="0" step="0.01"
+                      className="w-20 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                      placeholder="Цена"
+                      value={mat.unitPrice}
+                      onChange={(e) => updateMaterial(ji, mi, { unitPrice: e.target.value })}
+                    />
+                    <span className="w-16 text-label text-gray-900 text-right tabular-nums shrink-0">
+                      {formatMoney(computed.jobRows[ji]?.materials[mi]?.total ?? 0)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeMaterial(ji, mi)}
+                      className="text-gray-200 hover:text-danger transition shrink-0 w-4"
+                      title="Удалить материал"
+                    >
+                      ✕
+                    </button>
+
+                    {matSearch?.job === ji && matSearch?.mat === mi && mat.name.trim() && (
+                      <div className="absolute z-20 top-full mt-1 left-9 right-16 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-control shadow-e2">
+                        {inventoryItems
+                          .filter((it) => it.name.toLowerCase().includes(mat.name.trim().toLowerCase()))
+                          .slice(0, 20)
+                          .map((it) => (
+                            <button
+                              key={it.id}
+                              type="button"
+                              className="w-full text-left px-3 py-1.5 text-label hover:bg-gray-50 transition flex justify-between"
+                              onMouseDown={() => pickInventoryItem(ji, mi, it)}
+                            >
+                              <span className="text-gray-900">{it.name}</span>
+                              <span className="text-gray-500 tabular-nums">{formatMoney(it.sellPrice)}</span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={() => addMaterial(ji)} className="text-info text-label font-medium hover:underline">
+                  + Материал
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button type="button" onClick={addJob} className="text-info text-body font-medium hover:underline">
+            + Работа
           </button>
         </div>
 
@@ -243,9 +362,15 @@ export function DocumentBuilder({
       {/* Живой предпросмотр */}
       <div className="bg-navy-900 rounded-card shadow-e2 overflow-hidden sticky top-5">
         <div className="p-5 border-b border-white/10 flex items-start justify-between">
-          <div>
-            <p className="text-white font-bold text-subheading">{companyName}</p>
-            <p className="text-white/50 text-label mt-0.5">{companyLocation}</p>
+          <div className="flex items-center gap-3">
+            {companyLogoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={companyLogoUrl} alt={companyName} className="w-9 h-9 rounded object-cover" />
+            )}
+            <div>
+              <p className="text-white font-bold text-subheading">{companyName}</p>
+              <p className="text-white/50 text-label mt-0.5">{companyLocation}</p>
+            </div>
           </div>
           <div className="text-right">
             <p className="text-gold text-label font-bold uppercase tracking-wide">
@@ -269,24 +394,45 @@ export function DocumentBuilder({
 
           <div>
             <div className="flex text-white/40 text-[10px] uppercase tracking-wide pb-1.5 border-b border-white/10">
+              <span className="w-6">№</span>
               <span className="flex-1">Description</span>
               <span className="w-10 text-right">Qty</span>
               <span className="w-16 text-right">Price</span>
               <span className="w-20 text-right">Total</span>
             </div>
-            {computed.rows.filter((r) => r.description.trim()).length === 0 ? (
+            {computed.jobRows.filter((j) => j.title.trim()).length === 0 ? (
               <p className="text-white/30 text-label py-4 text-center">Нет позиций</p>
-            ) : computed.rows.filter((r) => r.description.trim()).map((r, i) => (
-              <div key={i} className="flex items-center py-1.5 border-b border-white/5 text-body">
-                <span className="flex-1 text-white/90 truncate pr-2">{r.description}</span>
-                <span className="w-10 text-right text-white/70 tabular-nums">{r.quantity}</span>
-                <span className="w-16 text-right text-white/70 tabular-nums">{formatMoney(r.unitPrice || 0)}</span>
-                <span className="w-20 text-right text-white font-medium tabular-nums">{formatMoney(r.total)}</span>
+            ) : computed.jobRows.filter((j) => j.title.trim()).map((j, ji) => (
+              <div key={ji}>
+                <div className="flex items-center py-1.5 border-b border-white/5 text-body bg-white/5">
+                  <span className="w-6 text-gold font-semibold tabular-nums">{ji + 1}</span>
+                  <span className="flex-1 text-white font-semibold truncate pr-2">{j.title}</span>
+                  <span className="w-10" />
+                  <span className="w-16" />
+                  <span className="w-20 text-right text-white font-semibold tabular-nums">{formatMoney(j.laborCostDec)}</span>
+                </div>
+                {j.materials.filter((m) => m.name.trim()).map((m, mi) => (
+                  <div key={mi} className="flex items-center py-1.5 border-b border-white/5 text-body pl-6">
+                    <span className="w-9 text-white/40 text-[10px] tabular-nums">{ji + 1}.{mi + 1}</span>
+                    <span className="flex-1 text-white/80 truncate pr-2">{m.name}</span>
+                    <span className="w-10 text-right text-white/60 tabular-nums">{m.quantity}</span>
+                    <span className="w-16 text-right text-white/60 tabular-nums">{formatMoney(m.unitPrice || 0)}</span>
+                    <span className="w-20 text-right text-white/90 tabular-nums">{formatMoney(m.total)}</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
 
           <div className="pt-2 space-y-1.5">
+            <div className="flex justify-between text-body">
+              <span className="text-white/50">Итого работа</span>
+              <span className="text-white tabular-nums">{formatMoney(computed.jobsTotal)}</span>
+            </div>
+            <div className="flex justify-between text-body">
+              <span className="text-white/50">Итого материалы</span>
+              <span className="text-white tabular-nums">{formatMoney(computed.materialsTotal)}</span>
+            </div>
             <div className="flex justify-between text-body">
               <span className="text-white/50">Subtotal</span>
               <span className="text-white tabular-nums">{formatMoney(computed.subtotal)}</span>

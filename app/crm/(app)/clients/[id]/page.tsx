@@ -34,7 +34,7 @@ export default async function ClientDetailPage({
     include: {
       yachts:       { orderBy: { createdAt: 'asc' } },
       stageHistory: { orderBy: { createdAt: 'desc' } },
-      quotes:       { orderBy: { createdAt: 'desc' }, include: { items: true } },
+      quotes:       { orderBy: { createdAt: 'desc' } },
       tasks:        { orderBy: { scheduledAt: 'desc' } },
       invoices:     { orderBy: { date: 'desc' } },
       finances:     { orderBy: { date: 'desc' }, take: 10 },

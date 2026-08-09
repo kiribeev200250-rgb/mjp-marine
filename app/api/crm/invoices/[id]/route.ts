@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const invoice = await prisma.invoice.findFirst({
     where: { id, companyId: session.user.companyId },
     include: {
-      items: { orderBy: { sortOrder: 'asc' } },
+      jobs: { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } },
       client: true,
       quote: { select: { id: true, number: true } },
       finances: true,

@@ -13,7 +13,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const quote = await prisma.quote.findFirst({
     where: { id, companyId: session.user.companyId },
-    include: { items: { orderBy: { sortOrder: 'asc' } }, client: true },
+    include: {
+      jobs: { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } },
+      client: true,
+    },
   })
   if (!quote) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 
@@ -32,26 +35,38 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           clientId:   quote.clientId,
           quoteId:    quote.id,
           number, year, sequenceNum,
-          language:   quote.language,
-          ivaRate:    quote.ivaRate,
-          irpfRate:   companyInfo.irpfRate,
-          subtotal:   quote.subtotal,
-          ivaAmount:  quote.ivaAmount,
-          irpfAmount: quote.subtotal.mul(companyInfo.irpfRate).div(100),
-          total:      quote.total.minus(quote.subtotal.mul(companyInfo.irpfRate).div(100)),
-          clientName: `${quote.client.firstName} ${quote.client.lastName}`.trim(),
-          notes:      quote.notes,
-          items: {
-            create: quote.items.map((it) => ({
-              description: it.description,
-              quantity:    it.quantity,
-              unitPrice:   it.unitPrice,
-              total:       it.total,
-              sortOrder:   it.sortOrder,
+          language:       quote.language,
+          ivaRate:        quote.ivaRate,
+          irpfRate:       companyInfo.irpfRate,
+          jobsTotal:      quote.jobsTotal,
+          materialsTotal: quote.materialsTotal,
+          subtotal:       quote.subtotal,
+          ivaAmount:      quote.ivaAmount,
+          irpfAmount:     quote.subtotal.mul(companyInfo.irpfRate).div(100),
+          total:          quote.total.minus(quote.subtotal.mul(companyInfo.irpfRate).div(100)),
+          clientName:     `${quote.client.firstName} ${quote.client.lastName}`.trim(),
+          notes:          quote.notes,
+          jobs: {
+            create: quote.jobs.map((job) => ({
+              sortOrder:  job.sortOrder,
+              title:      job.title,
+              laborHours: job.laborHours,
+              laborRate:  job.laborRate,
+              laborCost:  job.laborCost,
+              materials: {
+                create: job.materials.map((m) => ({
+                  sortOrder:       m.sortOrder,
+                  name:            m.name,
+                  quantity:        m.quantity,
+                  unitPrice:       m.unitPrice,
+                  total:           m.total,
+                  inventoryItemId: m.inventoryItemId,
+                })),
+              },
             })),
           },
         },
-        include: { items: true },
+        include: { jobs: { include: { materials: true } } },
       })
 
       await tx.client.update({ where: { id: quote.clientId }, data: { funnelStage: 'INVOICE_SENT' } })

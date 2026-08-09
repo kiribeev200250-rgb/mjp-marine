@@ -20,7 +20,7 @@ export async function GET(
     include: {
       yachts:       true,
       stageHistory: { orderBy: { createdAt: 'desc' } },
-      quotes:       { orderBy: { createdAt: 'desc' }, include: { items: true } },
+      quotes:       { orderBy: { createdAt: 'desc' } },
       tasks:        { orderBy: { createdAt: 'desc' } },
       invoices:     { orderBy: { createdAt: 'desc' } },
       finances:     { orderBy: { date: 'desc' } },
