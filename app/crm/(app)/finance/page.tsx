@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/crm/permissions'
 import { formatMoney } from '@/lib/crm/utils'
 import { KpiCard, ExportCsvButton } from '@/components/crm/ui'
-import { TransactionForm } from '@/components/crm/finance/TransactionForm'
+import { QuickEntryForm } from '@/components/crm/finance/QuickEntryForm'
 import { DeleteEntryButton } from '@/components/crm/finance/DeleteEntryButton'
 import Decimal from 'decimal.js'
 
@@ -55,13 +55,14 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     prisma.financeEntry.findMany({
       where:   { companyId: session.user.companyId, date: { gte: from, lt: to } },
       orderBy: { date: 'desc' },
+      include: { categoryRef: { select: { name: true } } },
     }),
     // Last 30 recent (for list)
     prisma.financeEntry.findMany({
       where:   { companyId: session.user.companyId },
       orderBy: { date: 'desc' },
       take:    30,
-      include: { client: { select: { firstName: true, lastName: true } } },
+      include: { client: { select: { firstName: true, lastName: true } }, categoryRef: { select: { name: true } } },
     }),
     // All capital entries for cash-on-hand
     prisma.capitalEntry.findMany({
@@ -86,7 +87,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const expenseEntries = monthEntries.filter((e) => e.type === 'EXPENSE' || e.type === 'SALARY')
   const catMap = new Map<string, Decimal>()
   expenseEntries.forEach((e) => {
-    const cat = e.category || '—'
+    const cat = e.categoryRef?.name || e.category || '—'
     catMap.set(cat, (catMap.get(cat) ?? new Decimal(0)).plus(e.amount.toString()))
   })
   const totalExpenses = expense.plus(salary)
@@ -135,8 +136,11 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
 
         {/* Left: add transaction form */}
         <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
-          <h2 className="text-subheading font-bold text-gray-900 mb-4">Записать транзакцию</h2>
-          <TransactionForm />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-subheading font-bold text-gray-900">Быстрый ввод</h2>
+            <a href="/crm/finance/categories" className="text-label text-gray-500 hover:text-gold transition">Категории</a>
+          </div>
+          <QuickEntryForm />
         </div>
 
         {/* Center: expenses by category */}
@@ -176,7 +180,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                 filename={`finance-${ym}`}
                 headers={['ID', 'Тип', 'Дата', 'Категория', 'Сумма', 'Способ оплаты', 'Клиент', 'Описание']}
                 rows={allEntries.map((r) => [
-                  r.autoId, TYPE_RU[r.type] ?? r.type, fmtDate(r.date), r.category, Number(r.amount),
+                  r.autoId, TYPE_RU[r.type] ?? r.type, fmtDate(r.date), r.categoryRef?.name || r.category, Number(r.amount),
                   r.paymentMethod, r.client ? `${r.client.firstName} ${r.client.lastName}` : '', r.description,
                 ])}
               />
@@ -198,7 +202,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                     }`} />
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-medium text-gray-900 truncate">{e.category}</p>
+                      <p className="text-body font-medium text-gray-900 truncate">{e.categoryRef?.name || e.category}</p>
                       <p className="text-label text-gray-500">
                         {fmtDate(e.date)} · {TYPE_RU[e.type]}
                         {e.client ? ` · ${e.client.firstName} ${e.client.lastName}` : ''}

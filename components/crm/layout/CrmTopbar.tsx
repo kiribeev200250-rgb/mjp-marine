@@ -2,6 +2,7 @@
 
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
+import { QuickAddModal } from '@/components/crm/finance/QuickAddModal'
 
 interface Props {
   userName: string
@@ -10,6 +11,7 @@ interface Props {
 
 export function CrmTopbar({ userName, userInitial }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
 
   return (
     <header className="h-14 bg-navy-900 border-b border-white/5 flex items-center px-5 shrink-0 gap-4">
@@ -26,6 +28,15 @@ export function CrmTopbar({ userName, userInitial }: Props) {
           />
         </div>
       </div>
+
+      <button
+        onClick={() => setQuickAddOpen(true)}
+        className="shrink-0 flex items-center gap-1.5 bg-gold text-navy-900 text-label font-bold px-3 py-1.5 rounded-control hover:bg-gold/90 transition"
+      >
+        + Операция
+      </button>
+
+      {quickAddOpen && <QuickAddModal onClose={() => setQuickAddOpen(false)} />}
 
       {/* Right: user avatar + dropdown */}
       <div className="ml-auto relative">

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/crm/permissions'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { nextFinanceAutoId } from '@/lib/crm/numbering'
+import { findOrCreateCategory } from '@/lib/crm/services/categories'
 import Decimal from 'decimal.js'
 import type { StockMovementType } from '@prisma/client'
 
@@ -61,6 +62,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const incomeAutoId = type === 'SELL'
     ? await nextFinanceAutoId(session.user.companyId, 'INCOME', new Date().getFullYear())
     : null
+  const sellCategory = type === 'SELL'
+    ? await findOrCreateCategory(prisma, session.user.companyId, 'INCOME', 'Продажа запчастей')
+    : null
 
   const [movement] = await prisma.$transaction([
     prisma.stockMovement.create({
@@ -98,7 +102,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
             autoId:      incomeAutoId!,
             type:        'INCOME' as const,
             date:        new Date(),
-            category:    'Продажа запчастей',
+            category:    sellCategory!.name,
+            categoryId:  sellCategory!.id,
             amountExpr:  total.toString(),
             amount:      total,
             description: `Продажа: ${item.name}`,

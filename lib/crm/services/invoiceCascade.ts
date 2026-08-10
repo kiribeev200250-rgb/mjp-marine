@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import Decimal from 'decimal.js'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { nextFinanceAutoId } from '@/lib/crm/numbering'
+import { findOrCreateCategory } from '@/lib/crm/services/categories'
 
 type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 
@@ -134,6 +135,7 @@ export async function recordPayment(
   const year   = new Date().getFullYear()
   const autoId = await nextFinanceAutoId(companyId, 'INCOME', year)
   const amount = new Decimal(String(invoice.total))
+  const category = await findOrCreateCategory(tx, companyId, 'INCOME', 'Работы по фактуре')
 
   await tx.financeEntry.create({
     data: {
@@ -141,7 +143,8 @@ export async function recordPayment(
       autoId,
       type:          'INCOME',
       date:          new Date(),
-      category:      'Оплата по счёту',
+      category:      category.name,
+      categoryId:    category.id,
       amountExpr:    amount.toString(),
       amount,
       paymentMethod: invoice.paymentMethod || paymentMethod || '',

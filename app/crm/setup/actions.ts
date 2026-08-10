@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ADMIN_PERMISSIONS } from '@/lib/crm/permissions'
 import { seedReferences } from '@/lib/crm/seed-references'
+import { seedCategories } from '@/lib/crm/seed-categories'
 
 export async function setupCompanyAction(formData: FormData) {
   const companyName = (formData.get('companyName') as string)?.trim()
@@ -62,6 +63,7 @@ export async function setupCompanyAction(formData: FormData) {
     // 4. Справочники — передаём tx, чтобы всё откатилось вместе при ошибке
     //    companyId — id только что созданной компании, не устаревшая строка
     await seedReferences(tx, company.id)
+    await seedCategories(tx, company.id)
   }, { timeout: 20000 }) // upsert ~50 справочников по сети до хостед Postgres не укладывается в дефолтные 5с
 
   redirect('/crm/login?setup=done')

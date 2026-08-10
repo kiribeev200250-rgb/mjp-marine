@@ -40,12 +40,19 @@ export async function POST(req: NextRequest) {
   requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')
 
   const body = await req.json()
-  const { type, category, amountExpr, date, paymentMethod, description, clientId } = body
+  const { type, category, categoryId, amountExpr, date, paymentMethod, description, clientId } = body
 
   if (!VALID_TYPES.includes(type)) {
     return NextResponse.json({ error: 'Некорректный тип' }, { status: 400 })
   }
-  if (!category?.trim()) {
+
+  let categoryName = category?.trim() ?? ''
+  if (categoryId) {
+    const cat = await prisma.category.findFirst({ where: { id: categoryId, companyId: session.user.companyId, kind: type } })
+    if (!cat) return NextResponse.json({ error: 'Категория не найдена' }, { status: 404 })
+    categoryName = cat.name
+  }
+  if (!categoryName) {
     return NextResponse.json({ error: 'Укажите категорию' }, { status: 400 })
   }
 
@@ -68,7 +75,8 @@ export async function POST(req: NextRequest) {
         autoId,
         type,
         date:          entryDate,
-        category:      category.trim(),
+        category:      categoryName,
+        ...(categoryId && { categoryId }),
         amountExpr:    String(amountExpr ?? amount.toString()),
         amount,
         paymentMethod: (paymentMethod ?? '').trim(),
@@ -83,7 +91,7 @@ export async function POST(req: NextRequest) {
         action:    'CREATE',
         entity:    'FinanceEntry',
         entityId:  e.id,
-        newValue:  { type, amount: amount.toString(), category },
+        newValue:  { type, amount: amount.toString(), category: categoryName },
       },
     })
     return e
