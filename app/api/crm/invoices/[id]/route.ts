@@ -4,6 +4,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
+import { recordPayment, returnInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 import type { InvoiceStatus } from '@prisma/client'
 
@@ -27,18 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json(invoice)
 }
 
-async function nextIncomeAutoId(companyId: string, year: number): Promise<string> {
-  const count = await prisma.financeEntry.count({
-    where: {
-      companyId,
-      type: 'INCOME',
-      date: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) },
-    },
-  })
-  return `INC-${year}-${String(count + 1).padStart(3, '0')}`
-}
-
-// PATCH — смена статуса (в т.ч. оплата → создаёт FinanceEntry), способа оплаты, срока
+// PATCH — смена статуса (в т.ч. оплата → создаёт FinanceEntry через каскад), способа оплаты, срока
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await getCrmSession()
@@ -59,41 +49,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const becamePaid = status === 'PAID' && existing.status !== 'PAID'
 
   try {
-    const updated = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const inv = await tx.invoice.update({
         where: { id },
         data: {
-          ...(status && { status }),
+          ...(status && !becamePaid && { status }),
           ...(paymentMethod !== undefined && { paymentMethod }),
           ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
           ...(notes !== undefined && { notes }),
-          ...(becamePaid && { paidAt: new Date() }),
         },
       })
 
-      if (becamePaid) {
-        const year = new Date().getFullYear()
-        const autoId = await nextIncomeAutoId(session.user.companyId, year)
-        await tx.financeEntry.create({
-          data: {
-            companyId:     session.user.companyId,
-            autoId,
-            type:          'INCOME',
-            date:          new Date(),
-            category:      'Оплата по счёту',
-            amountExpr:    inv.total.toString(),
-            amount:        inv.total,
-            paymentMethod: inv.paymentMethod || paymentMethod || '',
-            description:   `Оплата счёта ${inv.number}`,
-            clientId:      inv.clientId,
-            invoiceId:     inv.id,
-          },
-        })
-        await tx.client.update({ where: { id: inv.clientId }, data: { funnelStage: 'PAID' } })
-        await tx.funnelHistory.create({
-          data: { clientId: inv.clientId, fromStage: 'INVOICE_SENT', toStage: 'PAID', note: `Счёт ${inv.number} оплачен` },
-        })
-      }
+      const cascade = becamePaid
+        ? await recordPayment(tx, session.user.companyId, inv, paymentMethod)
+        : []
 
       await tx.auditLog.create({
         data: {
@@ -103,14 +72,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           entity:    'Invoice',
           entityId:  inv.id,
           oldValue:  { status: existing.status },
-          newValue:  { status: inv.status },
+          newValue:  { status: becamePaid ? 'PAID' : inv.status },
+          meta:      { cascade },
         },
       })
 
-      return inv
+      return { ...inv, status: becamePaid ? 'PAID' as const : inv.status, cascade }
     })
 
-    return NextResponse.json(updated)
+    return NextResponse.json(result)
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 400 })
   }
@@ -239,16 +209,28 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: 'Нельзя отменить оплаченный счёт' }, { status: 400 })
   }
 
-  const updated = await prisma.invoice.update({ where: { id }, data: { status: 'CANCELLED' } })
-  await writeAudit({
-    companyId: session.user.companyId,
-    userId:    session.user.id,
-    action:    'STATUS_CHANGE',
-    entity:    'Invoice',
-    entityId:  id,
-    oldValue:  { status: existing.status },
-    newValue:  { status: 'CANCELLED' },
+  const result = await prisma.$transaction(async (tx) => {
+    const cascade = existing.materialsWrittenOff
+      ? await returnInvoiceMaterials(tx, session.user.companyId, existing)
+      : []
+
+    const updated = await tx.invoice.update({ where: { id }, data: { status: 'CANCELLED' } })
+
+    await tx.auditLog.create({
+      data: {
+        companyId: session.user.companyId,
+        userId:    session.user.id,
+        action:    'STATUS_CHANGE',
+        entity:    'Invoice',
+        entityId:  id,
+        oldValue:  { status: existing.status },
+        newValue:  { status: 'CANCELLED' },
+        meta:      { cascade },
+      },
+    })
+
+    return { ...updated, cascade }
   })
 
-  return NextResponse.json(updated)
+  return NextResponse.json(result)
 }

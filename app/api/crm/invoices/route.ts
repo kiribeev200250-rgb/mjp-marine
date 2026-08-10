@@ -4,6 +4,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
 import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
+import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 import type { InvoiceStatus } from '@prisma/client'
 
@@ -115,11 +116,13 @@ export async function POST(req: NextRequest) {
         include: { jobs: { include: { materials: true } } },
       })
 
+      let cascade: string[] = []
       if (!asDraft) {
         await tx.client.update({ where: { id: clientId }, data: { funnelStage: 'INVOICE_SENT' } })
         await tx.funnelHistory.create({
           data: { clientId, toStage: 'INVOICE_SENT', note: `Счёт ${inv.number} выставлен` },
         })
+        cascade = await writeOffInvoiceMaterials(tx, session.user.companyId, inv, inv.jobs)
       }
 
       await tx.auditLog.create({
@@ -130,10 +133,11 @@ export async function POST(req: NextRequest) {
           entity:    'Invoice',
           entityId:  inv.id,
           newValue:  { number: inv.number, total: inv.total.toString(), draft: !!asDraft },
+          meta:      { cascade },
         },
       })
 
-      return inv
+      return { ...inv, cascade, materialsWrittenOff: !asDraft }
     })
 
     return NextResponse.json(invoice, { status: 201 })

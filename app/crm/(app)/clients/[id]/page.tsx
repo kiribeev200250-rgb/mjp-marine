@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { FUNNEL_STAGE_LABELS, FUNNEL_STAGE_LABELS as FSL, INVOICE_STATUS_LABELS, TASK_STATUS_LABELS } from '@/lib/crm/utils'
-import { Badge, FUNNEL_TONE, TASK_TONE, INVOICE_TONE, Button } from '@/components/crm/ui'
+import { FUNNEL_STAGE_LABELS, FUNNEL_STAGE_LABELS as FSL, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS, TASK_STATUS_LABELS, formatMoney } from '@/lib/crm/utils'
+import { Badge, FUNNEL_TONE, TASK_TONE, INVOICE_TONE, QUOTE_TONE, Button } from '@/components/crm/ui'
 
 const STAGE_ORDER = Object.keys(FSL)
 
@@ -24,13 +24,14 @@ const LANG_FLAG: Record<string, string> = {
 export default async function ClientDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const session = await getCrmSession()
   if (!session) return null
 
   const client = await prisma.client.findFirst({
-    where: { id: params.id, companyId: session.user.companyId },
+    where: { id, companyId: session.user.companyId },
     include: {
       yachts:       { orderBy: { createdAt: 'asc' } },
       stageHistory: { orderBy: { createdAt: 'desc' } },
@@ -44,6 +45,41 @@ export default async function ClientDetailPage({
   if (!client) notFound()
 
   const stageIndex = STAGE_ORDER.indexOf(client.funnelStage)
+
+  type FeedEvent = { date: Date; title: string; badge?: React.ReactNode; note?: string; href?: string }
+  const feed: FeedEvent[] = [
+    ...client.tasks.map((t): FeedEvent => ({
+      date:  t.scheduledAt ?? t.createdAt,
+      title: `Задача: ${t.title}`,
+      badge: <Badge tone={TASK_TONE[t.status] ?? 'neutral'} className="text-[10px]">{TASK_STATUS_LABELS[t.status] ?? t.status}</Badge>,
+      href:  `/crm/schedule/${t.id}`,
+    })),
+    ...client.quotes.map((q): FeedEvent => ({
+      date:  q.createdAt,
+      title: `Пресмет ${q.number} — ${formatMoney(q.total)}`,
+      badge: <Badge tone={QUOTE_TONE[q.status] ?? 'neutral'} className="text-[10px]">{QUOTE_STATUS_LABELS[q.status] ?? q.status}</Badge>,
+      href:  `/crm/invoices/quote/${q.id}`,
+    })),
+    ...client.invoices.map((inv): FeedEvent => ({
+      date:  inv.date,
+      title: `Счёт ${inv.number} — ${formatMoney(inv.total)}`,
+      badge: <Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'} className="text-[10px]">{INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge>,
+      href:  `/crm/invoices/${inv.id}`,
+    })),
+    ...client.finances.filter((f) => f.type === 'INCOME' && f.invoiceId).map((f): FeedEvent => ({
+      date:  f.date,
+      title: `Оплата получена ${f.autoId} — ${formatMoney(f.amount)}`,
+      badge: <Badge tone="success" className="text-[10px]">Оплачено</Badge>,
+      href:  f.invoiceId ? `/crm/invoices/${f.invoiceId}` : undefined,
+    })),
+    ...client.stageHistory.map((h): FeedEvent => ({
+      date:  h.createdAt,
+      title: h.fromStage
+        ? `${FUNNEL_STAGE_LABELS[h.fromStage]} → ${FUNNEL_STAGE_LABELS[h.toStage]}`
+        : FUNNEL_STAGE_LABELS[h.toStage],
+      note: h.note || undefined,
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime())
 
   return (
     <main className="flex-1 overflow-y-auto flex flex-col">
@@ -120,64 +156,13 @@ export default async function ClientDetailPage({
               </Link>
             </div>
 
-            {client.tasks.length > 0 && (
-              <Section title={`Задачи (${client.tasks.length})`}>
-                {client.tasks.slice(0, 5).map((t) => (
-                  <TimelineItem
-                    key={t.id}
-                    date={t.scheduledAt ?? t.createdAt}
-                    title={t.title}
-                    badge={<Badge tone={TASK_TONE[t.status] ?? 'neutral'} className="text-[10px]">{TASK_STATUS_LABELS[t.status] ?? t.status}</Badge>}
-                    href={`/crm/schedule/${t.id}`}
-                  />
+            {feed.length > 0 ? (
+              <Section title={`Лента событий (${feed.length})`}>
+                {feed.map((e, i) => (
+                  <TimelineItem key={i} date={e.date} title={e.title} badge={e.badge} note={e.note} href={e.href} />
                 ))}
               </Section>
-            )}
-
-            {client.quotes.length > 0 && (
-              <Section title={`Пресметы (${client.quotes.length})`}>
-                {client.quotes.map((q) => (
-                  <TimelineItem
-                    key={q.id}
-                    date={q.createdAt}
-                    title={`${q.number} — ${Number(q.total).toFixed(2)} €`}
-                    badge={<Badge tone="neutral" className="text-[10px]">{q.status}</Badge>}
-                    href={`/crm/invoices/quote/${q.id}`}
-                  />
-                ))}
-              </Section>
-            )}
-
-            {client.invoices.length > 0 && (
-              <Section title={`Счета (${client.invoices.length})`}>
-                {client.invoices.map((inv) => (
-                  <TimelineItem
-                    key={inv.id}
-                    date={inv.date}
-                    title={`${inv.number} — ${Number(inv.total).toFixed(2)} €`}
-                    badge={<Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'} className="text-[10px]">{INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge>}
-                    href={`/crm/invoices/${inv.id}`}
-                  />
-                ))}
-              </Section>
-            )}
-
-            {client.stageHistory.length > 0 && (
-              <Section title="История воронки">
-                {client.stageHistory.map((h) => (
-                  <TimelineItem
-                    key={h.id}
-                    date={h.createdAt}
-                    title={h.fromStage
-                      ? `${FUNNEL_STAGE_LABELS[h.fromStage]} → ${FUNNEL_STAGE_LABELS[h.toStage]}`
-                      : FUNNEL_STAGE_LABELS[h.toStage]}
-                    note={h.note || undefined}
-                  />
-                ))}
-              </Section>
-            )}
-
-            {client.tasks.length === 0 && client.quotes.length === 0 && client.invoices.length === 0 && (
+            ) : (
               <div className="bg-white border border-gray-200 rounded-card p-8 text-center shadow-e1">
                 <p className="text-gray-500 text-body">История пуста — добавь первую задачу или пресмет</p>
               </div>

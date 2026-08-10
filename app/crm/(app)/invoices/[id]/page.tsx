@@ -12,6 +12,25 @@ function fmtDate(d: Date) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d)
 }
 
+function fmtDateTime(d: Date) {
+  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d)
+}
+
+const STOCK_MOVE_LABEL: Record<string, string> = {
+  WRITE_OFF: 'Списано',
+  RECEIVE:   'Возврат на склад',
+  SELL:      'Продано',
+  ADJUST:    'Корректировка',
+  ORDER:     'Заказ',
+}
+
+const AUDIT_ACTION_LABEL: Record<string, string> = {
+  CREATE:        'Счёт создан',
+  UPDATE:        'Счёт отредактирован',
+  STATUS_CHANGE: 'Статус изменён',
+  DELETE:        'Удалено',
+}
+
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await getCrmSession()
@@ -25,9 +44,16 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       client: true,
       quote:  { select: { id: true, number: true } },
       finances: true,
+      stockMovements: { orderBy: { createdAt: 'desc' }, include: { item: { select: { name: true, unit: true } } } },
     },
   })
   if (!invoice) notFound()
+
+  const auditTrail = await prisma.auditLog.findMany({
+    where:   { companyId: session.user.companyId, entity: 'Invoice', entityId: invoice.id },
+    orderBy: { createdAt: 'desc' },
+    include: { user: { select: { name: true } } },
+  })
 
   return (
     <main className="flex-1 overflow-y-auto flex flex-col">
@@ -82,6 +108,36 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               <p className="text-body text-gray-900">{invoice.notes}</p>
             </Card>
           )}
+
+          <Card title="След документа">
+            {invoice.stockMovements.length === 0 && invoice.finances.length === 0 && auditTrail.length === 0 ? (
+              <p className="text-label text-gray-500">Пока нет движений — они появятся при выставлении, оплате или отмене.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {invoice.stockMovements.map((mv) => (
+                  <TrailRow
+                    key={mv.id}
+                    date={mv.createdAt}
+                    text={`${STOCK_MOVE_LABEL[mv.type] ?? mv.type}: ${mv.item.name} ×${mv.qty.toString()} ${mv.item.unit}`}
+                  />
+                ))}
+                {invoice.finances.map((f) => (
+                  <TrailRow
+                    key={f.id}
+                    date={f.createdAt}
+                    text={`Финансы: ${f.autoId} — доход ${formatMoney(f.amount)}`}
+                  />
+                ))}
+                {auditTrail.map((a) => (
+                  <TrailRow
+                    key={a.id}
+                    date={a.createdAt}
+                    text={`${AUDIT_ACTION_LABEL[a.action] ?? a.action}${a.user ? ` · ${a.user.name}` : ''}`}
+                  />
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
 
         {/* Правая колонка — позиции и итог */}
@@ -183,6 +239,15 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     <div className="flex gap-3">
       <span className="text-gray-500 text-label w-24 shrink-0">{label}</span>
       <span className="text-gray-900 text-body">{value}</span>
+    </div>
+  )
+}
+
+function TrailRow({ date, text }: { date: Date; text: string }) {
+  return (
+    <div className="flex gap-3">
+      <span className="text-gray-400 text-label w-24 shrink-0 tabular-nums">{fmtDateTime(date)}</span>
+      <span className="text-gray-700 text-label flex-1">{text}</span>
     </div>
   )
 }

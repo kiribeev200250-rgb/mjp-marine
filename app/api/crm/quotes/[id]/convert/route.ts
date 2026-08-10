@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
+import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 
 // POST /api/crm/quotes/[id]/convert — создать счёт на основе пресмета
@@ -76,6 +77,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         data: { clientId: quote.clientId, toStage: 'INVOICE_SENT', note: `Счёт ${inv.number} создан из пресмета ${quote.number}` },
       })
 
+      const cascade = await writeOffInvoiceMaterials(tx, session.user.companyId, inv, inv.jobs)
+
       await tx.auditLog.create({
         data: {
           companyId: session.user.companyId,
@@ -84,10 +87,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           entity:    'Invoice',
           entityId:  inv.id,
           newValue:  { number: inv.number, total: inv.total.toString(), fromQuote: quote.number },
+          meta:      { cascade },
         },
       })
 
-      return inv
+      return { ...inv, cascade, materialsWrittenOff: true }
     })
 
     return NextResponse.json(invoice, { status: 201 })

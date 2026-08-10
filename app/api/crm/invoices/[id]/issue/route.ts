@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
+import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 
 // POST — выпустить черновик счёта: назначает сквозной номер (только тут он
@@ -26,12 +27,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const inv = await tx.invoice.update({
         where: { id },
         data: { number, year, sequenceNum, status: 'ISSUED', date: new Date() },
+        include: { jobs: { include: { materials: true } } },
       })
 
       await tx.client.update({ where: { id: inv.clientId }, data: { funnelStage: 'INVOICE_SENT' } })
       await tx.funnelHistory.create({
         data: { clientId: inv.clientId, toStage: 'INVOICE_SENT', note: `Счёт ${inv.number} выпущен из черновика` },
       })
+
+      const cascade = await writeOffInvoiceMaterials(tx, session.user.companyId, inv, inv.jobs)
 
       await tx.auditLog.create({
         data: {
@@ -42,10 +46,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           entityId:  inv.id,
           oldValue:  { status: 'DRAFT', number: existing.number },
           newValue:  { status: 'ISSUED', number: inv.number },
+          meta:      { cascade },
         },
       })
 
-      return inv
+      return { ...inv, cascade, materialsWrittenOff: true }
     })
 
     return NextResponse.json(invoice)

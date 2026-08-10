@@ -18,9 +18,10 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const [cascade, setCascade] = useState<string[] | null>(null)
 
   async function setStatus(next: InvoiceStatus) {
-    setBusy(next); setError(null)
+    setBusy(next); setError(null); setCascade(null)
     const res = await fetch(`/api/crm/invoices/${id}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -28,6 +29,8 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
     })
     setBusy(null)
     if (!res.ok) { setError((await res.json().catch(() => ({}))).error ?? 'Ошибка'); return }
+    const data = await res.json().catch(() => ({}))
+    if (data.cascade?.length) setCascade(data.cascade)
     router.refresh()
   }
 
@@ -46,20 +49,35 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
       ? 'Удалить черновик счёта? Номер ещё не выдан, действие необратимо.'
       : 'Отменить этот счёт? Номер останется занятым.'
     if (!confirm(msg)) return
-    setBusy('cancel'); setError(null)
+    setBusy('cancel'); setError(null); setCascade(null)
     const res = await fetch(`/api/crm/invoices/${id}`, { method: 'DELETE' })
     setBusy(null)
     if (!res.ok) { setError((await res.json().catch(() => ({}))).error ?? 'Ошибка'); return }
     if (status === 'DRAFT') { router.push('/crm/invoices'); return }
+    const data = await res.json().catch(() => ({}))
+    if (data.cascade?.length) setCascade(data.cascade)
     router.refresh()
   }
 
   async function handleIssue() {
     if (!confirm('Выпустить счёт? Будет назначен постоянный сквозной номер — после этого позиции нельзя будет редактировать напрямую.')) return
-    setBusy('issue'); setError(null)
+    setBusy('issue'); setError(null); setCascade(null)
     const res = await fetch(`/api/crm/invoices/${id}/issue`, { method: 'POST' })
     setBusy(null)
     if (!res.ok) { setError((await res.json().catch(() => ({}))).error ?? 'Ошибка'); return }
+    const data = await res.json().catch(() => ({}))
+    if (data.cascade?.length) setCascade(data.cascade)
+    router.refresh()
+  }
+
+  async function handleUnpay() {
+    if (!confirm('Отменить оплату? Доход будет удалён из P&L и кассы, счёт снова окажется в дебиторке.')) return
+    setBusy('unpay'); setError(null); setCascade(null)
+    const res = await fetch(`/api/crm/invoices/${id}/unpay`, { method: 'POST' })
+    setBusy(null)
+    if (!res.ok) { setError((await res.json().catch(() => ({}))).error ?? 'Ошибка'); return }
+    const data = await res.json().catch(() => ({}))
+    if (data.cascade?.length) setCascade(data.cascade)
     router.refresh()
   }
 
@@ -83,7 +101,8 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
   }
 
   const isDraft = status === 'DRAFT'
-  const isFinal = status === 'PAID' || status === 'CANCELLED'
+  const isPaid  = status === 'PAID'
+  const isFinal = isPaid || status === 'CANCELLED'
 
   return (
     <div className="space-y-2">
@@ -118,6 +137,11 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
             ✓ Отметить оплаченным
           </Button>
         )}
+        {isPaid && (
+          <Button variant="danger" size="sm" loading={busy === 'unpay'} onClick={handleUnpay}>
+            ↩ Отменить оплату
+          </Button>
+        )}
         <Button variant="secondary" size="sm" loading={busy === 'duplicate'} onClick={handleDuplicate}>
           ⧉ Дублировать
         </Button>
@@ -145,6 +169,14 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
       )}
       {sent && <p className="text-label text-success">Письмо отправлено.</p>}
       {error && <p className="text-label text-danger">{error}</p>}
+      {cascade && cascade.length > 0 && (
+        <div className="bg-info/10 border border-info/30 rounded-control px-3 py-2 space-y-1">
+          <p className="text-label text-info font-semibold uppercase tracking-wide">Что произошло</p>
+          {cascade.map((line, i) => (
+            <p key={i} className="text-label text-gray-700">· {line}</p>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
