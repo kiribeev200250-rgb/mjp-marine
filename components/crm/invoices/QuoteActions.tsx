@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/crm/ui'
 import type { QuoteStatus } from '@prisma/client'
 
@@ -62,6 +63,9 @@ export function QuoteActions({ id, status, hasEmail }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
+        <Link href={`/crm/invoices/quote/${id}/edit`}>
+          <Button variant="secondary" size="sm">✏ Редактировать</Button>
+        </Link>
         <a href={`/api/crm/quotes/${id}/pdf`} target="_blank" rel="noopener noreferrer">
           <Button variant="secondary" size="sm">⬇ Скачать PDF</Button>
         </a>

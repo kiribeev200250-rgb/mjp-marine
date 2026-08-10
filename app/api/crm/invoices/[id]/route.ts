@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
+import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
 import { prisma } from '@/lib/prisma'
 import type { InvoiceStatus } from '@prisma/client'
 
@@ -114,7 +116,103 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-// DELETE — отменить счёт (не удаляет, чтобы не ломать сквозную нумерацию)
+// PUT — полное редактирование счёта. Разрешено ТОЛЬКО для черновика (DRAFT) —
+// у него ещё нет сквозного номера, поэтому переписывать позиции безопасно.
+// Выпущенный счёт (номер уже занят фискально) не редактируется — см.
+// /api/crm/invoices/[id]/duplicate для «дубликата»/корректировки.
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const session = await getCrmSession()
+  if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+  requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'EDIT')
+
+  const existing = await prisma.invoice.findFirst({ where: { id, companyId: session.user.companyId } })
+  if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
+  if (existing.status !== 'DRAFT') {
+    return NextResponse.json({ error: 'Выпущенный счёт нельзя редактировать напрямую — используйте «Дублировать»' }, { status: 400 })
+  }
+
+  const body = await req.json()
+  const {
+    clientId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
+    clientNif, clientAddress,
+  } = body as {
+    clientId: string
+    language?: string
+    dueDate?: string | null
+    ivaRate?: string | number
+    irpfRate?: string | number
+    paymentMethod?: string
+    notes?: string
+    jobs: JobInput[]
+    clientNif?: string
+    clientAddress?: string
+  }
+
+  if (!clientId) return NextResponse.json({ error: 'Выберите клиента' }, { status: 400 })
+  const client = await prisma.client.findFirst({ where: { id: clientId, companyId: session.user.companyId } })
+  if (!client) return NextResponse.json({ error: 'Клиент не найден' }, { status: 404 })
+
+  let parsedJobs, jobsTotal, materialsTotal
+  try {
+    ;({ jobs: parsedJobs, jobsTotal, materialsTotal } = parseJobsInput(jobs))
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректные позиции' }, { status: 400 })
+  }
+
+  const subtotal   = jobsTotal.plus(materialsTotal)
+  const iva        = new Decimal(ivaRate ?? existing.ivaRate)
+  const irpf       = new Decimal(irpfRate ?? existing.irpfRate)
+  const ivaAmount  = subtotal.times(iva).div(100)
+  const irpfAmount = subtotal.times(irpf).div(100)
+  const total      = subtotal.plus(ivaAmount).minus(irpfAmount)
+
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.invoiceJob.deleteMany({ where: { invoiceId: id } })
+
+      const inv = await tx.invoice.update({
+        where: { id },
+        data: {
+          clientId,
+          language:      language || client.language || existing.language,
+          dueDate:       dueDate !== undefined ? (dueDate ? new Date(dueDate) : null) : existing.dueDate,
+          paymentMethod: paymentMethod ?? existing.paymentMethod,
+          ivaRate:       iva,
+          irpfRate:      irpf,
+          jobsTotal, materialsTotal, subtotal, ivaAmount, irpfAmount, total,
+          clientName:    `${client.firstName} ${client.lastName}`.trim(),
+          clientNif:     clientNif ?? existing.clientNif,
+          clientAddress: clientAddress ?? existing.clientAddress,
+          notes:         notes ?? existing.notes,
+          jobs: { create: jobsToCreateInput(parsedJobs) },
+        },
+        include: { jobs: { include: { materials: true } } },
+      })
+
+      await tx.auditLog.create({
+        data: {
+          companyId: session.user.companyId,
+          userId:    session.user.id,
+          action:    'UPDATE',
+          entity:    'Invoice',
+          entityId:  inv.id,
+          oldValue:  { total: existing.total.toString() },
+          newValue:  { total: inv.total.toString() },
+        },
+      })
+
+      return inv
+    })
+
+    return NextResponse.json(updated)
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Ошибка сервера' }, { status: 400 })
+  }
+}
+
+// DELETE — черновик удаляется безвозвратно (номер не занят); выпущенный счёт
+// только отменяется (CANCELLED), чтобы не ломать сквозную нумерацию.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await getCrmSession()
@@ -123,6 +221,20 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const existing = await prisma.invoice.findFirst({ where: { id, companyId: session.user.companyId } })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
+
+  if (existing.status === 'DRAFT') {
+    await prisma.invoice.delete({ where: { id } })
+    await writeAudit({
+      companyId: session.user.companyId,
+      userId:    session.user.id,
+      action:    'DELETE',
+      entity:    'Invoice',
+      entityId:  id,
+      meta:      { draft: true },
+    })
+    return NextResponse.json({ ok: true })
+  }
+
   if (existing.status === 'PAID') {
     return NextResponse.json({ error: 'Нельзя отменить оплаченный счёт' }, { status: 400 })
   }

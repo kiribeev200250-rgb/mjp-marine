@@ -584,9 +584,9 @@ model Invoice {
   client         Client        @relation(fields: [clientId], references: [id])
   quoteId        String?
   quote          Quote?        @relation(fields: [quoteId], references: [id])
-  number         String // F2025-001
-  year           Int
-  sequenceNum    Int
+  number         String // F2025-001 — для черновиков временный вид "ЧЕРНОВИК-xxxx" до выпуска
+  year           Int? // null пока счёт черновик — не занимает сквозной номер
+  sequenceNum    Int? // null пока счёт черновик
   status         InvoiceStatus @default(ISSUED)
   language       String        @default("ru")
   date           DateTime      @default(now())
@@ -618,6 +618,7 @@ model Invoice {
 }
 
 enum InvoiceStatus {
+  DRAFT
   ISSUED
   PARTIAL
   PAID

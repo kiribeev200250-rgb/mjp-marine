@@ -52,6 +52,7 @@ export const TASK_TONE: Record<string, BadgeTone> = {
 }
 
 export const INVOICE_TONE: Record<string, BadgeTone> = {
+  DRAFT:     'neutral',
   ISSUED:    'info',
   PARTIAL:   'warning',
   PAID:      'success',

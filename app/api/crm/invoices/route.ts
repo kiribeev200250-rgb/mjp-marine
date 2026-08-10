@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const {
     clientId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
-    clientNif, clientAddress,
+    clientNif, clientAddress, asDraft,
   } = body as {
     clientId: string
     language?: string
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     jobs: JobInput[]
     clientNif?: string
     clientAddress?: string
+    asDraft?: boolean
   }
 
   if (!clientId) return NextResponse.json({ error: 'Выберите клиента' }, { status: 400 })
@@ -85,13 +86,20 @@ export async function POST(req: NextRequest) {
 
   try {
     const invoice = await prisma.$transaction(async (tx) => {
-      const { number, year, sequenceNum } = await nextDocumentNumber(tx, session.user.companyId, 'invoice')
+      // Черновик не занимает сквозной номер — он выдаётся только при явном
+      // «Выпустить счёт» (см. /api/crm/invoices/[id]/issue), чтобы опечатка
+      // в черновике не оставляла дыру в фискальной нумерации.
+      const numbering = asDraft ? null : await nextDocumentNumber(tx, session.user.companyId, 'invoice')
+      const number = numbering ? numbering.number : `ЧЕРНОВИК-${Date.now().toString(36)}`
 
       const inv = await tx.invoice.create({
         data: {
           companyId: session.user.companyId,
           clientId,
-          number, year, sequenceNum,
+          number,
+          year:        numbering?.year ?? null,
+          sequenceNum: numbering?.sequenceNum ?? null,
+          status:        asDraft ? 'DRAFT' : 'ISSUED',
           language:      language || client.language || 'ru',
           dueDate:       dueDate ? new Date(dueDate) : null,
           paymentMethod: paymentMethod ?? '',
@@ -107,10 +115,12 @@ export async function POST(req: NextRequest) {
         include: { jobs: { include: { materials: true } } },
       })
 
-      await tx.client.update({ where: { id: clientId }, data: { funnelStage: 'INVOICE_SENT' } })
-      await tx.funnelHistory.create({
-        data: { clientId, toStage: 'INVOICE_SENT', note: `Счёт ${inv.number} выставлен` },
-      })
+      if (!asDraft) {
+        await tx.client.update({ where: { id: clientId }, data: { funnelStage: 'INVOICE_SENT' } })
+        await tx.funnelHistory.create({
+          data: { clientId, toStage: 'INVOICE_SENT', note: `Счёт ${inv.number} выставлен` },
+        })
+      }
 
       await tx.auditLog.create({
         data: {
@@ -119,7 +129,7 @@ export async function POST(req: NextRequest) {
           action:    'CREATE',
           entity:    'Invoice',
           entityId:  inv.id,
-          newValue:  { number: inv.number, total: inv.total.toString() },
+          newValue:  { number: inv.number, total: inv.total.toString(), draft: !!asDraft },
         },
       })
 

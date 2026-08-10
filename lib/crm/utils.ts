@@ -89,6 +89,7 @@ export const FUNNEL_STAGE_LABELS: Record<string, string> = {
 }
 
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
+  DRAFT:     'Черновик',
   ISSUED:    'Выставлен',
   PARTIAL:   'Частично оплачен',
   PAID:      'Оплачен',

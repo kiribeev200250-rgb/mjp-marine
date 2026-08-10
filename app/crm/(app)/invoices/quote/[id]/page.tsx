@@ -66,6 +66,9 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
           {quote.invoices.length > 0 && (
             <Card title="Связанные счета">
+              <p className="text-label text-gray-500 mb-1">
+                По этой смете уже есть счёт — при правке пресмета счёт не меняется автоматически.
+              </p>
               {quote.invoices.map((inv) => (
                 <Link key={inv.id} href={`/crm/invoices/${inv.id}`} className="block text-gold font-mono text-body hover:underline">
                   {inv.number}

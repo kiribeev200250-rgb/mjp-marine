@@ -59,6 +59,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     { key: 'status', header: 'Статус', render: (r) => (
       <Badge tone={INVOICE_TONE[r.status] ?? 'neutral'}>{INVOICE_STATUS_LABELS[r.status] ?? r.status}</Badge>
     ) },
+    { key: 'actions', header: '', align: 'right', render: (r) => (
+      r.status === 'DRAFT' ? (
+        <Link href={`/crm/invoices/${r.id}/edit`} className="text-gray-500 hover:text-gold transition text-label">✏ Редактировать</Link>
+      ) : null
+    ) },
   ]
 
   const quoteColumns: Column<QuoteRow>[] = [
@@ -76,6 +81,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     ) },
     { key: 'status', header: 'Статус', render: (r) => (
       <Badge tone={QUOTE_TONE[r.status] ?? 'neutral'}>{QUOTE_STATUS_LABELS[r.status] ?? r.status}</Badge>
+    ) },
+    { key: 'actions', header: '', align: 'right', render: (r) => (
+      <Link href={`/crm/invoices/quote/${r.id}/edit`} className="text-gray-500 hover:text-gold transition text-label">✏ Редактировать</Link>
     ) },
   ]
 
