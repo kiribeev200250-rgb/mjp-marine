@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   const entryDate = date ? new Date(date) : new Date()
+  if (isNaN(entryDate.getTime())) return NextResponse.json({ error: 'Некорректная дата' }, { status: 400 })
   const year      = entryDate.getFullYear()
   const autoId    = await nextCapitalAutoId(session.user.companyId, year)
 

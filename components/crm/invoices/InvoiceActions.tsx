@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/crm/ui'
+import { RefundModal } from './RefundModal'
 import type { InvoiceStatus } from '@prisma/client'
 
 interface Props {
@@ -11,14 +12,18 @@ interface Props {
   status:      InvoiceStatus
   hasEmail:    boolean
   isAdmin:     boolean
+  paidNet:     string
+  ivaRate:     string
+  number:      string
 }
 
-export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
+export function InvoiceActions({ id, status, hasEmail, isAdmin, paidNet, ivaRate, number }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const [cascade, setCascade] = useState<string[] | null>(null)
+  const [refunding, setRefunding] = useState(false)
 
   async function setStatus(next: InvoiceStatus) {
     setBusy(next); setError(null); setCascade(null)
@@ -47,6 +52,8 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
   async function handleCancel() {
     const msg = status === 'DRAFT'
       ? 'Удалить черновик счёта? Номер ещё не выдан, действие необратимо.'
+      : (isPaid || status === 'PARTIAL') && Number(paidNet) > 0
+      ? 'Отменить этот счёт? Зачтённая оплата будет полностью сторнирована (возврат виден в истории), материалы вернутся на склад, номер останется занятым.'
       : 'Отменить этот счёт? Номер останется занятым.'
     if (!confirm(msg)) return
     setBusy('cancel'); setError(null); setCascade(null)
@@ -71,7 +78,7 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
   }
 
   async function handleUnpay() {
-    if (!confirm('Отменить оплату? Доход будет удалён из P&L и кассы, счёт снова окажется в дебиторке.')) return
+    if (!confirm('Полностью отменить оплату? Весь зачтённый доход будет сторнирован (не удалён — останется виден в истории), счёт снова окажется в дебиторке.')) return
     setBusy('unpay'); setError(null); setCascade(null)
     const res = await fetch(`/api/crm/invoices/${id}/unpay`, { method: 'POST' })
     setBusy(null)
@@ -128,24 +135,24 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
           </Button>
         )}
         {!isDraft && !isFinal && (
-          <Button variant="secondary" size="sm" loading={busy === 'PARTIAL'} onClick={() => setStatus('PARTIAL')}>
-            Частично оплачен
-          </Button>
-        )}
-        {!isDraft && !isFinal && (
           <Button size="sm" loading={busy === 'PAID'} onClick={() => setStatus('PAID')}>
             ✓ Отметить оплаченным
           </Button>
         )}
-        {isPaid && (
+        {(isPaid || status === 'PARTIAL') && Number(paidNet) > 0 && (
+          <Button variant="danger" size="sm" onClick={() => setRefunding(true)}>
+            ↩ Оформить возврат
+          </Button>
+        )}
+        {(isPaid || status === 'PARTIAL') && Number(paidNet) > 0 && (
           <Button variant="danger" size="sm" loading={busy === 'unpay'} onClick={handleUnpay}>
-            ↩ Отменить оплату
+            Отменить оплату полностью
           </Button>
         )}
         <Button variant="secondary" size="sm" loading={busy === 'duplicate'} onClick={handleDuplicate}>
           ⧉ Дублировать
         </Button>
-        {!isDraft && !isFinal && (
+        {!isDraft && status !== 'CANCELLED' && (
           <Button variant="danger" size="sm" loading={busy === 'cancel'} onClick={handleCancel}>
             Отменить счёт
           </Button>
@@ -176,6 +183,16 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin }: Props) {
             <p key={i} className="text-label text-gray-700">· {line}</p>
           ))}
         </div>
+      )}
+      {refunding && (
+        <RefundModal
+          invoiceId={id}
+          invoiceNumber={number}
+          paidNet={paidNet}
+          ivaRate={ivaRate}
+          onClose={() => setRefunding(false)}
+          onDone={(lines) => { setRefunding(false); setCascade(lines); setError(null); router.refresh() }}
+        />
       )}
     </div>
   )

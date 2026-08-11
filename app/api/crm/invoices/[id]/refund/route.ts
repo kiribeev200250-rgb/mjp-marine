@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
-import { reversePayment } from '@/lib/crm/services/invoiceCascade'
+import { refundPayment } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 
-// POST — отменить оплату счёта: сторнирует FinanceEntry (доход убирается из
-// P&L/кассы), счёт возвращается в «Выставлен» и снова попадает в дебиторку.
+// POST /api/crm/invoices/[id]/refund — возврат (полный/частичный) уже
+// проведённой оплаты. Тело: { amount: string, reason?: string } — сумма нетто
+// (без IVA); IVA repercutido корректируется пропорционально ставке счёта.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await getCrmSession()
@@ -14,13 +16,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const existing = await prisma.invoice.findFirst({ where: { id, companyId: session.user.companyId } })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
-  if (existing.status !== 'PAID' && existing.status !== 'PARTIAL') {
-    return NextResponse.json({ error: 'Счёт не оплачен' }, { status: 400 })
+
+  const body = await req.json()
+  const { amount, reason } = body as { amount?: string | number; reason?: string }
+
+  let netRefundAmount: Decimal
+  try {
+    netRefundAmount = new Decimal(String(amount ?? '0'))
+    if (netRefundAmount.lte(0)) throw new Error('Сумма возврата должна быть больше нуля')
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректная сумма' }, { status: 400 })
   }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const cascade = await reversePayment(tx, session.user.companyId, session.user.id, existing)
+      const cascade = await refundPayment(tx, session.user.companyId, session.user.id, existing, netRefundAmount, reason?.trim())
       const inv = await tx.invoice.findUniqueOrThrow({ where: { id } })
       return { ...inv, cascade }
     })

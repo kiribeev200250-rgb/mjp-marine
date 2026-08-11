@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
+    "db:backup": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/backup.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

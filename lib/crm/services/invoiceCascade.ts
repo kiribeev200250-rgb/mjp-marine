@@ -200,46 +200,132 @@ export async function recordPayment(
   return lines
 }
 
-// Отмена оплаты: сторнирует связанный FinanceEntry (удаляет из P&L/кассы —
-// снимок суммы сохраняется в аудит-логе), фактура снова «не оплачена».
+// Возврат (полный/частичный) уже проведённой оплаты — сторно-запись, а не
+// удаление: создаёт обратную FinanceEntry (тот же type INCOME, отрицательная
+// amount, reversalOfId → исходный платёж) и обратную VatEntry (repercutido,
+// пропорционально ставке IVA счёта), поэтому вся история остаётся видна и
+// раскрываема (drill-down), а не пропадает бесследно. Идемпотентно в том
+// смысле, что нельзя вернуть больше, чем реально зачислено по счёту сейчас
+// (с учётом уже сделанных ранее возвратов) — повторный вызов с той же суммой,
+// если она уже возвращена, будет отклонён валидацией на превышение.
+export async function refundPayment(
+  tx: Tx,
+  companyId: string,
+  userId: string | null | undefined,
+  invoice: { id: string; number: string; clientId: string; ivaRate: unknown },
+  netRefundAmount: Decimal,
+  reason?: string,
+): Promise<string[]> {
+  if (netRefundAmount.lte(0)) throw new Error('Сумма возврата должна быть больше нуля')
+
+  const current = await tx.invoice.findUnique({ where: { id: invoice.id }, select: { status: true } })
+  if (current?.status !== 'PAID' && current?.status !== 'PARTIAL') {
+    throw new Error('По этому счёту нет проведённой оплаты для возврата')
+  }
+
+  const paidEntries = await tx.financeEntry.findMany({ where: { invoiceId: invoice.id, type: 'INCOME' } })
+  const paidNet = paidEntries.reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
+  if (netRefundAmount.gt(paidNet)) {
+    throw new Error(`Сумма возврата (${netRefundAmount.toFixed(2)} €) превышает оплаченную часть (${paidNet.toFixed(2)} €)`)
+  }
+
+  const ivaRate   = new Decimal(String(invoice.ivaRate))
+  const ivaRefund = netRefundAmount.times(ivaRate).div(100).toDecimalPlaces(2)
+  const grossRefund = netRefundAmount.plus(ivaRefund)
+
+  const year   = new Date().getFullYear()
+  const autoId = await nextFinanceAutoId(companyId, 'INCOME', year)
+  const category = await findOrCreateCategory(tx, companyId, 'INCOME', 'Работы по фактуре')
+  const now = new Date()
+
+  const originalPayment = await tx.financeEntry.findFirst({
+    where:   { invoiceId: invoice.id, type: 'INCOME', amount: { gt: 0 } },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  const entry = await tx.financeEntry.create({
+    data: {
+      companyId,
+      autoId,
+      type:        'INCOME',
+      date:        now,
+      category:    category.name,
+      categoryId:  category.id,
+      amountExpr:  netRefundAmount.negated().toString(),
+      amount:      netRefundAmount.negated(),
+      description: `Возврат по счёту ${invoice.number}${reason ? ' — ' + reason : ''}`,
+      clientId:    invoice.clientId,
+      invoiceId:   invoice.id,
+      reversalOfId: originalPayment?.id,
+    },
+  })
+
+  await recordVat(tx, companyId, {
+    direction:      'REPERCUTIDO',
+    date:           now,
+    baseAmount:     netRefundAmount.negated(),
+    rate:           ivaRate,
+    amount:         ivaRefund.negated(),
+    invoiceId:      invoice.id,
+    financeEntryId: entry.id,
+    note:           `Возврат по счёту ${invoice.number}`,
+  })
+
+  const newPaidNet   = paidNet.minus(netRefundAmount)
+  const fullyRefunded = newPaidNet.lte(0)
+  const newStatus     = fullyRefunded ? 'ISSUED' : 'PARTIAL'
+
+  await tx.invoice.update({
+    where: { id: invoice.id },
+    data:  { status: newStatus, ...(fullyRefunded && { paidAt: null }) },
+  })
+
+  await tx.auditLog.create({
+    data: {
+      companyId,
+      userId: userId ?? undefined,
+      action: 'REFUND',
+      entity: 'FinanceEntry',
+      entityId: entry.id,
+      oldValue: { paidNetBefore: paidNet.toString() },
+      newValue: { autoId, amount: entry.amount.toString(), ivaRefund: ivaRefund.toString(), reason: reason ?? '' },
+      meta: { invoiceId: invoice.id, reversalOfId: originalPayment?.id },
+    },
+  })
+
+  const lines = [
+    `Возврат ${netRefundAmount.toFixed(2)} € по счёту ${invoice.number} (${autoId}): доход −${netRefundAmount.toFixed(2)}, IVA repercutido −${ivaRefund.toFixed(2)}`,
+    `Клиенту к возврату ${grossRefund.toFixed(2)} € (нетто + IVA)`,
+  ]
+
+  if (fullyRefunded) {
+    await tx.client.update({ where: { id: invoice.clientId }, data: { funnelStage: 'INVOICE_SENT' } })
+    await tx.funnelHistory.create({
+      data: { clientId: invoice.clientId, fromStage: 'PAID', toStage: 'INVOICE_SENT', note: `Оплата счёта ${invoice.number} полностью возвращена` },
+    })
+    lines.push(`Счёт ${invoice.number} снова в дебиторке — полностью не оплачен`)
+  } else {
+    lines.push(`Счёт ${invoice.number} переведён в «Частично оплачен» — остаток ${newPaidNet.toFixed(2)} € (нетто) зачтён`)
+  }
+
+  return lines
+}
+
+// Отмена оплаты (полный возврат): сторнирует весь зачтённый по счёту доход —
+// тонкая обёртка над refundPayment на всю оставшуюся сумму. Идемпотентно —
+// повторный вызов на уже неоплаченном счёте ничего не делает.
 export async function reversePayment(
   tx: Tx,
   companyId: string,
   userId: string | null | undefined,
-  invoice: { id: string; number: string; clientId: string; status: string },
+  invoice: { id: string; number: string; clientId: string; status: string; ivaRate: unknown },
 ): Promise<string[]> {
   const current = await tx.invoice.findUnique({ where: { id: invoice.id }, select: { status: true } })
-  if (current?.status !== 'PAID') return []
+  if (current?.status !== 'PAID' && current?.status !== 'PARTIAL') return []
 
-  const lines: string[] = []
-  const entry = await tx.financeEntry.findFirst({ where: { invoiceId: invoice.id, type: 'INCOME' }, include: { vatEntry: true } })
-  if (entry) {
-    await tx.auditLog.create({
-      data: {
-        companyId,
-        userId: userId ?? undefined,
-        action: 'DELETE',
-        entity: 'FinanceEntry',
-        entityId: entry.id,
-        oldValue: { autoId: entry.autoId, amount: entry.amount.toString(), vatAmount: entry.vatEntry?.amount.toString() },
-        meta: { reason: 'unpay-invoice', invoiceId: invoice.id },
-      },
-    })
-    // VatEntry (repercutido) удаляется автоматически каскадом (onDelete: Cascade
-    // на financeEntryId) — отдельного удаления не требуется.
-    await tx.financeEntry.delete({ where: { id: entry.id } })
-    lines.push(`Доход ${entry.autoId} на ${new Decimal(entry.amount.toString()).toFixed(2)} € удалён из P&L и кассы`)
-    if (entry.vatEntry) {
-      lines.push(`IVA repercutido ${new Decimal(entry.vatEntry.amount.toString()).toFixed(2)} € по этому счёту тоже снят`)
-    }
-  }
+  const paidEntries = await tx.financeEntry.findMany({ where: { invoiceId: invoice.id, type: 'INCOME' } })
+  const paidNet = paidEntries.reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
+  if (paidNet.lte(0)) return []
 
-  await tx.invoice.update({ where: { id: invoice.id }, data: { status: 'ISSUED', paidAt: null } })
-  await tx.client.update({ where: { id: invoice.clientId }, data: { funnelStage: 'INVOICE_SENT' } })
-  await tx.funnelHistory.create({
-    data: { clientId: invoice.clientId, fromStage: 'PAID', toStage: 'INVOICE_SENT', note: `Оплата счёта ${invoice.number} отменена` },
-  })
-  lines.push(`Счёт ${invoice.number} снова в дебиторке`)
-
-  return lines
+  return refundPayment(tx, companyId, userId, invoice, paidNet, 'Полная отмена оплаты')
 }

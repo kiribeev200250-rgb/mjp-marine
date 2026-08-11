@@ -106,20 +106,27 @@ export default function TgFinancePage() {
             <TgEmpty text="Пока нет операций" />
           ) : (
             <div className="flex flex-col gap-2">
-              {data.recent.map((e) => (
-                <TgCard key={e.id} className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-semibold text-navy-900">{e.category}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {TYPE_LABELS[e.type]} · {new Date(e.date).toLocaleDateString('ru-RU')}
-                      {e.client ? ` · ${e.client}` : ''}
+              {data.recent.map((e) => {
+                // Эффективный знак: сторно-возврат хранится отрицательным числом
+                // в type INCOME — не всегда "+", даже если тип формально доход.
+                const raw = Number(e.amount)
+                const signedAmount = e.type === 'INCOME' ? raw : -raw
+                const isNeg = signedAmount < 0
+                return (
+                  <TgCard key={e.id} className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-navy-900">{e.category}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {TYPE_LABELS[e.type]} · {new Date(e.date).toLocaleDateString('ru-RU')}
+                        {e.client ? ` · ${e.client}` : ''}
+                      </div>
                     </div>
-                  </div>
-                  <div className={'text-sm font-semibold tabular-nums ' + (e.type === 'INCOME' ? 'text-success' : 'text-danger')}>
-                    {e.type === 'INCOME' ? '+' : '−'}{formatMoney(e.amount)}
-                  </div>
-                </TgCard>
-              ))}
+                    <div className={'text-sm font-semibold tabular-nums ' + (isNeg ? 'text-danger' : 'text-success')}>
+                      {isNeg ? '−' : '+'}{formatMoney(Math.abs(signedAmount))}
+                    </div>
+                  </TgCard>
+                )
+              })}
             </div>
           )}
         </>

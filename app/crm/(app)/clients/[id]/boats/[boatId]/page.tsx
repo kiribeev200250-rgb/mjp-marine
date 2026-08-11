@@ -56,10 +56,14 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
       date: mv.createdAt,
       title: `${mv.type === 'WRITE_OFF' ? 'Списано' : mv.type === 'RECEIVE' ? 'Возврат на склад' : mv.type}: ${mv.item.name} ×${mv.qty.toString()} ${mv.item.unit}${mv.invoice ? ` (${mv.invoice.number})` : ''}`,
     })),
-    ...payments.map((p): FeedEvent => ({
-      date: p.date, title: `Оплата ${p.autoId} — ${formatMoney(p.amount)}${p.invoice ? ` (${p.invoice.number})` : ''}`,
-      badge: <Badge tone="success" className="text-[10px]">Оплачено</Badge>,
-    })),
+    ...payments.map((p): FeedEvent => {
+      const isRefund = Number(p.amount) < 0
+      return {
+        date: p.date,
+        title: `${isRefund ? 'Возврат' : 'Оплата'} ${p.autoId} — ${formatMoney(Math.abs(Number(p.amount)))}${p.invoice ? ` (${p.invoice.number})` : ''}`,
+        badge: <Badge tone={isRefund ? 'warning' : 'success'} className="text-[10px]">{isRefund ? 'Возврат' : 'Оплачено'}</Badge>,
+      }
+    }),
   ].sort((a, b) => b.date.getTime() - a.date.getTime())
 
   const qs = `clientId=${clientId}&boatId=${boatId}`

@@ -66,52 +66,57 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     ? await findOrCreateCategory(prisma, session.user.companyId, 'INCOME', 'Продажа запчастей')
     : null
 
-  const [movement] = await prisma.$transaction([
-    prisma.stockMovement.create({
-      data: {
-        companyId: session.user.companyId,
-        itemId,
-        type,
-        qty:       qtyDec,
-        unitPrice: priceDec,
-        total,
-        note:      note?.trim() ?? '',
-        ...(taskId && { taskId }),
-      },
-    }),
-    prisma.inventoryItem.update({
-      where: { id: itemId },
-      data:  { qtyInStock: newStock, qtyOrdered: newOrdered },
-    }),
-    prisma.auditLog.create({
-      data: {
-        companyId: session.user.companyId,
-        userId:    session.user.id,
-        action:    'STOCK_MOVE',
-        entity:    'InventoryItem',
-        entityId:  itemId,
-        oldValue:  { qtyInStock: item.qtyInStock },
-        newValue:  { type, qty: qtyDec, newStock },
-        meta:      { note },
-      },
-    }),
-    ...(type === 'SELL'
-      ? [prisma.financeEntry.create({
-          data: {
-            companyId:   session.user.companyId,
-            autoId:      incomeAutoId!,
-            type:        'INCOME' as const,
-            date:        new Date(),
-            category:    sellCategory!.name,
-            categoryId:  sellCategory!.id,
-            amountExpr:  total.toString(),
-            amount:      total,
-            description: `Продажа: ${item.name}`,
-          },
-        })]
-      : []
-    ),
-  ])
+  let movement
+  try {
+    ;[movement] = await prisma.$transaction([
+      prisma.stockMovement.create({
+        data: {
+          companyId: session.user.companyId,
+          itemId,
+          type,
+          qty:       qtyDec,
+          unitPrice: priceDec,
+          total,
+          note:      note?.trim() ?? '',
+          ...(taskId && { taskId }),
+        },
+      }),
+      prisma.inventoryItem.update({
+        where: { id: itemId },
+        data:  { qtyInStock: newStock, qtyOrdered: newOrdered },
+      }),
+      prisma.auditLog.create({
+        data: {
+          companyId: session.user.companyId,
+          userId:    session.user.id,
+          action:    'STOCK_MOVE',
+          entity:    'InventoryItem',
+          entityId:  itemId,
+          oldValue:  { qtyInStock: item.qtyInStock },
+          newValue:  { type, qty: qtyDec, newStock },
+          meta:      { note },
+        },
+      }),
+      ...(type === 'SELL'
+        ? [prisma.financeEntry.create({
+            data: {
+              companyId:   session.user.companyId,
+              autoId:      incomeAutoId!,
+              type:        'INCOME' as const,
+              date:        new Date(),
+              category:    sellCategory!.name,
+              categoryId:  sellCategory!.id,
+              amountExpr:  total.toString(),
+              amount:      total,
+              description: `Продажа: ${item.name}`,
+            },
+          })]
+        : []
+      ),
+    ])
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Операция не выполнена — ничего не изменилось' }, { status: 400 })
+  }
 
   // Уведомление в Telegram, если списание/продажа увели остаток ниже минимума
   if ((type === 'WRITE_OFF' || type === 'SELL') && item.qtyMinAlert.toString() !== '0' && newStock.lt(new Decimal(item.qtyMinAlert.toString()))) {

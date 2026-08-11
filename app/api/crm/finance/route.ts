@@ -75,12 +75,16 @@ export async function POST(req: NextRequest) {
   let rate   = new Decimal(0)
   let vat    = new Decimal(0)
   if (withVat) {
-    rate   = new Decimal(vatRate ?? 21)
+    rate = new Decimal(vatRate ?? 21)
+    if (rate.lt(0) || rate.gt(100)) {
+      return NextResponse.json({ error: 'Ставка IVA должна быть от 0 до 100%' }, { status: 400 })
+    }
     amount = grossOrNet.div(rate.div(100).plus(1)).toDecimalPlaces(2)
     vat    = grossOrNet.minus(amount)
   }
 
   const entryDate = date ? new Date(date) : new Date()
+  if (isNaN(entryDate.getTime())) return NextResponse.json({ error: 'Некорректная дата' }, { status: 400 })
   const year      = entryDate.getFullYear()
   const autoId    = await nextFinanceAutoId(session.user.companyId, type, year)
 

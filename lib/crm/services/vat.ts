@@ -15,10 +15,13 @@ interface RecordVatParams {
 }
 
 // Запись в IVA-книгу (repercutido/soportado). НИКОГДА не входит в P&L — только
-// для расчёта «IVA к уплате» и квартальной аналитики. amount<=0 не пишется —
-// IVA-запись существует только когда реально есть сумма IVA к учёту.
+// для расчёта «IVA к уплате» и квартальной аналитики. amount===0 не пишется —
+// IVA-запись существует только когда реально есть сумма IVA к учёту. amount
+// МОЖЕТ быть отрицательной — это сторно (возврат) уже учтённого IVA, см.
+// refundPayment в invoiceCascade.ts; отклонять только истинный ноль, не весь
+// диапазон <=0, иначе сторно-записи молча не создаются и книга не сходится.
 export async function recordVat(tx: Tx, companyId: string, params: RecordVatParams) {
-  if (params.amount.lte(0)) return null
+  if (params.amount.isZero()) return null
 
   return tx.vatEntry.create({
     data: {

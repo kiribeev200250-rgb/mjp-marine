@@ -78,12 +78,17 @@ export default async function ClientDetailPage({
       badge: <Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'} className="text-[10px]">{INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge>,
       href:  `/crm/invoices/${inv.id}`,
     })),
-    ...client.finances.filter((f) => f.type === 'INCOME' && f.invoiceId).map((f): FeedEvent => ({
-      date:  f.date,
-      title: `Оплата получена ${f.autoId} — ${formatMoney(f.amount)}`,
-      badge: <Badge tone="success" className="text-[10px]">Оплачено</Badge>,
-      href:  f.invoiceId ? `/crm/invoices/${f.invoiceId}` : undefined,
-    })),
+    ...client.finances.filter((f) => f.type === 'INCOME' && f.invoiceId).map((f): FeedEvent => {
+      const isRefund = Number(f.amount) < 0
+      return {
+        date:  f.date,
+        title: isRefund
+          ? `Возврат ${f.autoId} — ${formatMoney(Math.abs(Number(f.amount)))}`
+          : `Оплата получена ${f.autoId} — ${formatMoney(f.amount)}`,
+        badge: <Badge tone={isRefund ? 'warning' : 'success'} className="text-[10px]">{isRefund ? 'Возврат' : 'Оплачено'}</Badge>,
+        href:  f.invoiceId ? `/crm/invoices/${f.invoiceId}` : undefined,
+      }
+    }),
     ...client.stageHistory.map((h): FeedEvent => ({
       date:  h.createdAt,
       title: h.fromStage

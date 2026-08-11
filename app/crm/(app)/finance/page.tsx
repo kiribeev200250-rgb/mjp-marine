@@ -195,17 +195,23 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
             <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
               {allEntries.map((e) => {
                 const amtDec = new Decimal(e.amount.toString())
-                const isNeg  = e.type !== 'INCOME'
+                // Эффективный знак вклада в кассу: доход — как хранится (сторно
+                // хранится отрицательным числом того же типа INCOME), расход/
+                // зарплата — всегда отток, даже если сумма хранится положительной.
+                const signedAmount = e.type === 'INCOME' ? amtDec : amtDec.negated()
+                const isNeg  = signedAmount.isNegative()
+                const isReversal = amtDec.isNegative()
                 return (
                   <div key={e.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/60 transition-colors group">
                     {/* Type dot */}
                     <span className={`w-2 h-2 rounded-full shrink-0 ${
+                      isReversal ? 'bg-warning' :
                       e.type === 'INCOME'  ? 'bg-success' :
                       e.type === 'EXPENSE' ? 'bg-danger'  : 'bg-warning'
                     }`} />
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-medium text-gray-900 truncate">{e.categoryRef?.name || e.category}</p>
+                      <p className="text-body font-medium text-gray-900 truncate">{e.categoryRef?.name || e.category}{isReversal ? ' · возврат' : ''}</p>
                       <p className="text-label text-gray-500">
                         {fmtDate(e.date)} · {TYPE_RU[e.type]}
                         {e.client ? ` · ${e.client.firstName} ${e.client.lastName}` : ''}
@@ -214,11 +220,11 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                     {/* Amount */}
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-body font-semibold tabular-nums ${isNeg ? 'text-danger' : 'text-success'}`}>
-                        {isNeg ? '−' : '+'}{formatMoney(amtDec)}
+                        {isNeg ? '−' : '+'}{formatMoney(signedAmount.abs())}
                       </span>
                       <span className="text-label text-gray-500 font-mono">{e.autoId}</span>
                       <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <DeleteEntryButton id={e.id} />
+                        {!e.invoiceId && <DeleteEntryButton id={e.id} />}
                       </span>
                     </div>
                   </div>

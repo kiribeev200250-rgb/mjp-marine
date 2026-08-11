@@ -5,6 +5,7 @@ import { KpiCard, Card, SectionHeader, Badge, FUNNEL_TONE } from '@/components/c
 import { FUNNEL_STAGE_LABELS, formatMoney, isNegativeMoney } from '@/lib/crm/utils'
 import { RevenueChart } from '@/components/crm/dashboard/RevenueChart'
 import { computeCashSummary } from '@/lib/crm/services/cash'
+import { hasPermission } from '@/lib/crm/permissions'
 import Decimal from 'decimal.js'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -35,6 +36,16 @@ export default async function DashboardPage() {
   if (!session) return null
   const companyId = session.user.companyId
 
+  // Дашборд агрегирует данные из нескольких модулей — каждый блок виден
+  // только если у сотрудника есть право VIEW на соответствующий модуль,
+  // иначе финансовые/клиентские данные утекали бы любому залогиненному
+  // сотруднику мимо матрицы прав (реальный экран не хуже прямого запроса).
+  const canFinance  = hasPermission(session.user.role, session.user.permissions, 'FINANCE',  'VIEW')
+  const canInvoices = hasPermission(session.user.role, session.user.permissions, 'INVOICES', 'VIEW')
+  const canClients  = hasPermission(session.user.role, session.user.permissions, 'CLIENTS',  'VIEW')
+  const canSchedule = hasPermission(session.user.role, session.user.permissions, 'SCHEDULE', 'VIEW')
+  const canSettings = hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'VIEW')
+
   const now         = new Date()
   const todayStart  = startOfDay(now)
   const todayEnd    = endOfDay(now)
@@ -55,52 +66,52 @@ export default async function DashboardPage() {
     chartFinances,
   ] = await Promise.all([
     // 1. Касса — единая формула, см. lib/crm/services/cash.ts
-    computeCashSummary(companyId),
+    canFinance ? computeCashSummary(companyId) : null,
     // 2. P&L this month
-    prisma.financeEntry.findMany({
+    canFinance ? prisma.financeEntry.findMany({
       where:  { companyId, date: { gte: monthStart, lte: now }, type: { in: ['INCOME','EXPENSE','SALARY'] } },
       select: { type: true, amount: true },
-    }),
+    }) : [],
     // 3. Accounts receivable
-    prisma.invoice.aggregate({
+    canInvoices ? prisma.invoice.aggregate({
       where: { companyId, status: { in: ['ISSUED','PARTIAL','OVERDUE'] } },
       _sum:  { total: true },
-    }),
+    }) : null,
     // 4. Overdue count
-    prisma.invoice.count({ where: { companyId, status: 'OVERDUE' } }),
+    canInvoices ? prisma.invoice.count({ where: { companyId, status: 'OVERDUE' } }) : 0,
     // 5. Tasks today
-    prisma.task.count({
+    canSchedule ? prisma.task.count({
       where: { companyId, status: { not: 'DONE' }, scheduledAt: { gte: todayStart, lte: todayEnd } },
-    }),
+    }) : 0,
     // 6. Total active clients
-    prisma.client.count({ where: { companyId, active: true } }),
+    canClients ? prisma.client.count({ where: { companyId, active: true } }) : 0,
     // 7. Paid clients (for conversion)
-    prisma.client.count({ where: { companyId, funnelStage: 'PAID' } }),
+    canClients ? prisma.client.count({ where: { companyId, funnelStage: 'PAID' } }) : 0,
     // 8. Company info (placeholder warning)
-    prisma.companyInfo.findUnique({ where: { companyId } }),
+    canSettings ? prisma.companyInfo.findUnique({ where: { companyId } }) : null,
     // 9. Pipeline by stage
-    prisma.client.groupBy({ by: ['funnelStage'], where: { companyId, active: true }, _count: true }),
-    // 10. Recent audit log
-    prisma.auditLog.findMany({
+    canClients ? prisma.client.groupBy({ by: ['funnelStage'], where: { companyId, active: true }, _count: true }) : [],
+    // 10. Recent audit log — как минимум SETTINGS, чтобы не светить чужую активность
+    canSettings ? prisma.auditLog.findMany({
       where:   { companyId },
       orderBy: { createdAt: 'desc' },
       take:    6,
       include: { user: { select: { name: true } } },
-    }),
+    }) : [],
     // 11. Chart: last 6 months finances
-    prisma.financeEntry.findMany({
+    canFinance ? prisma.financeEntry.findMany({
       where: {
         companyId,
         type: { in: ['INCOME','EXPENSE','SALARY'] },
         date: { gte: new Date(now.getFullYear(), now.getMonth() - 5, 1) },
       },
       select: { type: true, amount: true, date: true },
-    }),
+    }) : [],
   ])
 
   // ── KPI computations ───────────────────────────────────────────────────────
 
-  const cash = cashSummary.cash
+  const cash = cashSummary?.cash ?? new Decimal(0)
 
   let plMonth = new Decimal(0)
   for (const f of monthFinances) {
@@ -109,7 +120,7 @@ export default async function DashboardPage() {
     else                     plMonth = plMonth.minus(a)
   }
 
-  const receivable   = new Decimal((invoiceAgg._sum.total ?? 0).toString())
+  const receivable   = new Decimal((invoiceAgg?._sum.total ?? 0).toString())
   const conversion   = totalClients > 0 ? Math.round((paidClients / totalClients) * 100) : 0
   const isPlaceholder = companyInfo?.legalName === 'ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ'
 
@@ -171,46 +182,46 @@ export default async function DashboardPage() {
 
       {/* KPI row — 5 cards */}
       <div className="grid grid-cols-2 xl:grid-cols-5 lg:grid-cols-3 gap-4">
-        <Link href="/crm/finance">
+        <KpiLink href="/crm/finance" enabled={canFinance}>
           <KpiCard
             label="Касса"
-            value={<span className={isNegativeMoney(cash) ? 'text-danger' : ''}>{formatMoney(cash)}</span>}
-            delta={cash.isZero() ? 'Нет данных' : cashSummary.personalInProject.gt(0) ? `Личные: ${formatMoney(cashSummary.personalInProject)}` : undefined}
-            deltaTone={cashSummary.personalInProject.gt(0) ? 'danger' : 'neutral'}
+            value={canFinance ? <span className={isNegativeMoney(cash) ? 'text-danger' : ''}>{formatMoney(cash)}</span> : '—'}
+            delta={!canFinance ? 'Нет доступа' : cash.isZero() ? 'Нет данных' : cashSummary!.personalInProject.gt(0) ? `Личные: ${formatMoney(cashSummary!.personalInProject)}` : undefined}
+            deltaTone={!canFinance ? 'neutral' : cashSummary!.personalInProject.gt(0) ? 'danger' : 'neutral'}
           />
-        </Link>
-        <Link href="/crm/finance">
+        </KpiLink>
+        <KpiLink href="/crm/finance" enabled={canFinance}>
           <KpiCard
             label="P&L за месяц"
-            value={<span className={isNegativeMoney(plMonth) ? 'text-danger' : ''}>{formatMoney(plMonth)}</span>}
-            delta={plMonth.isPositive() && !plMonth.isZero() ? 'Прибыльно' : plMonth.isNegative() ? 'Убыток' : 'Нет данных'}
-            deltaTone={plMonth.isPositive() && !plMonth.isZero() ? 'success' : plMonth.isNegative() ? 'danger' : 'neutral'}
+            value={canFinance ? <span className={isNegativeMoney(plMonth) ? 'text-danger' : ''}>{formatMoney(plMonth)}</span> : '—'}
+            delta={!canFinance ? 'Нет доступа' : plMonth.isPositive() && !plMonth.isZero() ? 'Прибыльно' : plMonth.isNegative() ? 'Убыток' : 'Нет данных'}
+            deltaTone={!canFinance ? 'neutral' : plMonth.isPositive() && !plMonth.isZero() ? 'success' : plMonth.isNegative() ? 'danger' : 'neutral'}
           />
-        </Link>
-        <Link href="/crm/funnel">
+        </KpiLink>
+        <KpiLink href="/crm/funnel" enabled={canClients}>
           <KpiCard
             label="Конверсия воронки"
-            value={`${conversion}%`}
-            delta="Лид → Оплачено"
+            value={canClients ? `${conversion}%` : '—'}
+            delta={canClients ? 'Лид → Оплачено' : 'Нет доступа'}
             deltaTone="neutral"
           />
-        </Link>
-        <Link href="/crm/invoices">
+        </KpiLink>
+        <KpiLink href="/crm/invoices" enabled={canInvoices}>
           <KpiCard
             label="Дебиторка"
-            value={<span className={receivable.isZero() ? '' : 'text-danger'}>{formatMoney(receivable)}</span>}
-            delta={overdueCount > 0 ? `${overdueCount} просрочено` : 'Все в срок'}
-            deltaTone={overdueCount > 0 ? 'danger' : 'success'}
+            value={canInvoices ? <span className={receivable.isZero() ? '' : 'text-danger'}>{formatMoney(receivable)}</span> : '—'}
+            delta={!canInvoices ? 'Нет доступа' : overdueCount > 0 ? `${overdueCount} просрочено` : 'Все в срок'}
+            deltaTone={!canInvoices ? 'neutral' : overdueCount > 0 ? 'danger' : 'success'}
           />
-        </Link>
-        <Link href="/crm/schedule">
+        </KpiLink>
+        <KpiLink href="/crm/schedule" enabled={canSchedule}>
           <KpiCard
             label="Задач сегодня"
-            value={tasksToday}
-            delta="В планировщике"
+            value={canSchedule ? tasksToday : '—'}
+            delta={canSchedule ? 'В планировщике' : 'Нет доступа'}
             deltaTone="neutral"
           />
-        </Link>
+        </KpiLink>
       </div>
 
       {/* 2-column layout */}
@@ -223,7 +234,11 @@ export default async function DashboardPage() {
           <Card padding={false}>
             <div className="px-5 pt-5 pb-2">
               <SectionHeader title="Доходы и расходы — последние 6 месяцев" />
-              <RevenueChart data={chartData} maxVal={chartMax} />
+              {canFinance ? (
+                <RevenueChart data={chartData} maxVal={chartMax} />
+              ) : (
+                <p className="text-gray-500 text-body text-center py-8">Нет доступа к финансам</p>
+              )}
             </div>
           </Card>
 
@@ -232,7 +247,11 @@ export default async function DashboardPage() {
             <div className="px-5 py-4 border-b border-gray-200">
               <h3 className="text-label text-gray-500 uppercase tracking-wide font-semibold">Последние действия</h3>
             </div>
-            {recentAudit.length === 0 ? (
+            {!canSettings ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-gray-500 text-body">Нет доступа</p>
+              </div>
+            ) : recentAudit.length === 0 ? (
               <div className="px-5 py-8 text-center">
                 <p className="text-gray-500 text-body">Активности пока нет</p>
               </div>
@@ -268,6 +287,12 @@ export default async function DashboardPage() {
               <h3 className="text-label text-gray-500 uppercase tracking-wide font-semibold">Воронка по стадиям</h3>
             </div>
 
+            {!canClients ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-gray-500 text-body">Нет доступа</p>
+              </div>
+            ) : (
+              <>
             {/* Stacked bar */}
             {totalInPipeline > 0 && (
               <div className="px-5 py-3">
@@ -318,9 +343,16 @@ export default async function DashboardPage() {
                 )
               })}
             </div>
+              </>
+            )}
           </Card>
         </div>
       </div>
     </main>
   )
+}
+
+function KpiLink({ href, enabled, children }: { href: string; enabled: boolean; children: React.ReactNode }) {
+  if (!enabled) return <div className="cursor-default opacity-60">{children}</div>
+  return <Link href={href}>{children}</Link>
 }

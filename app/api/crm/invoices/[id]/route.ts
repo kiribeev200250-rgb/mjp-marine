@@ -4,7 +4,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
-import { recordPayment, returnInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
+import { recordPayment, returnInvoiceMaterials, refundPayment } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 import type { InvoiceStatus } from '@prisma/client'
 
@@ -139,6 +139,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const subtotal   = jobsTotal.plus(materialsTotal)
   const iva        = new Decimal(ivaRate ?? existing.ivaRate)
   const irpf       = new Decimal(irpfRate ?? existing.irpfRate)
+  if (iva.lt(0) || iva.gt(100))  return NextResponse.json({ error: 'Ставка IVA должна быть от 0 до 100%' },  { status: 400 })
+  if (irpf.lt(0) || irpf.gt(100)) return NextResponse.json({ error: 'Ставка IRPF должна быть от 0 до 100%' }, { status: 400 })
   const ivaAmount  = subtotal.times(iva).div(100)
   const irpfAmount = subtotal.times(irpf).div(100)
   const total      = subtotal.plus(ivaAmount).minus(irpfAmount)
@@ -212,14 +214,23 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ ok: true })
   }
 
-  if (existing.status === 'PAID') {
-    return NextResponse.json({ error: 'Нельзя отменить оплаченный счёт' }, { status: 400 })
-  }
-
   const result = await prisma.$transaction(async (tx) => {
-    const cascade = existing.materialsWrittenOff
+    const cascade: string[] = []
+
+    // Аннулирование оплаченного/частично оплаченного счёта сначала полностью
+    // сторнирует зачтённый доход (и его IVA repercutido) — деньги не пропадают
+    // молча, остаются видны как возврат в истории.
+    if (existing.status === 'PAID' || existing.status === 'PARTIAL') {
+      const paidEntries = await tx.financeEntry.findMany({ where: { invoiceId: id, type: 'INCOME' } })
+      const paidNet = paidEntries.reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
+      if (paidNet.gt(0)) {
+        cascade.push(...await refundPayment(tx, session.user.companyId, session.user.id, existing, paidNet, 'Аннулирование счёта'))
+      }
+    }
+
+    cascade.push(...(existing.materialsWrittenOff
       ? await returnInvoiceMaterials(tx, session.user.companyId, existing)
-      : []
+      : []))
 
     const updated = await tx.invoice.update({ where: { id }, data: { status: 'CANCELLED' } })
 

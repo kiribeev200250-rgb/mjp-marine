@@ -5,7 +5,9 @@ import { requirePermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { prisma } from '@/lib/prisma'
-import type { TaskStatus } from '@prisma/client'
+import type { PrismaClient, TaskStatus } from '@prisma/client'
+
+type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 
 interface TaskMaterial { itemId: string; name: string; unit: string; qty: string }
 
@@ -31,18 +33,26 @@ export async function GET(
   return NextResponse.json(task)
 }
 
-// Списывает привязанные к задаче материалы со склада (StockMovement WRITE_OFF)
-// и шлёт алерт в Telegram, если остаток после списания ушёл ниже минимума.
-async function writeOffMaterials(companyId: string, taskId: string, materials: TaskMaterial[]) {
-  if (materials.length === 0) return
+// Списывает привязанные к задаче материалы со склада (StockMovement WRITE_OFF).
+// Принимает tx — вызывается ВНУТРИ одной транзакции со сменой статуса задачи
+// (см. PATCH ниже), иначе при сбое между «задача → DONE» и «материалы списаны»
+// можно было получить задачу в DONE без реального списания склада. Алерты о
+// низком остатке возвращаются вызывающей стороне — уведомление в Telegram
+// шлётся уже ПОСЛЕ успешного коммита транзакции, не раньше.
+async function writeOffMaterials(
+  tx: Tx,
+  companyId: string,
+  taskId: string,
+  materials: TaskMaterial[],
+): Promise<{ name: string; newStock: Decimal; unit: string; minAlert: Decimal }[]> {
+  if (materials.length === 0) return []
 
-  const items = await prisma.inventoryItem.findMany({
+  const items = await tx.inventoryItem.findMany({
     where: { id: { in: materials.map((m) => m.itemId) }, companyId },
   })
 
   const lowStockAlerts: { name: string; newStock: Decimal; unit: string; minAlert: Decimal }[] = []
 
-  const ops = []
   for (const m of materials) {
     const item = items.find((i) => i.id === m.itemId)
     if (!item) continue
@@ -53,15 +63,13 @@ async function writeOffMaterials(companyId: string, taskId: string, materials: T
     const unitPrice      = new Decimal(item.costPrice.toString())
     const total           = qty.mul(unitPrice)
 
-    ops.push(
-      prisma.stockMovement.create({
-        data: {
-          companyId, itemId: item.id, taskId, type: 'WRITE_OFF',
-          qty, unitPrice, total, note: 'Автосписание при выполнении задачи',
-        },
-      }),
-      prisma.inventoryItem.update({ where: { id: item.id }, data: { qtyInStock: newStock } }),
-    )
+    await tx.stockMovement.create({
+      data: {
+        companyId, itemId: item.id, taskId, type: 'WRITE_OFF',
+        qty, unitPrice, total, note: 'Автосписание при выполнении задачи',
+      },
+    })
+    await tx.inventoryItem.update({ where: { id: item.id }, data: { qtyInStock: newStock } })
 
     const minAlert = new Decimal(item.qtyMinAlert.toString())
     if (minAlert.gt(0) && newStock.lt(minAlert)) {
@@ -69,13 +77,9 @@ async function writeOffMaterials(companyId: string, taskId: string, materials: T
     }
   }
 
-  ops.push(prisma.task.update({ where: { id: taskId }, data: { materialsWrittenOff: true } }))
+  await tx.task.update({ where: { id: taskId }, data: { materialsWrittenOff: true } })
 
-  await prisma.$transaction(ops)
-
-  for (const a of lowStockAlerts) {
-    void notifyAdmins(companyId, `⚠ Низкий остаток: «${a.name}» — ${a.newStock.toString()} ${a.unit} (мин. ${a.minAlert.toString()}).`)
-  }
+  return lowStockAlerts
 }
 
 export async function PATCH(
@@ -134,42 +138,63 @@ export async function PATCH(
   if (photosBefore !== undefined) data.photosBefore = photosBefore
   if (photosAfter  !== undefined) data.photosAfter  = photosAfter
 
-  const updated = await prisma.task.update({
-    where: { id },
-    data,
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true, marina: true } },
-      boat:   { select: { id: true, name: true, model: true } },
-    },
-  })
+  let updated
+  let lowStockAlerts: { name: string; newStock: Decimal; unit: string; minAlert: Decimal }[] = []
+  try {
+    updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.task.update({
+        where: { id },
+        data,
+        include: {
+          client: { select: { id: true, firstName: true, lastName: true, marina: true } },
+          boat:   { select: { id: true, name: true, model: true } },
+        },
+      })
 
-  // Автосписание материалов при переходе в DONE (SPEC М2)
-  if (updated.status === 'DONE' && !updated.materialsWrittenOff) {
-    const materials = Array.isArray(updated.plannedMaterials) ? (updated.plannedMaterials as unknown as TaskMaterial[]) : []
-    if (materials.length > 0) {
-      await writeOffMaterials(session.user.companyId, id, materials)
-    }
+      // Автосписание материалов при переходе в DONE (SPEC М2) — в той же
+      // транзакции, что и смена статуса, чтобы не застрять в DONE без
+      // реального списания склада при сбое посередине.
+      if (u.status === 'DONE' && !u.materialsWrittenOff) {
+        const materials = Array.isArray(u.plannedMaterials) ? (u.plannedMaterials as unknown as TaskMaterial[]) : []
+        if (materials.length > 0) {
+          lowStockAlerts = await writeOffMaterials(tx, session.user.companyId, id, materials)
+        }
+      }
+
+      if (status && status !== existing.status) {
+        await tx.auditLog.create({
+          data: {
+            companyId: session.user.companyId,
+            userId:    session.user.id,
+            action:    'STATUS_CHANGE',
+            entity:    'Task',
+            entityId:  id,
+            oldValue:  { status: existing.status },
+            newValue:  { status },
+          },
+        })
+      } else {
+        await tx.auditLog.create({
+          data: {
+            companyId: session.user.companyId,
+            userId:    session.user.id,
+            action:    'UPDATE',
+            entity:    'Task',
+            entityId:  id,
+            newValue:  data as object,
+          },
+        })
+      }
+
+      return u
+    })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Операция не выполнена — ничего не изменилось' }, { status: 400 })
   }
 
-  if (status && status !== existing.status) {
-    await writeAudit({
-      companyId: session.user.companyId,
-      userId:    session.user.id,
-      action:    'STATUS_CHANGE',
-      entity:    'Task',
-      entityId:  id,
-      oldValue:  { status: existing.status },
-      newValue:  { status },
-    })
-  } else {
-    await writeAudit({
-      companyId: session.user.companyId,
-      userId:    session.user.id,
-      action:    'UPDATE',
-      entity:    'Task',
-      entityId:  id,
-      newValue:  data,
-    })
+  // Уведомления — только после успешного коммита транзакции.
+  for (const a of lowStockAlerts) {
+    void notifyAdmins(session.user.companyId, `⚠ Низкий остаток: «${a.name}» — ${a.newStock.toString()} ${a.unit} (мин. ${a.minAlert.toString()}).`)
   }
 
   return NextResponse.json(updated)

@@ -21,6 +21,7 @@ export default async function CrmAppLayout({ children }: { children: React.React
       <CrmSidebar
         companyName={company?.name ?? 'MJP Marine'}
         userName={userName}
+        roleLabel={session.user.role === 'ADMIN' ? 'Администратор' : 'Сотрудник'}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <CrmTopbar userName={userName} userInitial={userInitial} />

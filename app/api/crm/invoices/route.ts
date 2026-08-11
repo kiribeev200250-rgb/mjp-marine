@@ -87,6 +87,8 @@ export async function POST(req: NextRequest) {
   const subtotal   = jobsTotal.plus(materialsTotal)
   const iva        = new Decimal(ivaRate ?? 21)
   const irpf       = new Decimal(irpfRate ?? 0)
+  if (iva.lt(0) || iva.gt(100))  return NextResponse.json({ error: 'Ставка IVA должна быть от 0 до 100%' },  { status: 400 })
+  if (irpf.lt(0) || irpf.gt(100)) return NextResponse.json({ error: 'Ставка IRPF должна быть от 0 до 100%' }, { status: 400 })
   const ivaAmount  = subtotal.times(iva).div(100)
   const irpfAmount = subtotal.times(irpf).div(100)
   const total      = subtotal.plus(ivaAmount).minus(irpfAmount)

@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { formatMoney, INVOICE_STATUS_LABELS, LANGUAGE_LABELS } from '@/lib/crm/utils'
 import { Badge, INVOICE_TONE } from '@/components/crm/ui'
 import { InvoiceActions } from '@/components/crm/invoices/InvoiceActions'
+import Decimal from 'decimal.js'
 
 function fmtDate(d: Date) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d)
@@ -50,6 +51,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   })
   if (!invoice) notFound()
 
+  const paidNet = invoice.finances
+    .filter((f) => f.type === 'INCOME')
+    .reduce((s, f) => s.plus(f.amount.toString()), new Decimal(0))
+
   const auditTrail = await prisma.auditLog.findMany({
     where:   { companyId: session.user.companyId, entity: 'Invoice', entityId: invoice.id },
     orderBy: { createdAt: 'desc' },
@@ -65,7 +70,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <h1 className="text-heading font-bold text-gray-900 font-mono">{invoice.number}</h1>
           <Badge tone={INVOICE_TONE[invoice.status] ?? 'neutral'}>{INVOICE_STATUS_LABELS[invoice.status] ?? invoice.status}</Badge>
         </div>
-        <InvoiceActions id={invoice.id} status={invoice.status} hasEmail={!!invoice.client.email} isAdmin={session.user.role === 'ADMIN'} />
+        <InvoiceActions
+          id={invoice.id}
+          number={invoice.number}
+          status={invoice.status}
+          hasEmail={!!invoice.client.email}
+          isAdmin={session.user.role === 'ADMIN'}
+          paidNet={paidNet.toString()}
+          ivaRate={invoice.ivaRate.toString()}
+        />
       </div>
 
       <div className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -98,19 +111,20 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               {invoice.finances.map((f) => {
                 const vat = invoice.vatEntries.find((v) => v.financeEntryId === f.id)
                 const gross = vat ? f.amount.plus(vat.amount) : f.amount
+                const isRefund = f.amount.isNegative()
                 return (
                   <div key={f.id} className="space-y-1">
                     <div className="flex justify-between text-body">
-                      <span className="text-gray-500">{f.autoId} · получено</span>
-                      <span className="text-gray-900 font-semibold tabular-nums">{formatMoney(gross)}</span>
+                      <span className="text-gray-500">{f.autoId} · {isRefund ? 'возврат' : 'получено'}</span>
+                      <span className={`font-semibold tabular-nums ${isRefund ? 'text-danger' : 'text-gray-900'}`}>{formatMoney(gross)}</span>
                     </div>
                     <div className="flex justify-between text-label pl-2">
-                      <span className="text-gray-500">— доход в P&L (нетто)</span>
-                      <span className="text-success tabular-nums">+{formatMoney(f.amount)}</span>
+                      <span className="text-gray-500">— {isRefund ? 'сторно дохода в P&L' : 'доход в P&L (нетто)'}</span>
+                      <span className={`tabular-nums ${isRefund ? 'text-danger' : 'text-success'}`}>{isRefund ? '' : '+'}{formatMoney(f.amount)}</span>
                     </div>
                     {vat && (
                       <div className="flex justify-between text-label pl-2">
-                        <span className="text-gray-500">— IVA к уплате (не прибыль)</span>
+                        <span className="text-gray-500">— IVA repercutido (не прибыль)</span>
                         <span className="text-warning tabular-nums">{formatMoney(vat.amount)}</span>
                       </div>
                     )}
@@ -142,7 +156,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                   <TrailRow
                     key={f.id}
                     date={f.createdAt}
-                    text={`Финансы: ${f.autoId} — доход (нетто) ${formatMoney(f.amount)}`}
+                    text={`Финансы: ${f.autoId} — ${f.amount.isNegative() ? 'возврат (нетто)' : 'доход (нетто)'} ${formatMoney(f.amount)}`}
                   />
                 ))}
                 {auditTrail.map((a) => (

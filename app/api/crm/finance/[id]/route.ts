@@ -21,6 +21,17 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const body = await req.json()
   const { category, amountExpr, date, paymentMethod, description } = body
 
+  // Проведённая операция, порождённая каскадом счёта (оплата/возврат), не
+  // редактируется по сумме напрямую — только через возврат/отмену оплаты
+  // счёта, чтобы IVA/AR/аудит оставались согласованы. Метаданные (категория,
+  // дата, способ оплаты, описание) править можно.
+  if (existing.invoiceId && amountExpr != null) {
+    return NextResponse.json(
+      { error: 'Сумма операции по счёту не редактируется напрямую — используйте возврат по счёту' },
+      { status: 400 },
+    )
+  }
+
   // Если у записи уже есть IVA, введённая сумма по-прежнему брутто — пересчитываем
   // нетто/vat по её текущей ставке (ставку саму по себе PATCH не меняет).
   let amount    = existing.amount
@@ -88,6 +99,13 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     where: { id, companyId: session.user.companyId },
   })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  if (existing.invoiceId) {
+    return NextResponse.json(
+      { error: 'Операция по счёту не удаляется напрямую — используйте возврат/отмену оплаты счёта' },
+      { status: 400 },
+    )
+  }
 
   await prisma.$transaction([
     prisma.financeEntry.delete({ where: { id } }),

@@ -17,9 +17,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/crm/reports',     icon: '📊', label: 'Аналитика'   },
 ]
 
-interface Props { companyName: string; userName: string }
+interface Props { companyName: string; userName: string; roleLabel?: string }
 
-export function CrmSidebar({ companyName, userName }: Props) {
+export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудник' }: Props) {
   const pathname = usePathname() ?? ''
 
   const navLink = (href: string) => cn(
@@ -73,7 +73,7 @@ export function CrmSidebar({ companyName, userName }: Props) {
           </div>
           <div className="min-w-0">
             <div className="text-white/80 text-label font-medium truncate">{userName}</div>
-            <div className="text-white/30 text-[10px]">Администратор</div>
+            <div className="text-white/30 text-[10px]">{roleLabel}</div>
           </div>
         </div>
       </div>

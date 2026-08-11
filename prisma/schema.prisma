@@ -619,8 +619,17 @@ model FinanceEntry {
 
   vatEntry VatEntry?
 
+  // Сторно-запись ссылается на операцию, которую она отменяет (полностью или
+  // частично) — проведённые операции никогда не удаляются и не редактируются
+  // по сумме напрямую, только компенсируются обратной записью с отрицательной
+  // amount того же type. История остаётся видна целиком через эту цепочку.
+  reversalOfId String?
+  reversalOf   FinanceEntry?  @relation("Reversal", fields: [reversalOfId], references: [id])
+  reversals    FinanceEntry[] @relation("Reversal")
+
   @@index([companyId, type, date])
   @@index([categoryId])
+  @@index([reversalOfId])
 }
 
 enum FinanceEntryType {
