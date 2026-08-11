@@ -55,7 +55,7 @@ export function RefundModal({ invoiceId, invoiceNumber, paidNet, ivaRate, onClos
       <div className="bg-white rounded-card shadow-e4 w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-subheading font-bold text-gray-900">Возврат по счёту {invoiceNumber}</h2>
-          <button onClick={onClose} className="text-gray-200 hover:text-gray-500 text-body transition">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-body transition">✕</button>
         </div>
         <p className="text-label text-gray-500 mb-4">Оплачено (нетто) сейчас: {formatMoney(maxNet)}</p>
 

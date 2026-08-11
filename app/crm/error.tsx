@@ -23,7 +23,7 @@ export default function CrmError({ error, reset }: { error: Error & { digest?: s
           </p>
         </div>
         {error.digest && (
-          <p className="text-label text-gray-300 font-mono">Код ошибки: {error.digest}</p>
+          <p className="text-label text-gray-500 font-mono">Код ошибки: {error.digest}</p>
         )}
         <div className="flex gap-2 justify-center pt-2">
           <button

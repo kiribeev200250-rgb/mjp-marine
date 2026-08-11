@@ -34,8 +34,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
     <main className="flex-1 overflow-y-auto flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 bg-white shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/crm/invoices?tab=quotes" className="text-gray-200 hover:text-gray-500 text-body transition">← Пресметы</Link>
-          <span className="text-gray-200">/</span>
+          <Link href="/crm/invoices?tab=quotes" className="text-gray-500 hover:text-gray-900 text-body transition">← Пресметы</Link>
+          <span className="text-gray-500">/</span>
           <h1 className="text-heading font-bold text-gray-900 font-mono">{quote.number}</h1>
           <Badge tone={QUOTE_TONE[quote.status] ?? 'neutral'}>{QUOTE_STATUS_LABELS[quote.status] ?? quote.status}</Badge>
         </div>
@@ -114,8 +114,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                       <tr key={m.id} className="bg-gray-50/40 border-b border-b-gray-200 last:border-0">
                         <td className="px-2 py-2 text-label text-gray-500 tabular-nums border-r border-r-gray-200 border-l-[3px] border-l-transparent">{ji + 1}.{mi + 1}</td>
                         <td className="px-2 py-2 pl-6 text-body text-gray-700 border-r border-r-gray-200">{m.name}</td>
-                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
-                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
+                        <td className="px-3 py-2 text-body text-gray-500 text-right tabular-nums border-r border-r-gray-200">—</td>
+                        <td className="px-3 py-2 text-body text-gray-500 text-right tabular-nums border-r border-r-gray-200">—</td>
                         <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums border-r border-r-gray-200">{m.quantity.toString()}</td>
                         <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums border-r border-r-gray-200">{formatMoney(m.unitPrice)}</td>
                         <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.total)}</td>

@@ -88,7 +88,7 @@ export default async function InventoryPage({
             name="q"
             defaultValue={sp.q ?? ''}
             placeholder="Поиск по названию…"
-            className="flex-1 max-w-xs rounded-control border border-gray-200 bg-gray-50 px-3 py-2 text-body text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+            className="flex-1 max-w-xs rounded-control border border-gray-200 bg-gray-50 px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
           />
           <select
             name="category"

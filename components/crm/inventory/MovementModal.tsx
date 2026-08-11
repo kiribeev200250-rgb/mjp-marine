@@ -56,7 +56,7 @@ export function MovementModal({ itemId, itemName, unit, defaultType = 'RECEIVE',
       <div className="bg-white rounded-card shadow-e4 w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-subheading font-bold text-gray-900">Движение товара</h2>
-          <button onClick={onClose} className="text-gray-200 hover:text-gray-500 text-body transition">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-body transition">✕</button>
         </div>
 
         <p className="text-body text-gray-500 mb-5 truncate">{itemName}</p>

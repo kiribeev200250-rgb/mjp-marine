@@ -269,7 +269,7 @@ export default async function DashboardPage() {
                       <p className="text-body text-gray-900 flex-1 truncate">
                         <span className="text-gray-500">{entry.entity}</span>
                         {' '}{entry.action}
-                        {entry.user && <span className="text-gray-200"> · {entry.user.name}</span>}
+                        {entry.user && <span className="text-gray-500"> · {entry.user.name}</span>}
                       </p>
                       <span className="text-label text-gray-500 tabular-nums shrink-0">{ts}</span>
                     </div>
@@ -334,7 +334,7 @@ export default async function DashboardPage() {
                     className="flex items-center justify-between px-5 py-2.5 hover:bg-gray-50/70 transition"
                   >
                     <div className="flex items-center gap-2">
-                      <Badge tone={FUNNEL_TONE[stage] ?? 'neutral'} className="text-[10px]">
+                      <Badge tone={FUNNEL_TONE[stage] ?? 'neutral'}>
                         {FUNNEL_STAGE_LABELS[stage]}
                       </Badge>
                     </div>

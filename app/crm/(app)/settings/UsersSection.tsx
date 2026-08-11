@@ -101,22 +101,22 @@ export function UsersSection({ companyId, users }: Props) {
                 </Badge>
               </td>
               <td className="px-5 py-3">
-                <span className={`text-xs font-medium ${u.active ? 'text-success' : 'text-gray-300'}`}>
+                <span className={`text-label font-medium ${u.active ? 'text-success' : 'text-gray-500'}`}>
                   {u.active ? 'Активен' : 'Отключён'}
                 </span>
               </td>
               <td className="px-5 py-3">
                 {codeFor?.userId === u.id ? (
-                  <span className="text-xs text-gold-dark">
+                  <span className="text-label text-gold-dark">
                     Код: <b className="font-mono">{codeFor.code}</b> — отправить боту: <code>/link {codeFor.code}</code> (15 мин)
                   </span>
                 ) : linked[u.id] ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-success">✓ Привязан</span>
+                    <span className="text-label text-success">✓ Привязан</span>
                     <button
                       onClick={() => handleUnlink(u.id)}
                       disabled={tgBusy === u.id}
-                      className="text-xs text-gray-300 hover:text-danger transition"
+                      className="text-label text-gray-500 hover:text-danger transition"
                     >
                       отвязать
                     </button>
@@ -125,7 +125,7 @@ export function UsersSection({ companyId, users }: Props) {
                   <button
                     onClick={() => handleGetCode(u.id)}
                     disabled={tgBusy === u.id}
-                    className="text-xs text-gold-dark hover:text-gold transition disabled:opacity-50"
+                    className="text-label text-gold-dark hover:text-gold transition disabled:opacity-50"
                   >
                     {tgBusy === u.id ? '...' : 'Получить код'}
                   </button>
@@ -156,7 +156,7 @@ export function UsersSection({ companyId, users }: Props) {
             </Select>
 
             {error && (
-              <p className="sm:col-span-2 text-danger text-xs">{error}</p>
+              <p className="sm:col-span-2 text-danger text-label">{error}</p>
             )}
 
             <div className="sm:col-span-2 flex gap-3 items-center">

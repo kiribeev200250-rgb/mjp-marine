@@ -18,7 +18,7 @@ export function DeleteEntryButton({ id }: { id: string }) {
     <button
       onClick={handleDelete}
       disabled={busy}
-      className="text-gray-200 hover:text-danger text-label px-1.5 py-0.5 rounded transition"
+      className="text-gray-500 hover:text-danger text-label px-1.5 py-0.5 rounded transition"
       title="Удалить"
     >
       ✕

@@ -186,7 +186,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
                             <Link href={`/crm/schedule/${mv.task.id}`} className="text-label text-info hover:underline truncate max-w-[140px] block">
                               {mv.task.title}
                             </Link>
-                          ) : <span className="text-gray-200 text-label">—</span>}
+                          ) : <span className="text-gray-500 text-label">—</span>}
                         </td>
                         <td className="px-4 py-3 text-body text-gray-500 max-w-[180px] truncate">{mv.note || '—'}</td>
                       </tr>

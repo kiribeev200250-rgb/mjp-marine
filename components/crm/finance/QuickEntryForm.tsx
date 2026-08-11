@@ -132,7 +132,7 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
           value={amountExpr}
           onChange={(e) => setAmountExpr(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleSubmit() } }}
-          className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+          className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
         />
       </div>
 
@@ -202,7 +202,7 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
           placeholder="Описание (необязательно)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+          className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
         />
       )}
 

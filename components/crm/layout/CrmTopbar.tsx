@@ -18,13 +18,13 @@ export function CrmTopbar({ userName, userInitial }: Props) {
       {/* Search */}
       <div className="flex-1 max-w-lg">
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 text-sm select-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45 text-body select-none">
             🔍
           </span>
           <input
             type="text"
             placeholder="Поиск клиентов, счетов, задач…"
-            className="w-full bg-white/7 border border-white/10 rounded-control pl-8 pr-4 py-1.5 text-label text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 focus:bg-white/10 transition"
+            className="w-full bg-white/7 border border-white/10 rounded-control pl-8 pr-4 py-1.5 text-label text-white placeholder:text-white/45 focus:outline-none focus:border-white/20 focus:bg-white/10 transition"
           />
         </div>
       </div>
@@ -48,7 +48,7 @@ export function CrmTopbar({ userName, userInitial }: Props) {
             {userInitial}
           </div>
           <span className="text-white/70 text-label hidden sm:block">{userName}</span>
-          <span className="text-white/30 text-[10px]">▾</span>
+          <span className="text-white/55 text-label">▾</span>
         </button>
 
         {menuOpen && (

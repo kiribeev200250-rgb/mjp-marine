@@ -99,7 +99,7 @@ export function KanbanBoard({ initialClients }: Props) {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Фильтр по клиенту или работе…"
-          className="w-56 bg-white border border-gray-200 rounded-control px-3 py-1.5 text-label text-gray-900 placeholder:text-gray-200 shadow-e1 focus:outline-none focus:ring-2 focus:ring-info/30 focus:border-info transition"
+          className="w-56 bg-white border border-gray-200 rounded-control px-3 py-1.5 text-label text-gray-900 placeholder:text-gray-500 shadow-e1 focus:outline-none focus:ring-2 focus:ring-info/30 focus:border-info transition"
         />
       </div>
 

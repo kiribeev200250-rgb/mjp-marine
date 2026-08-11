@@ -124,7 +124,7 @@ function LogoUploader({ companyId, logoUrl }: { companyId: string; logoUrl: stri
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt="Логотип" className="w-full h-full object-contain" />
           ) : (
-            <span className="text-gray-300 text-[10px] text-center px-2">Нет логотипа</span>
+            <span className="text-gray-500 text-label text-center px-2">Нет логотипа</span>
           )}
         </div>
 

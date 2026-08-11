@@ -37,7 +37,7 @@ export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудн�
           <span className="text-gold text-2xl">⚓</span>
           <div>
             <div className="text-white font-semibold text-subheading leading-tight">{companyName}</div>
-            <div className="text-white/40 text-label">CRM</div>
+            <div className="text-white/60 text-label">CRM</div>
           </div>
         </div>
       </div>
@@ -73,7 +73,7 @@ export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудн�
           </div>
           <div className="min-w-0">
             <div className="text-white/80 text-label font-medium truncate">{userName}</div>
-            <div className="text-white/30 text-[10px]">{roleLabel}</div>
+            <div className="text-white/55 text-label">{roleLabel}</div>
           </div>
         </div>
       </div>

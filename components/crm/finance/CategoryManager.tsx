@@ -82,7 +82,7 @@ export function CategoryManager({ initial }: { initial: CategoryRow[] }) {
 
       <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 divide-y divide-gray-100">
         {rows.length === 0 ? (
-          <p className="px-5 py-8 text-center text-body text-gray-300">Категорий пока нет</p>
+          <p className="px-5 py-8 text-center text-body text-gray-500">Категорий пока нет</p>
         ) : rows.map((c) => (
           <div key={c.id} className={`flex items-center gap-3 px-5 py-3 ${c.archived ? 'opacity-50' : ''}`}>
             {editingId === c.id ? (

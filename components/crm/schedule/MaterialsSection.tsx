@@ -66,7 +66,7 @@ export function MaterialsSection({ taskId, materials, writtenOff, items }: Props
       </div>
 
       {list.length === 0 ? (
-        <p className="text-body text-gray-300">Материалы не привязаны</p>
+        <p className="text-body text-gray-500">Материалы не привязаны</p>
       ) : (
         <div className="space-y-1.5">
           {list.map((m, i) => (
@@ -78,7 +78,7 @@ export function MaterialsSection({ taskId, materials, writtenOff, items }: Props
                   <button
                     onClick={() => handleRemove(i)}
                     disabled={saving}
-                    className="text-gray-200 hover:text-danger transition"
+                    className="text-gray-500 hover:text-danger transition"
                     title="Убрать"
                   >
                     ✕

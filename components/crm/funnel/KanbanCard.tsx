@@ -79,25 +79,25 @@ export function KanbanCard({
 
         {/* Client name */}
         {client.latestTask && (
-          <p className="text-gray-500 text-[10px] pl-4">
+          <p className="text-gray-500 text-label pl-4">
             {client.firstName} {client.lastName}
           </p>
         )}
 
         {/* Marina */}
         {client.marina && (
-          <p className="text-gray-200 text-[10px] pl-4 mt-0.5">⚓ {client.marina}</p>
+          <p className="text-gray-500 text-label pl-4 mt-0.5">⚓ {client.marina}</p>
         )}
       </div>
 
       {/* Footer: amount + nav arrows */}
       <div className="flex items-center justify-between px-3 pb-2.5 pt-1.5 border-t border-gray-100">
         {openAmount > 0 ? (
-          <span className="text-warning text-[10px] font-bold tabular-nums">
+          <span className="text-warning text-label font-bold tabular-nums">
             {openAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
           </span>
         ) : (
-          <span className="text-gray-200 text-[10px]">—</span>
+          <span className="text-gray-500 text-label">—</span>
         )}
 
         {/* Stage nav arrows */}
@@ -105,7 +105,7 @@ export function KanbanCard({
           <button
             onClick={(e) => { e.stopPropagation(); onMovePrev?.(client.id) }}
             disabled={!canMovePrev}
-            className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-20 text-gray-500 text-[10px] transition"
+            className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-20 text-gray-500 text-label transition"
             title="Назад по воронке"
           >
             ◁
@@ -113,7 +113,7 @@ export function KanbanCard({
           <button
             onClick={(e) => { e.stopPropagation(); onMoveNext?.(client.id) }}
             disabled={!canMoveNext}
-            className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-20 text-gray-500 text-[10px] transition"
+            className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-20 text-gray-500 text-label transition"
             title="Вперёд по воронке"
           >
             ▷

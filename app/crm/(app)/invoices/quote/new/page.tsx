@@ -33,8 +33,8 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
   return (
     <main className="flex-1 overflow-y-auto flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 bg-white shrink-0 flex items-center gap-3">
-        <Link href="/crm/invoices" className="text-gray-200 hover:text-gray-500 text-body transition">← Счета</Link>
-        <span className="text-gray-200">/</span>
+        <Link href="/crm/invoices" className="text-gray-500 hover:text-gray-900 text-body transition">← Счета</Link>
+        <span className="text-gray-500">/</span>
         <h1 className="text-heading font-bold text-gray-900">Новый пресмет</h1>
       </div>
 

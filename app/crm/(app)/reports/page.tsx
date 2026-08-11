@@ -8,6 +8,8 @@ import { formatMoney, INVOICE_STATUS_LABELS } from '@/lib/crm/utils'
 import { Card, KpiCard, SectionHeader, Badge, INVOICE_TONE, ExportCsvButton } from '@/components/crm/ui'
 import { KpiGoalCard } from '@/components/crm/reports/KpiGoalCard'
 import { BarList } from '@/components/crm/reports/BarList'
+import { MarginTable } from '@/components/crm/reports/MarginTable'
+import { marginByBoat, marginByClient, marginByWorkType } from '@/lib/crm/services/profitability'
 import type { InvoiceStatus } from '@prisma/client'
 
 interface SearchParams { month?: string }
@@ -56,6 +58,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     outstandingInvoices,
     kpiGoal,
     plMonthEntries,
+    marginBoats,
+    marginClients,
+    marginWorkTypes,
   ] = await Promise.all([
     prisma.invoice.findMany({
       where:   { companyId, status: 'PAID', paidAt: { gte: from, lt: to } },
@@ -89,6 +94,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       where: { companyId, date: { gte: from, lt: to }, type: { in: ['INCOME', 'EXPENSE', 'SALARY'] } },
       select: { type: true, amount: true },
     }),
+    marginByBoat(companyId, from, to),
+    marginByClient(companyId, from, to),
+    marginByWorkType(companyId, from, to),
   ])
 
   // ── Выручка по маринам ──────────────────────────────────────────────────
@@ -187,18 +195,36 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </Card>
         </div>
 
+        <div className="space-y-6">
+          <Card>
+            <SectionHeader title="Прибыльность по лодкам" />
+            <MarginTable rows={marginBoats} labelHeader="Лодка" />
+          </Card>
+          <Card>
+            <SectionHeader title="Прибыльность по клиентам" />
+            <MarginTable rows={marginClients} labelHeader="Клиент" />
+          </Card>
+          <Card>
+            <SectionHeader title="Прибыльность по видам работ" />
+            <MarginTable rows={marginWorkTypes} labelHeader="Работа" />
+          </Card>
+          <p className="text-label text-gray-400">
+            Выручка — нетто по счёту (без IVA), материалы — по текущей закупочной цене склада. Себестоимость труда не учтена — в системе нет ставки часа.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <SectionHeader title="Расходы на рекламу по каналам" />
             <BarList items={adByChannel} barColor="bg-danger" emptyText="Расходов на рекламу нет" />
-            <p className="text-label text-gray-300 mt-3 pt-3 border-t border-gray-100">
+            <p className="text-label text-gray-500 mt-3 pt-3 border-t border-gray-100">
               CPL и ROMI считаются по всем лидам/доходу за месяц — точная привязка канал→лид доступна только для Facebook (поле источника клиента), для Google/TikTok — оценка по общим цифрам.
             </p>
           </Card>
           <Card>
             <SectionHeader title="Топ-клиенты за месяц" />
             {topClientsWithTotals.length === 0 ? (
-              <p className="text-body text-gray-300 text-center py-6">Оплаченных счетов нет</p>
+              <p className="text-body text-gray-500 text-center py-6">Оплаченных счетов нет</p>
             ) : (
               <div className="divide-y divide-gray-100">
                 {topClientsWithTotals.map(({ client, total }) => (
@@ -229,7 +255,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             />
           </div>
           {outstandingInvoices.length === 0 ? (
-            <p className="text-body text-gray-300 text-center py-8">Неоплаченных счетов нет</p>
+            <p className="text-body text-gray-500 text-center py-8">Неоплаченных счетов нет</p>
           ) : (
             <div className="overflow-x-auto mt-3">
               <table className="w-full">

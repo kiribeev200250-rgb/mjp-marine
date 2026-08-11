@@ -37,7 +37,7 @@ export function KanbanColumn({ stage, label, clients, onMovePrev, onMoveNext, is
       <div className="px-3 py-3 border-b border-gray-200/80 flex items-center gap-2">
         <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
         <span className="text-label font-semibold text-gray-900 flex-1 truncate">{label}</span>
-        <span className="text-[10px] text-gray-500 bg-white border border-gray-200 rounded-chip px-1.5 py-0.5 tabular-nums">
+        <span className="text-label text-gray-500 bg-white border border-gray-200 rounded-chip px-1.5 py-0.5 tabular-nums">
           {clients.length}
         </span>
       </div>
@@ -59,7 +59,7 @@ export function KanbanColumn({ stage, label, clients, onMovePrev, onMoveNext, is
             <div className={`min-h-[80px] border border-dashed rounded-control flex items-center justify-center transition-colors ${
               isOver ? 'border-info/40 bg-info/5' : 'border-gray-200'
             }`}>
-              <span className="text-gray-200 text-label">Перетащи сюда</span>
+              <span className="text-gray-500 text-label">Перетащи сюда</span>
             </div>
           )}
         </div>
@@ -69,7 +69,7 @@ export function KanbanColumn({ stage, label, clients, onMovePrev, onMoveNext, is
       <div className="px-2 py-1.5 border-t border-gray-200/60">
         <Link
           href={`/crm/clients/new`}
-          className="w-full flex items-center justify-center gap-1 text-gray-200 hover:text-gray-500 text-[10px] py-1 rounded transition"
+          className="w-full flex items-center justify-center gap-1 text-gray-500 hover:text-gray-900 text-label py-1 rounded transition"
         >
           + добавить
         </Link>

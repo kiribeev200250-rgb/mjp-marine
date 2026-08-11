@@ -50,11 +50,11 @@ export function KpiCard({ label, value, delta, deltaTone = 'neutral', icon, clas
           <p className="text-label text-gray-500 uppercase tracking-wide mb-1">{label}</p>
           <p className="text-heading text-gray-900 tabular-nums">{value}</p>
           {delta && (
-            <p className={cn('text-xs mt-1', DELTA_COLOR[deltaTone])}>{delta}</p>
+            <p className={cn('text-label mt-1', DELTA_COLOR[deltaTone])}>{delta}</p>
           )}
         </div>
         {icon && (
-          <div className="shrink-0 text-gray-200 text-2xl">{icon}</div>
+          <div className="shrink-0 text-gray-500 text-2xl">{icon}</div>
         )}
       </div>
     </Card>

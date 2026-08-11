@@ -16,7 +16,7 @@ export function BacklogPanel({ tasks, onTaskClick }: Props) {
         <div className="flex items-center gap-2">
           <span className="text-label text-gray-500 font-semibold uppercase tracking-wide">Backlog</span>
           {tasks.length > 0 && (
-            <span className="bg-warning/10 text-warning text-[10px] font-bold px-1.5 py-0.5 rounded-chip">
+            <span className="bg-warning/10 text-warning text-label font-bold px-1.5 py-0.5 rounded-chip">
               {tasks.length}
             </span>
           )}

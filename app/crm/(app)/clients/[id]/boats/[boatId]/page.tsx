@@ -6,6 +6,7 @@ import { formatMoney, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS, TASK_STATUS_LA
 import { Badge, INVOICE_TONE, QUOTE_TONE, TASK_TONE, Button } from '@/components/crm/ui'
 import { BoatEditForm } from '@/components/crm/clients/BoatEditForm'
 import { NotesThread } from '@/components/crm/clients/NotesThread'
+import { computeBoatMargin } from '@/lib/crm/services/profitability'
 
 function fmtDate(d: Date) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(d)
@@ -34,22 +35,23 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
 
   const paidTotal = invoices.filter((i) => i.status === 'PAID').reduce((s, i) => s + Number(i.total), 0)
   const debtTotal = invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIAL' || i.status === 'OVERDUE').reduce((s, i) => s + Number(i.total), 0)
+  const margin = await computeBoatMargin(boatId)
 
   type FeedEvent = { date: Date; title: string; badge?: React.ReactNode; href?: string }
   const feed: FeedEvent[] = [
     ...quotes.map((q): FeedEvent => ({
       date: q.createdAt, title: `Пресмет ${q.number} — ${formatMoney(q.total)}`,
-      badge: <Badge tone={QUOTE_TONE[q.status] ?? 'neutral'} className="text-[10px]">{QUOTE_STATUS_LABELS[q.status] ?? q.status}</Badge>,
+      badge: <Badge tone={QUOTE_TONE[q.status] ?? 'neutral'}>{QUOTE_STATUS_LABELS[q.status] ?? q.status}</Badge>,
       href: `/crm/invoices/quote/${q.id}`,
     })),
     ...invoices.map((inv): FeedEvent => ({
       date: inv.date, title: `Счёт ${inv.number} — ${formatMoney(inv.total)}`,
-      badge: <Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'} className="text-[10px]">{INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge>,
+      badge: <Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'}>{INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge>,
       href: `/crm/invoices/${inv.id}`,
     })),
     ...tasks.map((t): FeedEvent => ({
       date: t.scheduledAt ?? t.createdAt, title: `Задача: ${t.title}`,
-      badge: <Badge tone={TASK_TONE[t.status] ?? 'neutral'} className="text-[10px]">{TASK_STATUS_LABELS[t.status] ?? t.status}</Badge>,
+      badge: <Badge tone={TASK_TONE[t.status] ?? 'neutral'}>{TASK_STATUS_LABELS[t.status] ?? t.status}</Badge>,
       href: `/crm/schedule/${t.id}`,
     })),
     ...movements.map((mv): FeedEvent => ({
@@ -61,7 +63,7 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
       return {
         date: p.date,
         title: `${isRefund ? 'Возврат' : 'Оплата'} ${p.autoId} — ${formatMoney(Math.abs(Number(p.amount)))}${p.invoice ? ` (${p.invoice.number})` : ''}`,
-        badge: <Badge tone={isRefund ? 'warning' : 'success'} className="text-[10px]">{isRefund ? 'Возврат' : 'Оплачено'}</Badge>,
+        badge: <Badge tone={isRefund ? 'warning' : 'success'}>{isRefund ? 'Возврат' : 'Оплачено'}</Badge>,
       }
     }),
   ].sort((a, b) => b.date.getTime() - a.date.getTime())
@@ -72,8 +74,8 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
     <main className="flex-1 overflow-y-auto flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 bg-white shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href={`/crm/clients/${clientId}`} className="text-gray-200 hover:text-gray-500 text-body transition">← {boat.client.firstName} {boat.client.lastName}</Link>
-          <span className="text-gray-200">/</span>
+          <Link href={`/crm/clients/${clientId}`} className="text-gray-500 hover:text-gray-900 text-body transition">← {boat.client.firstName} {boat.client.lastName}</Link>
+          <span className="text-gray-500">/</span>
           <h1 className="text-heading font-bold text-gray-900">⛵ {boat.name || boat.model || 'Без названия'}</h1>
         </div>
         <BoatEditForm
@@ -86,9 +88,14 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
         />
       </div>
 
-      <div className="bg-white border-b border-gray-200 px-6 py-3 grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+      <div className="bg-white border-b border-gray-200 px-6 py-3 grid grid-cols-2 md:grid-cols-5 gap-4 shrink-0">
         <Summary label="Оплачено всего" value={formatMoney(paidTotal)} />
         <Summary label="В дебиторке" value={formatMoney(debtTotal)} danger={debtTotal > 0} />
+        <Summary
+          label="Маржа по сделкам"
+          value={`${formatMoney(margin.margin)}${margin.marginPct != null ? ` (${margin.marginPct.toFixed(0)}%)` : ''}`}
+          danger={margin.margin.isNegative()}
+        />
         <Summary label="Сметы / Счета" value={`${quotes.length} / ${invoices.length}`} />
         <Summary label="Последняя активность" value={feed[0] ? fmtDate(feed[0].date) : '—'} />
       </div>
@@ -133,7 +140,7 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
               <h3 className="text-label text-gray-500 font-semibold uppercase tracking-wide">История лодки ({feed.length})</h3>
             </div>
             {feed.length === 0 ? (
-              <p className="text-body text-gray-300 text-center py-8">Пока пусто — начните со сметы или задачи</p>
+              <p className="text-body text-gray-500 text-center py-8">Пока пусто — начните со сметы или задачи</p>
             ) : (
               <div className="divide-y divide-gray-100">
                 {feed.map((e, i) => {

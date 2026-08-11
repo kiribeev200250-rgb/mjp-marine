@@ -198,7 +198,7 @@ export default function StyleGuidePage() {
             <div key={cls} className="text-center">
               <div className={`w-16 h-16 ${cls} ${bg} border border-gray-200`} />
               <p className="text-[10px] text-gray-500 mt-1">{cls}</p>
-              <p className="text-[10px] text-gray-200">{size}</p>
+              <p className="text-label text-gray-500">{size}</p>
             </div>
           ))}
         </div>

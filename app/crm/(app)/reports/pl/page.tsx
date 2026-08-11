@@ -229,8 +229,8 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
     <main className="flex-1 overflow-y-auto flex flex-col">
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <Link href="/crm/reports" className="text-gray-200 hover:text-gray-500 text-body transition">← Аналитика</Link>
-          <span className="text-gray-200">/</span>
+          <Link href="/crm/reports" className="text-gray-500 hover:text-gray-900 text-body transition">← Аналитика</Link>
+          <span className="text-gray-500">/</span>
           <h1 className="text-heading font-bold text-gray-900">P&L — финансовый центр</h1>
         </div>
         <div className="flex items-center gap-2">
@@ -261,7 +261,7 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
           <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-1">IVA · {year}</h2>
           <p className="text-label text-gray-500 mb-3">Не прибыль и не расход — деньги для государства. Только для контроля и modelo 303.</p>
           {vatEntriesYear.length === 0 ? (
-            <p className="text-body text-gray-300 text-center py-4">За {year} год операций с IVA нет</p>
+            <p className="text-body text-gray-500 text-center py-4">За {year} год операций с IVA нет</p>
           ) : (
             <VatGrid entries={vatEntriesYear} />
           )}
@@ -286,7 +286,7 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
           <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
             <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Дебиторка — {formatMoney(outstandingSum)}</h2>
             {overdueList.length === 0 ? (
-              <p className="text-body text-gray-300 text-center py-4">Просрочек нет</p>
+              <p className="text-body text-gray-500 text-center py-4">Просрочек нет</p>
             ) : (
               <table className="w-full text-body">
                 <thead>
@@ -327,17 +327,17 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
             <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Выручка по видам работ</h2>
-            {revenueByCategory.length === 0 ? <p className="text-body text-gray-300 text-center py-4">Нет данных</p> :
+            {revenueByCategory.length === 0 ? <p className="text-body text-gray-500 text-center py-4">Нет данных</p> :
               revenueByCategory.map((c) => <NumRow key={c.name} label={c.name} value={formatMoney(c.sum)} />)}
           </div>
           <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
             <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Выручка по маринам</h2>
-            {revenueByMarina.length === 0 ? <p className="text-body text-gray-300 text-center py-4">Нет данных</p> :
+            {revenueByMarina.length === 0 ? <p className="text-body text-gray-500 text-center py-4">Нет данных</p> :
               revenueByMarina.map(([label, sum]) => <NumRow key={label} label={label} value={formatMoney(sum)} />)}
           </div>
           <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
             <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Топ-клиенты</h2>
-            {topClientsWithTotals.length === 0 ? <p className="text-body text-gray-300 text-center py-4">Нет данных</p> :
+            {topClientsWithTotals.length === 0 ? <p className="text-body text-gray-500 text-center py-4">Нет данных</p> :
               topClientsWithTotals.map(({ client, total }) => (
                 <NumRow key={client.id} label={<Link href={`/crm/clients/${client.id}`} className="hover:text-gold transition">{client.firstName} {client.lastName}</Link>} value={formatMoney(total)} />
               ))}
@@ -348,7 +348,7 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
           <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
             <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Реклама по каналам · {year}</h2>
             {adByChannel.every((c) => c.amount.eq(0)) ? (
-              <p className="text-body text-gray-300 text-center py-4">Расходов на рекламу нет</p>
+              <p className="text-body text-gray-500 text-center py-4">Расходов на рекламу нет</p>
             ) : adByChannel.map((c) => <NumRow key={c.label} label={c.label} value={formatMoney(c.amount)} />)}
             <div className="border-t border-gray-100 mt-2 pt-2">
               <NumRow label="Блендед CPL" value={blendedCpl ? formatMoney(blendedCpl) : '—'} />

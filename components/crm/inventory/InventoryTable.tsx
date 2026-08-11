@@ -37,7 +37,7 @@ export function InventoryTable({ items }: Props) {
   if (items.length === 0) {
     return (
       <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-12 text-center">
-        <p className="text-gray-200 text-5xl mb-3">📦</p>
+        <p className="text-gray-500 text-5xl mb-3">📦</p>
         <p className="text-gray-500 text-body">Склад пуст — добавь первый товар</p>
       </div>
     )
@@ -80,7 +80,7 @@ export function InventoryTable({ items }: Props) {
                       {item.category ? (
                         <Badge tone="neutral">{item.category}</Badge>
                       ) : (
-                        <span className="text-gray-200 text-label">—</span>
+                        <span className="text-gray-500 text-label">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -125,7 +125,7 @@ export function InventoryTable({ items }: Props) {
                         </button>
                         <Link
                           href={`/crm/inventory/${item.id}`}
-                          className="text-gray-200 hover:text-gray-500 text-label px-2 py-1 rounded transition"
+                          className="text-gray-500 hover:text-gray-900 text-label px-2 py-1 rounded transition"
                           title="Детали"
                         >
                           ···

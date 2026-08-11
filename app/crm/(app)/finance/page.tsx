@@ -154,7 +154,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           <h2 className="text-subheading font-bold text-gray-900 mb-1">Расходы по категориям</h2>
           <p className="text-label text-gray-500 mb-4">Расходы + зарплата за {monthLabel(ym)}</p>
           {categories.length === 0 ? (
-            <p className="text-body text-gray-300 text-center py-8">Расходов нет</p>
+            <p className="text-body text-gray-500 text-center py-8">Расходов нет</p>
           ) : (
             <div className="space-y-3">
               {categories.map(({ name, amount: amt, pct }) => (
@@ -169,7 +169,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                       style={{ width: `${Math.min(pct, 100)}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-gray-300 mt-0.5">{pct.toFixed(1)}%</p>
+                  <p className="text-label text-gray-500 mt-0.5">{pct.toFixed(1)}%</p>
                 </div>
               ))}
             </div>
@@ -193,7 +193,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
             </div>
           </div>
           {allEntries.length === 0 ? (
-            <p className="text-body text-gray-300 text-center py-10">Записей нет</p>
+            <p className="text-body text-gray-500 text-center py-10">Записей нет</p>
           ) : (
             <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
               {allEntries.map((e) => {

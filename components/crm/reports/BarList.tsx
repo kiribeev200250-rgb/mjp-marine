@@ -12,7 +12,7 @@ export function BarList({ items, barColor = 'bg-gold', emptyText = 'Нет да�
   const max = Math.max(...items.map((i) => i.amount), 1)
 
   if (items.length === 0) {
-    return <p className="text-body text-gray-300 text-center py-6">{emptyText}</p>
+    return <p className="text-body text-gray-500 text-center py-6">{emptyText}</p>
   }
 
   return (

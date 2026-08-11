@@ -598,7 +598,7 @@ function JobRow({
           type="button"
           {...attributes}
           {...listeners}
-          className="text-gray-300 hover:text-gray-500 transition shrink-0 w-4 cursor-grab active:cursor-grabbing touch-none select-none"
+          className="text-gray-500 hover:text-gray-500 transition shrink-0 w-4 cursor-grab active:cursor-grabbing touch-none select-none"
           title="Перетащить работу"
         >
           ⠿
@@ -613,7 +613,7 @@ function JobRow({
         <button
           type="button"
           onClick={() => removeJob(ji)}
-          className="text-gray-200 hover:text-danger transition shrink-0 w-5"
+          className="text-gray-500 hover:text-danger transition shrink-0 w-5"
           title="Удалить работу"
         >
           ✕
@@ -669,7 +669,7 @@ function JobRow({
               value={job.laborHours}
               onChange={(e) => updateJob(ji, { laborHours: e.target.value })}
             />
-            <span className="text-gray-300 text-label">×</span>
+            <span className="text-gray-500 text-label">×</span>
             <input
               type="number" min="0" step="0.01"
               className="w-20 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
@@ -677,7 +677,7 @@ function JobRow({
               value={job.laborRate}
               onChange={(e) => updateJob(ji, { laborRate: e.target.value })}
             />
-            <span className="text-gray-300 text-label">=</span>
+            <span className="text-gray-500 text-label">=</span>
             <span className="text-body font-semibold text-gray-900 tabular-nums">
               {formatMoney(computedJob?.laborCostDec ?? 0)}
             </span>
@@ -691,7 +691,7 @@ function JobRow({
               value={job.quantity}
               onChange={(e) => updateJob(ji, { quantity: e.target.value })}
             />
-            <span className="text-gray-300 text-label">×</span>
+            <span className="text-gray-500 text-label">×</span>
             <input
               type="number" min="0" step="0.01"
               className="w-20 rounded-control border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
@@ -699,7 +699,7 @@ function JobRow({
               value={job.unitPrice}
               onChange={(e) => updateJob(ji, { unitPrice: e.target.value })}
             />
-            <span className="text-gray-300 text-label">=</span>
+            <span className="text-gray-500 text-label">=</span>
             <span className="text-body font-semibold text-gray-900 tabular-nums">
               {formatMoney(computedJob?.laborCostDec ?? 0)}
             </span>
@@ -761,7 +761,7 @@ function MaterialRow({
         type="button"
         {...attributes}
         {...listeners}
-        className="text-gray-300 hover:text-gray-500 transition shrink-0 w-3 cursor-grab active:cursor-grabbing touch-none select-none"
+        className="text-gray-500 hover:text-gray-500 transition shrink-0 w-3 cursor-grab active:cursor-grabbing touch-none select-none"
         title="Перетащить материал"
       >
         ⠿
@@ -797,7 +797,7 @@ function MaterialRow({
       <button
         type="button"
         onClick={() => removeMaterial(ji, mi)}
-        className="text-gray-200 hover:text-danger transition shrink-0 w-4"
+        className="text-gray-500 hover:text-danger transition shrink-0 w-4"
         title="Удалить материал"
       >
         ✕

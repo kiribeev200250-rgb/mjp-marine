@@ -64,14 +64,14 @@ export function NotesThread({ clientId, boatId, initial }: Props) {
         <Button size="sm" loading={saving} onClick={handleAdd}>Добавить</Button>
       </div>
       {notes.length === 0 ? (
-        <p className="text-body text-gray-300 text-center py-3">Заметок пока нет</p>
+        <p className="text-body text-gray-500 text-center py-3">Заметок пока нет</p>
       ) : (
         <div className="space-y-3 divide-y divide-gray-100">
           {notes.map((n) => (
             <div key={n.id} className="pt-3 first:pt-0 group">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-body text-gray-900 whitespace-pre-wrap flex-1">{n.text}</p>
-                <button onClick={() => handleDelete(n.id)} className="text-gray-200 hover:text-danger transition opacity-0 group-hover:opacity-100 shrink-0">✕</button>
+                <button onClick={() => handleDelete(n.id)} className="text-gray-500 hover:text-danger transition opacity-0 group-hover:opacity-100 shrink-0">✕</button>
               </div>
               <p className="text-label text-gray-500 mt-1">
                 {new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(n.createdAt))}

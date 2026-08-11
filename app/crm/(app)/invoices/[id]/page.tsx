@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { formatMoney, INVOICE_STATUS_LABELS, LANGUAGE_LABELS } from '@/lib/crm/utils'
 import { Badge, INVOICE_TONE } from '@/components/crm/ui'
 import { InvoiceActions } from '@/components/crm/invoices/InvoiceActions'
+import { computeInvoiceMargin } from '@/lib/crm/services/profitability'
 import Decimal from 'decimal.js'
 
 function fmtDate(d: Date) {
@@ -55,6 +56,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     .filter((f) => f.type === 'INCOME')
     .reduce((s, f) => s.plus(f.amount.toString()), new Decimal(0))
 
+  const margin = await computeInvoiceMargin(invoice.id)
+
   const auditTrail = await prisma.auditLog.findMany({
     where:   { companyId: session.user.companyId, entity: 'Invoice', entityId: invoice.id },
     orderBy: { createdAt: 'desc' },
@@ -65,8 +68,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     <main className="flex-1 overflow-y-auto flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 bg-white shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/crm/invoices" className="text-gray-200 hover:text-gray-500 text-body transition">← Счета</Link>
-          <span className="text-gray-200">/</span>
+          <Link href="/crm/invoices" className="text-gray-500 hover:text-gray-900 text-body transition">← Счета</Link>
+          <span className="text-gray-500">/</span>
           <h1 className="text-heading font-bold text-gray-900 font-mono">{invoice.number}</h1>
           <Badge tone={INVOICE_TONE[invoice.status] ?? 'neutral'}>{INVOICE_STATUS_LABELS[invoice.status] ?? invoice.status}</Badge>
         </div>
@@ -105,6 +108,22 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               } />
             )}
           </Card>
+
+          {margin && (
+            <Card title="Маржа по сделке">
+              <InfoRow label="Выручка" value={<span className="tabular-nums">{formatMoney(margin.revenueNet)}</span>} />
+              <InfoRow label="Материалы (себест.)" value={<span className="tabular-nums text-danger">−{formatMoney(margin.materialCost)}</span>} />
+              <InfoRow
+                label="Маржа"
+                value={
+                  <span className={`tabular-nums font-semibold ${margin.margin.isNegative() ? 'text-danger' : 'text-success'}`}>
+                    {formatMoney(margin.margin)}{margin.marginPct != null && ` (${margin.marginPct.toFixed(0)}%)`}
+                  </span>
+                }
+              />
+              <p className="text-label text-gray-500 pt-1">Себестоимость труда не учтена — в системе нет ставки часа сотрудника.</p>
+            </Card>
+          )}
 
           {invoice.finances.length > 0 && (
             <Card title="Связанные платежи">
@@ -202,8 +221,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                       <tr key={m.id} className="bg-gray-50/40 border-b border-b-gray-200 last:border-0">
                         <td className="px-2 py-2 text-label text-gray-500 tabular-nums border-r border-r-gray-200 border-l-[3px] border-l-transparent">{ji + 1}.{mi + 1}</td>
                         <td className="px-2 py-2 pl-6 text-body text-gray-700 border-r border-r-gray-200">{m.name}</td>
-                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
-                        <td className="px-3 py-2 text-body text-gray-300 text-right tabular-nums border-r border-r-gray-200">—</td>
+                        <td className="px-3 py-2 text-body text-gray-500 text-right tabular-nums border-r border-r-gray-200">—</td>
+                        <td className="px-3 py-2 text-body text-gray-500 text-right tabular-nums border-r border-r-gray-200">—</td>
                         <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums border-r border-r-gray-200">{m.quantity.toString()}</td>
                         <td className="px-3 py-2 text-body text-gray-700 text-right tabular-nums border-r border-r-gray-200">{formatMoney(m.unitPrice)}</td>
                         <td className="px-4 py-2 text-body text-gray-700 text-right tabular-nums">{formatMoney(m.total)}</td>

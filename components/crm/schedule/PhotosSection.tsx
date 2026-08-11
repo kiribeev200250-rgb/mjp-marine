@@ -65,7 +65,7 @@ function Gallery({ taskId, kind, label, photos }: {
             <img src={url} alt="" className="w-full h-full object-cover" />
             <button
               onClick={() => handleRemove(url)}
-              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-label opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
               title="Удалить"
             >
               ✕
@@ -76,7 +76,7 @@ function Gallery({ taskId, kind, label, photos }: {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="aspect-square rounded-control border border-dashed border-gray-200 text-gray-300 hover:text-gray-500 hover:border-gray-300 transition flex items-center justify-center text-xl disabled:opacity-50"
+          className="aspect-square rounded-control border border-dashed border-gray-200 text-gray-500 hover:text-gray-500 hover:border-gray-300 transition flex items-center justify-center text-xl disabled:opacity-50"
         >
           {uploading ? '…' : '+'}
         </button>
