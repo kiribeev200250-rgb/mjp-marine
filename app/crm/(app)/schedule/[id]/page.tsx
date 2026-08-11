@@ -7,7 +7,8 @@ import { QuickStatusPanel } from '@/components/crm/schedule/QuickStatusPanel'
 import { MaterialsSection, type TaskMaterial } from '@/components/crm/schedule/MaterialsSection'
 import { PhotosSection } from '@/components/crm/schedule/PhotosSection'
 import { Badge, TASK_TONE } from '@/components/crm/ui'
-import type { SerializedTask } from '@/components/crm/schedule/types'
+import { TASK_STATUS_LABELS } from '@/lib/crm/utils'
+import type { SerializedTask, ClientWithBoats } from '@/components/crm/schedule/types'
 
 export default async function TaskDetailPage({
   params,
@@ -18,14 +19,20 @@ export default async function TaskDetailPage({
   const session = await getCrmSession()
   if (!session) return null
 
-  const [task, clients, inventoryItems] = await Promise.all([
+  const [task, clientRows, inventoryItems] = await Promise.all([
     prisma.task.findFirst({
       where:   { id, companyId: session.user.companyId },
-      include: { client: { select: { id: true, firstName: true, lastName: true, marina: true } } },
+      include: {
+        client: { select: { id: true, firstName: true, lastName: true, marina: true } },
+        boat:   { select: { id: true, name: true, model: true } },
+      },
     }),
     prisma.client.findMany({
       where:   { companyId: session.user.companyId, active: true },
-      select:  { id: true, firstName: true, lastName: true },
+      select:  {
+        id: true, firstName: true, lastName: true,
+        yachts: { where: { archived: false }, select: { id: true, name: true, model: true }, orderBy: { createdAt: 'asc' } },
+      },
       orderBy: { firstName: 'asc' },
     }),
     prisma.inventoryItem.findMany({
@@ -51,10 +58,16 @@ export default async function TaskDetailPage({
     isBacklog:   task.isBacklog,
     marina:      task.marina,
     clientId:    task.clientId,
+    boatId:      task.boatId,
     completedAt: task.completedAt?.toISOString() ?? null,
     createdAt:   task.createdAt.toISOString(),
     client:      task.client,
+    boat:        task.boat,
   }
+
+  const clients: ClientWithBoats[] = clientRows.map((c) => ({
+    id: c.id, firstName: c.firstName, lastName: c.lastName, boats: c.yachts,
+  }))
 
   const scheduledDate = task.scheduledAt
     ? task.scheduledAt.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -63,10 +76,10 @@ export default async function TaskDetailPage({
   return (
     <main className="flex-1 overflow-y-auto flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 bg-white shrink-0 flex items-center gap-3">
-        <Link href="/crm/schedule" className="text-gray-200 hover:text-gray-500 text-body transition">← Планировщик</Link>
-        <span className="text-gray-200">/</span>
+        <Link href="/crm/schedule" className="text-gray-500 hover:text-gray-900 text-body transition">← Планировщик</Link>
+        <span className="text-gray-500">/</span>
         <h1 className="text-heading font-bold text-gray-900 truncate">{task.title}</h1>
-        <Badge tone={TASK_TONE[task.status] ?? 'neutral'}>{task.status}</Badge>
+        <Badge tone={TASK_TONE[task.status] ?? 'neutral'}>{TASK_STATUS_LABELS[task.status] ?? task.status}</Badge>
       </div>
 
       <div className="flex-1 p-6">
@@ -91,6 +104,13 @@ export default async function TaskDetailPage({
                 <InfoRow label="Клиент" value={
                   <Link href={`/crm/clients/${task.clientId}`} className="text-gold hover:underline">
                     {task.client.firstName} {task.client.lastName}
+                  </Link>
+                } />
+              )}
+              {task.boat && task.client && (
+                <InfoRow label="Лодка" value={
+                  <Link href={`/crm/clients/${task.clientId}/boats/${task.boat.id}`} className="text-gold hover:underline">
+                    ⛵ {task.boat.name || task.boat.model || 'Без названия'}
                   </Link>
                 } />
               )}

@@ -9,6 +9,7 @@ export interface SerializedTask {
   isBacklog:   boolean
   marina:      string
   clientId:    string | null
+  boatId:      string | null
   completedAt: string | null
   createdAt:   string
   client: {
@@ -17,4 +18,20 @@ export interface SerializedTask {
     lastName:  string
     marina:    string
   } | null
+  boat: {
+    id:    string
+    name:  string
+    model: string
+  } | null
+}
+
+export interface ClientWithBoats {
+  id:        string
+  firstName: string
+  lastName:  string
+  boats: {
+    id:    string
+    name:  string
+    model: string
+  }[]
 }

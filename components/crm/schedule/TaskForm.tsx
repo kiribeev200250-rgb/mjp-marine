@@ -3,16 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input, Select, Textarea, Button } from '@/components/crm/ui'
-import type { SerializedTask } from './types'
+import type { SerializedTask, ClientWithBoats } from './types'
 
-interface ClientOption { id: string; firstName: string; lastName: string }
 interface Props {
   task?: SerializedTask
-  clients: ClientOption[]
+  clients: ClientWithBoats[]
   defaultDate?: string
   defaultClientId?: string
   defaultBoatId?: string
-  defaultBoatName?: string
+  onSaved?: (task: SerializedTask) => void
+  onDeleted?: () => void
 }
 
 const STATUS_OPTIONS = [
@@ -23,7 +23,7 @@ const STATUS_OPTIONS = [
   { value: 'PROBLEM',     label: 'Проблема'      },
 ]
 
-export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultBoatId, defaultBoatName }: Props) {
+export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultBoatId, onSaved, onDeleted }: Props) {
   const router = useRouter()
   const isEdit = !!task
 
@@ -31,6 +31,7 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
     title:       task?.title       ?? '',
     description: task?.description ?? '',
     clientId:    task?.clientId    ?? defaultClientId ?? '',
+    boatId:      task?.boatId      ?? defaultBoatId    ?? '',
     marina:      task?.marina      ?? '',
     status:      task?.status      ?? 'NEW',
     scheduledAt: task?.scheduledAt ? task.scheduledAt.slice(0, 10) : (defaultDate ?? ''),
@@ -41,6 +42,13 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
   const [error,  setError]  = useState<string | null>(null)
 
   function set(key: string, value: string) { setForm((p) => ({ ...p, [key]: value })) }
+
+  function setClient(clientId: string) {
+    const boats = clients.find((c) => c.id === clientId)?.boats ?? []
+    setForm((p) => ({ ...p, clientId, boatId: boats.some((b) => b.id === p.boatId) ? p.boatId : '' }))
+  }
+
+  const selectedBoats = clients.find((c) => c.id === form.clientId)?.boats ?? []
 
   function buildDatetime(date: string, time: string): string | null {
     if (!date) return null
@@ -54,11 +62,11 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
 
     const body = {
       title: form.title.trim(), description: form.description,
-      clientId: form.clientId || null, marina: form.marina, status: form.status,
+      clientId: form.clientId || null, boatId: form.boatId || null,
+      marina: form.marina, status: form.status,
       scheduledAt: buildDatetime(form.scheduledAt, ''),
       startTime:   buildDatetime(form.scheduledAt, form.startTime),
       endTime:     buildDatetime(form.scheduledAt, form.endTime),
-      ...(!isEdit && defaultBoatId && { boatId: defaultBoatId }),
     }
 
     try {
@@ -68,6 +76,8 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Ошибка сервера')
+      const saved = await res.json()
+      if (onSaved) { onSaved(saved); return }
       router.push('/crm/schedule'); router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Ошибка')
@@ -78,6 +88,8 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
     if (!task || !confirm('Удалить задачу?')) return
     setSaving(true)
     await fetch(`/api/crm/tasks/${task.id}`, { method: 'DELETE' })
+    setSaving(false)
+    if (onDeleted) { onDeleted(); return }
     router.push('/crm/schedule'); router.refresh()
   }
 
@@ -104,16 +116,22 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
         rows={3}
       />
 
-      <Select label="Клиент" value={form.clientId} onChange={(e) => set('clientId', e.target.value)}>
-        <option value="">— без клиента —</option>
-        {clients.map((c) => (
-          <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
-        ))}
-      </Select>
-
-      {!isEdit && defaultBoatId && (
-        <p className="text-label text-gray-500">🛥 Лодка: {defaultBoatName || '—'} (привяжется автоматически)</p>
-      )}
+      <div className="grid grid-cols-2 gap-4">
+        <Select label="Клиент" value={form.clientId} onChange={(e) => setClient(e.target.value)}>
+          <option value="">— без клиента —</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+          ))}
+        </Select>
+        {selectedBoats.length > 0 && (
+          <Select label="Лодка" value={form.boatId} onChange={(e) => set('boatId', e.target.value)}>
+            <option value="">— без лодки —</option>
+            {selectedBoats.map((b) => (
+              <option key={b.id} value={b.id}>⛵ {b.name || b.model || 'Без названия'}</option>
+            ))}
+          </Select>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <Input label="Марина" value={form.marina} onChange={(e) => set('marina', e.target.value)} placeholder="Puerto Blanco..." />
@@ -135,9 +153,11 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
         <Button type="submit" loading={saving}>
           {isEdit ? 'Сохранить' : 'Создать задачу'}
         </Button>
-        <Button type="button" variant="secondary" onClick={() => router.back()}>
-          Отмена
-        </Button>
+        {!onSaved && (
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
+            Отмена
+          </Button>
+        )}
         {isEdit && (
           <Button type="button" variant="danger" onClick={handleDelete} disabled={saving} className="ml-auto">
             Удалить

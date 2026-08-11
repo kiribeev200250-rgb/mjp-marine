@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
     ],
     include: {
       client: { select: { id: true, firstName: true, lastName: true, marina: true } },
+      boat:   { select: { id: true, name: true, model: true } },
     },
   })
 
@@ -50,6 +51,12 @@ export async function POST(req: NextRequest) {
 
   if (!title?.trim()) return NextResponse.json({ error: 'Название обязательно' }, { status: 422 })
 
+  if (boatId) {
+    if (!clientId) return NextResponse.json({ error: 'У задачи без клиента не может быть лодки' }, { status: 422 })
+    const boat = await prisma.yacht.findFirst({ where: { id: boatId, clientId } })
+    if (!boat) return NextResponse.json({ error: 'Лодка не найдена у этого клиента' }, { status: 404 })
+  }
+
   const task = await prisma.task.create({
     data: {
       companyId:   session.user.companyId,
@@ -64,7 +71,10 @@ export async function POST(req: NextRequest) {
       isBacklog:   isBacklog  ?? false,
       status:      scheduledAt ? 'SCHEDULED' : 'NEW',
     },
-    include: { client: { select: { id: true, firstName: true, lastName: true, marina: true } } },
+    include: {
+      client: { select: { id: true, firstName: true, lastName: true, marina: true } },
+      boat:   { select: { id: true, name: true, model: true } },
+    },
   })
 
   await writeAudit({

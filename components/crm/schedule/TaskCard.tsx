@@ -1,16 +1,16 @@
 'use client'
 
-import Link from 'next/link'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Badge, TASK_TONE } from '@/components/crm/ui'
+import { TASK_STATUS_LABELS } from '@/lib/crm/utils'
 import type { SerializedTask } from './types'
 
-interface Props { task: SerializedTask; compact?: boolean; draggable?: boolean }
+interface Props { task: SerializedTask; compact?: boolean; onClick: () => void }
 
 export function TaskCardDisplay({ task, compact }: { task: SerializedTask; compact?: boolean }) {
   const time = task.startTime
-    ? new Date(task.startTime).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(task.startTime).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
     : null
 
   return (
@@ -23,18 +23,19 @@ export function TaskCardDisplay({ task, compact }: { task: SerializedTask; compa
           {!compact && task.client && (
             <p className="text-gray-500 text-label truncate mt-0.5">
               {task.client.firstName} {task.client.lastName}
+              {task.boat && ` · ⛵ ${task.boat.name || task.boat.model || ''}`}
             </p>
           )}
           {!compact && (task.marina || time) && (
             <div className="flex gap-2 mt-1">
-              {task.marina && <span className="text-gray-500 text-[10px]">⚓ {task.marina}</span>}
-              {time        && <span className="text-gray-500 text-[10px]">🕐 {time}</span>}
+              {task.marina && <span className="text-gray-500 text-label">⚓ {task.marina}</span>}
+              {time        && <span className="text-gray-500 text-label">🕐 {time}</span>}
             </div>
           )}
         </div>
         {!compact && (
-          <Badge tone={TASK_TONE[task.status] ?? 'neutral'} className="shrink-0 text-[10px]">
-            {task.status}
+          <Badge tone={TASK_TONE[task.status] ?? 'neutral'} className="shrink-0">
+            {TASK_STATUS_LABELS[task.status] ?? task.status}
           </Badge>
         )}
       </div>
@@ -42,21 +43,20 @@ export function TaskCardDisplay({ task, compact }: { task: SerializedTask; compa
   )
 }
 
-export function TaskCard({ task, compact, draggable = true }: Props) {
+export function TaskCard({ task, compact, onClick }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: task.id, disabled: !draggable, data: { task },
+    id: task.id, data: { task },
   })
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
-      {...(draggable ? attributes : {})}
-      {...(draggable ? listeners  : {})}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => { e.stopPropagation(); onClick() }}
     >
-      <Link href={`/crm/schedule/${task.id}`} onClick={(e) => e.stopPropagation()}>
-        <TaskCardDisplay task={task} compact={compact} />
-      </Link>
+      <TaskCardDisplay task={task} compact={compact} />
     </div>
   )
 }

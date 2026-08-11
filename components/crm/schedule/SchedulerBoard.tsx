@@ -5,14 +5,15 @@ import {
   DndContext, DragOverlay, PointerSensor,
   useSensor, useSensors, type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core'
-import { useRouter } from 'next/navigation'
 import { WeekView }   from './WeekView'
 import { MonthView }  from './MonthView'
 import { DayView }    from './DayView'
 import { BacklogPanel } from './BacklogPanel'
 import { TaskCardDisplay } from './TaskCard'
+import { TaskPopover } from './TaskPopover'
+import { QuickCreatePopover } from './QuickCreatePopover'
 import { localDateStr } from '@/lib/crm/utils'
-import type { SerializedTask } from './types'
+import type { SerializedTask, ClientWithBoats } from './types'
 
 type View = 'week' | 'month' | 'day'
 
@@ -31,16 +32,18 @@ function addDays(d: Date, n: number): Date {
   const r = new Date(d); r.setDate(r.getDate() + n); return r
 }
 
-interface Props { initialTasks: SerializedTask[] }
+interface Props { initialTasks: SerializedTask[]; clients: ClientWithBoats[] }
 
-export function SchedulerBoard({ initialTasks }: Props) {
-  const router = useRouter()
+export function SchedulerBoard({ initialTasks, clients }: Props) {
   const [tasks,      setTasks]      = useState<SerializedTask[]>(initialTasks)
   const [view,       setView]       = useState<View>('week')
   const [weekStart,  setWeekStart]  = useState(() => getMonday(new Date()))
   const [monthYear,  setMonthYear]  = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }))
   const [dayDate,    setDayDate]    = useState(() => new Date())
   const [activeTask, setActiveTask] = useState<SerializedTask | null>(null)
+
+  const [detailTask, setDetailTask] = useState<SerializedTask | null>(null)
+  const [quickCreate, setQuickCreate] = useState<{ date: string; startMinutes: number | null; anchor?: { x: number; y: number } } | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const todayStr = localDateStr(new Date())
@@ -85,11 +88,40 @@ export function SchedulerBoard({ initialTasks }: Props) {
     setView('day')
   }
 
-  function handleAdd(dateStr: string) {
-    router.push(`/crm/schedule/new?date=${dateStr}`)
+  function handleQuickCreate(date: string, startMinutes: number | null, anchor?: { x: number; y: number }) {
+    setQuickCreate({ date, startMinutes, anchor })
   }
 
-  // ── DnD ────────────────────────────────────────────────────────────────
+  function handleTaskCreated(task: SerializedTask) {
+    setTasks((ts) => [...ts, task])
+    setQuickCreate(null)
+  }
+
+  function handleTaskChanged(task: SerializedTask) {
+    setTasks((ts) => ts.map((t) => (t.id === task.id ? task : t)))
+    setDetailTask((prev) => (prev && prev.id === task.id ? task : prev))
+  }
+
+  function handleTaskDeleted(id: string) {
+    setTasks((ts) => ts.filter((t) => t.id !== id))
+    setDetailTask((prev) => (prev && prev.id === id ? null : prev))
+  }
+
+  const handleTaskPatch = useCallback(async (id: string, patch: Record<string, unknown>) => {
+    const prev = tasks
+    setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    try {
+      const res = await fetch(`/api/crm/tasks/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      if (!res.ok) throw new Error()
+      const updated = await res.json()
+      setTasks((ts) => ts.map((t) => (t.id === id ? updated : t)))
+    } catch { setTasks(prev) }
+  }, [tasks])
+
+  // ── DnD (backlog <-> day, day <-> day, at day granularity) ────────────────
   function handleDragStart({ active }: DragStartEvent) {
     setActiveTask(tasks.find((t) => t.id === active.id) ?? null)
   }
@@ -137,7 +169,7 @@ export function SchedulerBoard({ initialTasks }: Props) {
   ]
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext id="scheduler-dnd" sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-full flex flex-col gap-0 min-h-0">
 
         {/* ── Toolbar ── */}
@@ -180,7 +212,14 @@ export function SchedulerBoard({ initialTasks }: Props) {
           {/* Calendar area */}
           <div className="flex-1 flex flex-col min-h-0 bg-white rounded-card border border-gray-200 shadow-e2 overflow-hidden">
             {view === 'week' && (
-              <WeekView weekDays={weekDays} tasks={tasks} today={todayStr} onAdd={handleAdd} />
+              <WeekView
+                weekDays={weekDays}
+                tasks={tasks}
+                today={todayStr}
+                onQuickCreate={handleQuickCreate}
+                onTaskClick={setDetailTask}
+                onTaskPatch={handleTaskPatch}
+              />
             )}
             {view === 'month' && (
               <MonthView
@@ -189,21 +228,51 @@ export function SchedulerBoard({ initialTasks }: Props) {
                 tasks={tasks}
                 today={todayStr}
                 onDayClick={handleDayClick}
+                onTaskClick={setDetailTask}
+                onQuickCreate={handleQuickCreate}
               />
             )}
             {view === 'day' && (
-              <DayView date={dayDate} tasks={tasks} today={todayStr} />
+              <DayView
+                date={dayDate}
+                tasks={tasks}
+                today={todayStr}
+                onQuickCreate={handleQuickCreate}
+                onTaskClick={setDetailTask}
+                onTaskPatch={handleTaskPatch}
+              />
             )}
           </div>
 
           {/* Backlog panel */}
-          <BacklogPanel tasks={backlogTasks} />
+          <BacklogPanel tasks={backlogTasks} onTaskClick={setDetailTask} />
         </div>
       </div>
 
       <DragOverlay dropAnimation={null}>
         {activeTask ? <TaskCardDisplay task={activeTask} /> : null}
       </DragOverlay>
+
+      {detailTask && (
+        <TaskPopover
+          task={detailTask}
+          clients={clients}
+          onClose={() => setDetailTask(null)}
+          onChange={handleTaskChanged}
+          onDeleted={handleTaskDeleted}
+        />
+      )}
+
+      {quickCreate && (
+        <QuickCreatePopover
+          date={quickCreate.date}
+          startMinutes={quickCreate.startMinutes}
+          anchor={quickCreate.anchor}
+          clients={clients}
+          onClose={() => setQuickCreate(null)}
+          onCreated={handleTaskCreated}
+        />
+      )}
     </DndContext>
   )
 }

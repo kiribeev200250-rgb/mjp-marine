@@ -5,9 +5,9 @@ import { useDroppable } from '@dnd-kit/core'
 import { TaskCard } from './TaskCard'
 import type { SerializedTask } from './types'
 
-interface Props { tasks: SerializedTask[] }
+interface Props { tasks: SerializedTask[]; onTaskClick: (task: SerializedTask) => void }
 
-export function BacklogPanel({ tasks }: Props) {
+export function BacklogPanel({ tasks, onTaskClick }: Props) {
   const { isOver, setNodeRef } = useDroppable({ id: 'backlog' })
 
   return (
@@ -38,7 +38,7 @@ export function BacklogPanel({ tasks }: Props) {
             <p className="text-gray-500 text-label text-center">Все задачи запланированы</p>
           </div>
         ) : (
-          tasks.map((task) => <TaskCard key={task.id} task={task} />)
+          tasks.map((task) => <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />)
         )}
 
         {isOver && (

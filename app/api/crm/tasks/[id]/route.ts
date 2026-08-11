@@ -22,6 +22,7 @@ export async function GET(
     where: { id, companyId: session.user.companyId },
     include: {
       client: { select: { id: true, firstName: true, lastName: true } },
+      boat:   { select: { id: true, name: true, model: true } },
       stockUsage: { include: { item: { select: { id: true, name: true, unit: true } } } },
     },
   })
@@ -93,7 +94,7 @@ export async function PATCH(
 
   const body = await req.json()
   const {
-    status, scheduledAt, startTime, endTime, title, description, marina, clientId, isBacklog,
+    status, scheduledAt, startTime, endTime, title, description, marina, clientId, boatId, isBacklog,
     plannedMaterials, photosBefore, photosAfter,
   } = body
 
@@ -103,6 +104,16 @@ export async function PATCH(
   if (marina      !== undefined) data.marina      = marina
   if (clientId    !== undefined) data.clientId    = clientId || null
   if (isBacklog   !== undefined) data.isBacklog   = isBacklog
+
+  if (boatId !== undefined) {
+    if (boatId) {
+      const effectiveClientId = clientId !== undefined ? (clientId || null) : existing.clientId
+      if (!effectiveClientId) return NextResponse.json({ error: 'У задачи без клиента не может быть лодки' }, { status: 422 })
+      const boat = await prisma.yacht.findFirst({ where: { id: boatId, clientId: effectiveClientId } })
+      if (!boat) return NextResponse.json({ error: 'Лодка не найдена у этого клиента' }, { status: 404 })
+    }
+    data.boatId = boatId || null
+  }
   if (status      !== undefined) {
     data.status = status as TaskStatus
     if (status === 'DONE')  data.completedAt = new Date()
@@ -126,7 +137,10 @@ export async function PATCH(
   const updated = await prisma.task.update({
     where: { id },
     data,
-    include: { client: { select: { id: true, firstName: true, lastName: true, marina: true } } },
+    include: {
+      client: { select: { id: true, firstName: true, lastName: true, marina: true } },
+      boat:   { select: { id: true, name: true, model: true } },
+    },
   })
 
   // Автосписание материалов при переходе в DONE (SPEC М2)

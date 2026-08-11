@@ -113,7 +113,7 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
             <Link href={`/crm/invoices/new?${qs}`}>
               <Button variant="secondary" size="sm">🧾 Счёт</Button>
             </Link>
-            <Link href={`/crm/schedule/new?${qs}&boatName=${encodeURIComponent(boat.name || boat.model || '')}`}>
+            <Link href={`/crm/schedule/new?${qs}`}>
               <Button variant="secondary" size="sm">📋 Задача</Button>
             </Link>
           </div>

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
 import { SchedulerBoard } from '@/components/crm/schedule/SchedulerBoard'
-import type { SerializedTask } from '@/components/crm/schedule/types'
+import type { SerializedTask, ClientWithBoats } from '@/components/crm/schedule/types'
 
 export default async function SchedulePage() {
   const session = await getCrmSession()
@@ -10,19 +10,30 @@ export default async function SchedulePage() {
 
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
 
-  const tasks = await prisma.task.findMany({
-    where: {
-      companyId: session.user.companyId,
-      OR: [
-        { status: { notIn: ['DONE'] } },
-        { completedAt: { gte: fourteenDaysAgo } },
-      ],
-    },
-    orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'asc' }],
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true, marina: true } },
-    },
-  })
+  const [tasks, clients] = await Promise.all([
+    prisma.task.findMany({
+      where: {
+        companyId: session.user.companyId,
+        OR: [
+          { status: { notIn: ['DONE'] } },
+          { completedAt: { gte: fourteenDaysAgo } },
+        ],
+      },
+      orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'asc' }],
+      include: {
+        client: { select: { id: true, firstName: true, lastName: true, marina: true } },
+        boat:   { select: { id: true, name: true, model: true } },
+      },
+    }),
+    prisma.client.findMany({
+      where:   { companyId: session.user.companyId, active: true },
+      select:  {
+        id: true, firstName: true, lastName: true,
+        yachts: { where: { archived: false }, select: { id: true, name: true, model: true }, orderBy: { createdAt: 'asc' } },
+      },
+      orderBy: { firstName: 'asc' },
+    }),
+  ])
 
   const serialized: SerializedTask[] = tasks.map((t) => ({
     id:          t.id,
@@ -35,9 +46,15 @@ export default async function SchedulePage() {
     isBacklog:   t.isBacklog,
     marina:      t.marina,
     clientId:    t.clientId,
+    boatId:      t.boatId,
     completedAt: t.completedAt?.toISOString() ?? null,
     createdAt:   t.createdAt.toISOString(),
     client:      t.client,
+    boat:        t.boat,
+  }))
+
+  const clientOptions: ClientWithBoats[] = clients.map((c) => ({
+    id: c.id, firstName: c.firstName, lastName: c.lastName, boats: c.yachts,
   }))
 
   const todoCount = tasks.filter((t) => t.status !== 'DONE').length
@@ -59,7 +76,7 @@ export default async function SchedulePage() {
         </Link>
       </div>
       <div className="flex-1 overflow-hidden p-4 flex flex-col">
-        <SchedulerBoard initialTasks={serialized} />
+        <SchedulerBoard initialTasks={serialized} clients={clientOptions} />
       </div>
     </main>
   )

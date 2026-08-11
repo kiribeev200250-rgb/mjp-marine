@@ -2,54 +2,65 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { TASK_STATUS_LABELS } from '@/lib/crm/utils'
 
-const STATUSES = [
-  { key: 'IN_PROGRESS', label: 'В работе',  color: 'border-[#E67E22]/40 text-[#E67E22]' },
-  { key: 'DONE',        label: 'Выполнена', color: 'border-[#27AE60]/40 text-[#27AE60]' },
-  { key: 'PROBLEM',     label: 'Проблема',  color: 'border-[#C0392B]/40 text-[#C0392B]' },
-] as const
+const STATUSES = ['NEW', 'SCHEDULED', 'IN_PROGRESS', 'DONE', 'PROBLEM'] as const
 
-interface Props {
-  taskId:  string
-  current: string
+const STATUS_STYLE: Record<string, { active: string; idle: string }> = {
+  NEW:         { active: 'bg-gray-200 text-gray-900 border-gray-300',   idle: 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-900' },
+  SCHEDULED:   { active: 'bg-info/15 text-info border-info/30',         idle: 'border-gray-200 text-gray-500 hover:border-info/40 hover:text-info' },
+  IN_PROGRESS: { active: 'bg-warning/15 text-warning border-warning/30', idle: 'border-gray-200 text-gray-500 hover:border-warning/40 hover:text-warning' },
+  DONE:        { active: 'bg-success/15 text-success border-success/30', idle: 'border-gray-200 text-gray-500 hover:border-success/40 hover:text-success' },
+  PROBLEM:     { active: 'bg-danger/15 text-danger border-danger/30',   idle: 'border-gray-200 text-gray-500 hover:border-danger/40 hover:text-danger' },
 }
 
-export function QuickStatusPanel({ taskId, current }: Props) {
+interface Props {
+  taskId:    string
+  current:   string
+  onChange?: (updated: Record<string, unknown>) => void
+}
+
+export function QuickStatusPanel({ taskId, current, onChange }: Props) {
   const router  = useRouter()
   const [busy, setBusy] = useState(false)
 
   async function setStatus(status: string) {
     if (status === current || busy) return
     setBusy(true)
-    await fetch(`/api/crm/tasks/${taskId}`, {
+    const res = await fetch(`/api/crm/tasks/${taskId}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ status }),
     })
-    router.refresh()
     setBusy(false)
+    if (!res.ok) return
+    const updated = await res.json()
+    if (onChange) { onChange(updated); return }
+    router.refresh()
   }
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-      <p className="text-white/40 text-xs mb-3">Быстрый статус</p>
-      {STATUSES.map((s) => {
-        const isActive = current === s.key
-        return (
-          <button
-            key={s.key}
-            onClick={() => setStatus(s.key)}
-            disabled={isActive || busy}
-            className={`w-full py-2 rounded-lg border text-xs transition ${
-              isActive
-                ? `opacity-80 cursor-default ${s.color}`
-                : `bg-white/3 hover:bg-white/8 border-white/10 text-white/50`
-            }`}
-          >
-            {isActive ? '✓ ' : ''}{s.label}
-          </button>
-        )
-      })}
+    <div className="bg-white border border-gray-200 rounded-card shadow-e2 p-4 space-y-2">
+      <p className="text-label text-gray-500 font-semibold uppercase tracking-wide mb-1">Статус</p>
+      <div className="grid grid-cols-1 gap-1.5">
+        {STATUSES.map((s) => {
+          const isActive = current === s
+          const style = STATUS_STYLE[s]
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatus(s)}
+              disabled={isActive || busy}
+              className={`w-full py-2 px-3 rounded-control border text-body font-medium text-left transition ${
+                isActive ? `${style.active} cursor-default` : `bg-white ${style.idle}`
+              }`}
+            >
+              {isActive ? '✓ ' : ''}{TASK_STATUS_LABELS[s] ?? s}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
