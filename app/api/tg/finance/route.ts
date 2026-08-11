@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { parseAmountExpr } from '@/lib/crm/utils'
 import { nextFinanceAutoId } from '@/lib/crm/numbering'
+import { computeCashSummary } from '@/lib/crm/services/cash'
 import { prisma } from '@/lib/prisma'
 import type { FinanceEntryType } from '@prisma/client'
 
@@ -21,9 +22,8 @@ export async function GET(req: Request) {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const [allFinances, reinvestments, monthFinances, recent] = await Promise.all([
-    prisma.financeEntry.findMany({ where: { companyId: session.companyId }, select: { type: true, amount: true } }),
-    prisma.capitalEntry.findMany({ where: { companyId: session.companyId, type: 'REINVESTMENT' }, select: { amount: true } }),
+  const [summary, monthFinances, recent] = await Promise.all([
+    computeCashSummary(session.companyId),
     prisma.financeEntry.findMany({ where: { companyId: session.companyId, date: { gte: monthStart } }, select: { type: true, amount: true } }),
     prisma.financeEntry.findMany({
       where: { companyId: session.companyId }, orderBy: { date: 'desc' }, take: 20,
@@ -31,15 +31,11 @@ export async function GET(req: Request) {
     }),
   ])
 
-  let cash = new Decimal(0)
-  for (const f of allFinances) cash = f.type === 'INCOME' ? cash.plus(f.amount.toString()) : cash.minus(f.amount.toString())
-  for (const r of reinvestments) cash = cash.plus(r.amount.toString())
-
   let plMonth = new Decimal(0)
   for (const f of monthFinances) plMonth = f.type === 'INCOME' ? plMonth.plus(f.amount.toString()) : plMonth.minus(f.amount.toString())
 
   return NextResponse.json({
-    cash: cash.toString(),
+    cash: summary.cash.toString(),
     plMonth: plMonth.toString(),
     recent: recent.map((e) => ({
       id: e.id, autoId: e.autoId, type: e.type, date: e.date.toISOString(),

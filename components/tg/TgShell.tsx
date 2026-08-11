@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/tg/tasks', label: 'Задачи', icon: '🗓' },
   { href: '/tg/warehouse', label: 'Склад', icon: '📦' },
   { href: '/tg/finance', label: 'Финансы', icon: '💶' },
+  { href: '/tg/invoices', label: 'Счета', icon: '🧾' },
 ] as const
 
 export function TgShell({ title, children }: { title: string; children: React.ReactNode }) {

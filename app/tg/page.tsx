@@ -9,6 +9,7 @@ const MODULES = [
   { href: '/tg/tasks', label: 'Задачи и планировщик', desc: 'Сегодня и бэклог', icon: '🗓' },
   { href: '/tg/warehouse', label: 'Склад', desc: 'Остатки, приход, списание', icon: '📦' },
   { href: '/tg/finance', label: 'Финансы', desc: 'Касса, P&L, операции', icon: '💶' },
+  { href: '/tg/invoices', label: 'Дебиторка', desc: 'Неоплаченные счета', icon: '🧾' },
 ] as const
 
 export default function TgHomePage() {

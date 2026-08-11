@@ -17,40 +17,12 @@ export async function seedReferences(
 ): Promise<void> {
   const items: RefItem[] = []
 
-  // Категории расходов — совпадают с листом «Расходы» Google Sheets
-  const expenseCategories = [
-    'Лизинг / аренда авто',
-    'Топливо и транспорт',
-    'Инструмент и оборудование',
-    'Расходные материалы',
-    'Реклама — Facebook',
-    'Реклама — Google',
-    'Реклама — TikTok',
-    'Реклама — другое',
-    'Страховка',
-    'Связь и интернет',
-    'Аренда квартиры',
-    'Переезд',
-    'Прочие расходы',
-  ]
-  expenseCategories.forEach((label, i) =>
-    items.push({ type: ReferenceType.EXPENSE_CATEGORY, value: label, label, sortOrder: i }),
-  )
-
-  // Категории доходов
-  const incomeCategories = [
-    'Ремонт двигателя',
-    'Обслуживание корпуса',
-    'Покраска и антифоулинг',
-    'Электрика и электроника',
-    'Такелаж и парусное',
-    'Продажа запчастей',
-    'Диагностика',
-    'Прочие доходы',
-  ]
-  incomeCategories.forEach((label, i) =>
-    items.push({ type: ReferenceType.INCOME_CATEGORY, value: label, label, sortOrder: i }),
-  )
+  // Категории расходов/доходов — не здесь: живут в Category (см.
+  // seedCategories в lib/crm/seed-categories.ts), которую читают и веб, и
+  // Telegram-бот. Раньше сюда же сеялся параллельный список
+  // EXPENSE_CATEGORY/INCOME_CATEGORY, который читал только бот — расходился с
+  // Category и требовал ручной синхронизации; убран вместе с переводом бота
+  // на Category (см. lib/crm/telegram/conversations.ts).
 
   // Способы оплаты
   ;[

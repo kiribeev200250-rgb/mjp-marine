@@ -4,10 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { writeAudit } from '@/lib/crm/audit'
 import { parseAmountExpr, PAYMENT_METHODS } from '@/lib/crm/utils'
 import { nextFinanceAutoId, nextCapitalAutoId } from '@/lib/crm/numbering'
+import { findOrCreateCategory } from '@/lib/crm/services/categories'
 import { getLinkedUser, can } from './auth'
 import { notifyAdmins } from './notify'
 import type { MyContext } from './types'
-import type { FinanceEntryType } from '@prisma/client'
+import type { FinanceEntryType, CategoryKind } from '@prisma/client'
 
 type Convo = Conversation<MyContext, MyContext>
 
@@ -27,29 +28,36 @@ async function requireLinked(conversation: Convo, ctx: MyContext) {
   return user
 }
 
+// Категории — из того же живого списка (Category), что и веб, а не из
+// отдельного ReferenceItem, который не растёт вместе с CategoryCombobox в вебе
+// и годами расходится с реальным списком. Текст, не совпавший ни с одним
+// номером/названием, заводит новую категорию «на лету» — как «+Добавить» в
+// вебовском CategoryCombobox.
 async function pickCategory(
   conversation: Convo,
   ctx: MyContext,
   companyId: string,
-  type: 'EXPENSE_CATEGORY' | 'INCOME_CATEGORY',
+  kind: CategoryKind,
 ): Promise<string | null> {
   const categories = await conversation.external(() =>
-    prisma.referenceItem.findMany({
-      where: { companyId, type, active: true },
-      orderBy: { sortOrder: 'asc' },
+    prisma.category.findMany({
+      where: { companyId, kind, archived: false },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
   )
 
-  const list = categories.map((c, i) => `${i + 1}. ${c.label}`).join('\n')
-  await ctx.reply(`Категория?\n${list}\n\nНомер из списка или свой текст. /cancel — отмена.`)
+  const list = categories.map((c, i) => `${i + 1}. ${c.name}`).join('\n')
+  await ctx.reply(`Категория?\n${list}\n\nНомер из списка или новое название текстом. /cancel — отмена.`)
 
   const msg = await conversation.waitFor('message:text')
   const text = msg.message.text.trim()
   if (isCancel(text)) return null
 
   const idx = parseInt(text, 10)
-  if (!isNaN(idx) && categories[idx - 1]) return categories[idx - 1].label
-  return text
+  if (!isNaN(idx) && categories[idx - 1]) return categories[idx - 1].name
+
+  const created = await conversation.external(() => findOrCreateCategory(prisma, companyId, kind, text))
+  return created.name
 }
 
 async function askAmount(conversation: Convo, ctx: MyContext, prompt: string): Promise<Decimal | null> {
@@ -94,8 +102,7 @@ export async function moneyEntryConversation(
     return
   }
 
-  const refType = type === 'INCOME' ? 'INCOME_CATEGORY' : 'EXPENSE_CATEGORY'
-  const category = await pickCategory(conversation, ctx, user.companyId, refType)
+  const category = await pickCategory(conversation, ctx, user.companyId, type)
   if (category === null) { await ctx.reply('Отменено.'); return }
 
   const amount = await askAmount(conversation, ctx, `Сумма (${type === 'INCOME' ? 'доход' : 'расход'})?`)
