@@ -5,9 +5,9 @@ import { TaskForm } from '@/components/crm/schedule/TaskForm'
 export default async function NewTaskPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; clientId?: string }>
+  searchParams: Promise<{ date?: string; clientId?: string; boatId?: string; boatName?: string }>
 }) {
-  const { date, clientId } = await searchParams
+  const { date, clientId, boatId, boatName } = await searchParams
   const session = await getCrmSession()
   if (!session) return null
 
@@ -23,7 +23,7 @@ export default async function NewTaskPage({
         <h1 className="text-heading font-bold text-gray-900">Новая задача</h1>
       </div>
       <div className="flex-1 p-6">
-        <TaskForm clients={clients} defaultDate={date} />
+        <TaskForm clients={clients} defaultDate={date} defaultClientId={clientId} defaultBoatId={boatId} defaultBoatName={boatName} />
       </div>
     </main>
   )

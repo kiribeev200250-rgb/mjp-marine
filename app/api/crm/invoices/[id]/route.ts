@@ -104,10 +104,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const body = await req.json()
   const {
-    clientId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
+    clientId, boatId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
     clientNif, clientAddress,
   } = body as {
     clientId: string
+    boatId?: string | null
     language?: string
     dueDate?: string | null
     ivaRate?: string | number
@@ -122,6 +123,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!clientId) return NextResponse.json({ error: 'Выберите клиента' }, { status: 400 })
   const client = await prisma.client.findFirst({ where: { id: clientId, companyId: session.user.companyId } })
   if (!client) return NextResponse.json({ error: 'Клиент не найден' }, { status: 404 })
+
+  if (boatId) {
+    const boat = await prisma.yacht.findFirst({ where: { id: boatId, clientId } })
+    if (!boat) return NextResponse.json({ error: 'Лодка не найдена у этого клиента' }, { status: 404 })
+  }
 
   let parsedJobs, jobsTotal, materialsTotal
   try {
@@ -145,6 +151,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         where: { id },
         data: {
           clientId,
+          boatId:        boatId !== undefined ? (boatId || null) : existing.boatId,
           language:      language || client.language || existing.language,
           dueDate:       dueDate !== undefined ? (dueDate ? new Date(dueDate) : null) : existing.dueDate,
           paymentMethod: paymentMethod ?? existing.paymentMethod,

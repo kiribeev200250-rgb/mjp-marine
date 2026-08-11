@@ -34,6 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         data: {
           companyId:  session.user.companyId,
           clientId:   quote.clientId,
+          boatId:     quote.boatId,
           quoteId:    quote.id,
           number, year, sequenceNum,
           language:       quote.language,

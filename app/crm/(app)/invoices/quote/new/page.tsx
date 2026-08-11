@@ -5,7 +5,7 @@ import { requirePermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { DocumentBuilder } from '@/components/crm/invoices/DocumentBuilder'
 
-interface SearchParams { clientId?: string }
+interface SearchParams { clientId?: string; boatId?: string }
 
 export default async function NewQuotePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
@@ -16,7 +16,10 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
   const [clients, companyInfo, inventoryItems] = await Promise.all([
     prisma.client.findMany({
       where:   { companyId: session.user.companyId, active: true },
-      select:  { id: true, firstName: true, lastName: true, phone: true, marina: true, language: true },
+      select:  {
+        id: true, firstName: true, lastName: true, phone: true, marina: true, language: true,
+        yachts: { where: { archived: false }, select: { id: true, name: true, model: true }, orderBy: { createdAt: 'asc' } },
+      },
       orderBy: { firstName: 'asc' },
     }),
     prisma.companyInfo.findUnique({ where: { companyId: session.user.companyId } }),
@@ -38,7 +41,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
       <div className="flex-1 p-6">
         <DocumentBuilder
           kind="quote"
-          clients={clients}
+          clients={clients.map((c) => ({ ...c, boats: c.yachts.map((y) => ({ id: y.id, name: y.name, model: y.model })) }))}
           inventoryItems={inventoryItems.map((i) => ({ id: i.id, name: i.name, unit: i.unit, sellPrice: i.sellPrice.toString() }))}
           defaultIvaRate={String(companyInfo?.ivaRate ?? 21)}
           defaultIrpfRate={String(companyInfo?.irpfRate ?? 0)}
@@ -46,6 +49,7 @@ export default async function NewQuotePage({ searchParams }: { searchParams: Pro
           companyLocation={[companyInfo?.city, companyInfo?.country].filter(Boolean).join(', ') || 'Costa Blanca, Spain'}
           companyLogoUrl={companyInfo?.logoUrl}
           initialClientId={sp.clientId}
+          initialBoatId={sp.boatId}
         />
       </div>
     </main>

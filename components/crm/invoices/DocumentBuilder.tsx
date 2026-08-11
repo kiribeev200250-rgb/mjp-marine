@@ -14,6 +14,12 @@ import { CSS } from '@dnd-kit/utilities'
 import { Button, Input, Select } from '@/components/crm/ui'
 import { formatMoney, PAYMENT_METHODS, LANGUAGE_LABELS } from '@/lib/crm/utils'
 
+export interface BuilderBoat {
+  id:    string
+  name:  string
+  model: string
+}
+
 export interface BuilderClient {
   id:        string
   firstName: string
@@ -21,6 +27,7 @@ export interface BuilderClient {
   phone:     string
   marina:    string
   language:  string
+  boats?:    BuilderBoat[]
 }
 
 export interface BuilderInventoryItem {
@@ -69,6 +76,7 @@ export interface BuilderInitialJob {
 
 export interface BuilderInitialData {
   clientId: string
+  boatId?: string | null
   language: string
   ivaRate: string
   irpfRate?: string
@@ -89,6 +97,7 @@ interface Props {
   companyLocation:  string
   companyLogoUrl?:  string | null
   initialClientId?: string
+  initialBoatId?:   string
   mode?:            'create' | 'edit'
   documentId?:      string
   initialData?:     BuilderInitialData
@@ -140,7 +149,7 @@ type ComputedJobRow = Omit<JobLine, 'materials'> & {
 
 export function DocumentBuilder({
   kind, clients, inventoryItems, defaultIvaRate, defaultIrpfRate,
-  companyName, companyLocation, companyLogoUrl, initialClientId,
+  companyName, companyLocation, companyLogoUrl, initialClientId, initialBoatId,
   mode = 'create', documentId, initialData, linkedInvoiceHint,
 }: Props) {
   const router = useRouter()
@@ -149,6 +158,7 @@ export function DocumentBuilder({
 
   const initialClient = clients.find((c) => c.id === (initialData?.clientId ?? initialClientId))
   const [clientId,     setClientId]     = useState(initialData?.clientId ?? initialClientId ?? '')
+  const [boatId,       setBoatId]       = useState(initialData?.boatId ?? initialBoatId ?? '')
   const [clientSearch, setClientSearch] = useState(
     initialClient ? `${initialClient.firstName} ${initialClient.lastName}` : '',
   )
@@ -176,6 +186,7 @@ export function DocumentBuilder({
   }, [clients, clientSearch])
 
   const selectedClient = clients.find((c) => c.id === clientId)
+  const selectedClientBoats = selectedClient?.boats ?? []
 
   function updateJob(i: number, patch: Partial<JobLine>) {
     setJobs((prev) => prev.map((j, idx) => (idx === i ? { ...j, ...patch } : j)))
@@ -279,8 +290,8 @@ export function DocumentBuilder({
       ? (isInvoice ? `/api/crm/invoices/${documentId}` : `/api/crm/quotes/${documentId}`)
       : (isInvoice ? '/api/crm/invoices' : '/api/crm/quotes')
     const payload = isInvoice
-      ? { clientId, language, dueDate: dueDate || undefined, ivaRate, irpfRate, paymentMethod, notes, jobs: cleanJobs, ...(!isEdit && { asDraft }) }
-      : { clientId, language, validUntil: validUntil || undefined, ivaRate, notes, jobs: cleanJobs }
+      ? { clientId, boatId: boatId || null, language, dueDate: dueDate || undefined, ivaRate, irpfRate, paymentMethod, notes, jobs: cleanJobs, ...(!isEdit && { asDraft }) }
+      : { clientId, boatId: boatId || null, language, validUntil: validUntil || undefined, ivaRate, notes, jobs: cleanJobs }
 
     const res = await fetch(endpoint, {
       method:  isEdit ? 'PUT' : 'POST',
@@ -340,6 +351,7 @@ export function DocumentBuilder({
                       setClientId(c.id)
                       setClientSearch(`${c.firstName} ${c.lastName}`)
                       if (c.language) setLanguage(c.language)
+                      setBoatId(c.boats?.length === 1 ? c.boats[0].id : '')
                     }}
                   >
                     <span className="text-gray-900 font-medium">{c.firstName} {c.lastName}</span>
@@ -356,6 +368,15 @@ export function DocumentBuilder({
             ))}
           </Select>
         </div>
+
+        {selectedClientBoats.length > 0 && (
+          <Select label="Лодка" value={boatId} onChange={(e) => setBoatId(e.target.value)}>
+            <option value="">— без привязки к лодке —</option>
+            {selectedClientBoats.map((b) => (
+              <option key={b.id} value={b.id}>{b.name || b.model || 'Без названия'}</option>
+            ))}
+          </Select>
+        )}
 
         {/* Работы */}
         <div className="space-y-3">

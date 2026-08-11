@@ -45,8 +45,9 @@ export async function POST(req: NextRequest) {
   requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'CREATE')
 
   const body = await req.json()
-  const { clientId, language, validUntil, ivaRate, notes, jobs } = body as {
+  const { clientId, boatId, language, validUntil, ivaRate, notes, jobs } = body as {
     clientId: string
+    boatId?: string | null
     language?: string
     validUntil?: string
     ivaRate?: string | number
@@ -58,6 +59,11 @@ export async function POST(req: NextRequest) {
 
   const client = await prisma.client.findFirst({ where: { id: clientId, companyId: session.user.companyId } })
   if (!client) return NextResponse.json({ error: 'Клиент не найден' }, { status: 404 })
+
+  if (boatId) {
+    const boat = await prisma.yacht.findFirst({ where: { id: boatId, clientId } })
+    if (!boat) return NextResponse.json({ error: 'Лодка не найдена у этого клиента' }, { status: 404 })
+  }
 
   let parsedJobs, jobsTotal, materialsTotal
   try {
@@ -79,6 +85,7 @@ export async function POST(req: NextRequest) {
         data: {
           companyId:  session.user.companyId,
           clientId,
+          boatId:     boatId || null,
           number,
           language:   language || client.language || 'ru',
           validUntil: validUntil ? new Date(validUntil) : null,

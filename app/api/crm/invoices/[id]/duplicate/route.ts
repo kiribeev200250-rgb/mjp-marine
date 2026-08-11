@@ -25,6 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         data: {
           companyId:     session.user.companyId,
           clientId:      source.clientId,
+          boatId:        source.boatId,
           number:        `ЧЕРНОВИК-${Date.now().toString(36)}`,
           year:           null,
           sequenceNum:    null,

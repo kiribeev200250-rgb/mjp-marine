@@ -6,7 +6,14 @@ import { Input, Select, Textarea, Button } from '@/components/crm/ui'
 import type { SerializedTask } from './types'
 
 interface ClientOption { id: string; firstName: string; lastName: string }
-interface Props { task?: SerializedTask; clients: ClientOption[]; defaultDate?: string }
+interface Props {
+  task?: SerializedTask
+  clients: ClientOption[]
+  defaultDate?: string
+  defaultClientId?: string
+  defaultBoatId?: string
+  defaultBoatName?: string
+}
 
 const STATUS_OPTIONS = [
   { value: 'NEW',         label: 'Новая'         },
@@ -16,14 +23,14 @@ const STATUS_OPTIONS = [
   { value: 'PROBLEM',     label: 'Проблема'      },
 ]
 
-export function TaskForm({ task, clients, defaultDate }: Props) {
+export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultBoatId, defaultBoatName }: Props) {
   const router = useRouter()
   const isEdit = !!task
 
   const [form, setForm] = useState({
     title:       task?.title       ?? '',
     description: task?.description ?? '',
-    clientId:    task?.clientId    ?? '',
+    clientId:    task?.clientId    ?? defaultClientId ?? '',
     marina:      task?.marina      ?? '',
     status:      task?.status      ?? 'NEW',
     scheduledAt: task?.scheduledAt ? task.scheduledAt.slice(0, 10) : (defaultDate ?? ''),
@@ -51,6 +58,7 @@ export function TaskForm({ task, clients, defaultDate }: Props) {
       scheduledAt: buildDatetime(form.scheduledAt, ''),
       startTime:   buildDatetime(form.scheduledAt, form.startTime),
       endTime:     buildDatetime(form.scheduledAt, form.endTime),
+      ...(!isEdit && defaultBoatId && { boatId: defaultBoatId }),
     }
 
     try {
@@ -102,6 +110,10 @@ export function TaskForm({ task, clients, defaultDate }: Props) {
           <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
         ))}
       </Select>
+
+      {!isEdit && defaultBoatId && (
+        <p className="text-label text-gray-500">🛥 Лодка: {defaultBoatName || '—'} (привяжется автоматически)</p>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <Input label="Марина" value={form.marina} onChange={(e) => set('marina', e.target.value)} placeholder="Puerto Blanco..." />

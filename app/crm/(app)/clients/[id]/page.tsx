@@ -4,6 +4,8 @@ import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
 import { FUNNEL_STAGE_LABELS, FUNNEL_STAGE_LABELS as FSL, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS, TASK_STATUS_LABELS, formatMoney } from '@/lib/crm/utils'
 import { Badge, FUNNEL_TONE, TASK_TONE, INVOICE_TONE, QUOTE_TONE, Button } from '@/components/crm/ui'
+import { NotesThread } from '@/components/crm/clients/NotesThread'
+import { AddBoatButton } from '@/components/crm/clients/AddBoatButton'
 
 const STAGE_ORDER = Object.keys(FSL)
 
@@ -33,18 +35,28 @@ export default async function ClientDetailPage({
   const client = await prisma.client.findFirst({
     where: { id, companyId: session.user.companyId },
     include: {
-      yachts:       { orderBy: { createdAt: 'asc' } },
+      yachts:       { where: { archived: false }, orderBy: { createdAt: 'asc' } },
       stageHistory: { orderBy: { createdAt: 'desc' } },
       quotes:       { orderBy: { createdAt: 'desc' } },
       tasks:        { orderBy: { scheduledAt: 'desc' } },
       invoices:     { orderBy: { date: 'desc' } },
       finances:     { orderBy: { date: 'desc' }, take: 10 },
+      noteEntries:  { orderBy: { createdAt: 'desc' }, include: { author: { select: { name: true } } } },
     },
   })
 
   if (!client) notFound()
 
   const stageIndex = STAGE_ORDER.indexOf(client.funnelStage)
+
+  // ── Сводка по клиенту ────────────────────────────────────────────────────
+  const paidTotal = client.invoices
+    .filter((i) => i.status === 'PAID')
+    .reduce((s, i) => s + Number(i.total), 0)
+  const debtTotal = client.invoices
+    .filter((i) => i.status === 'ISSUED' || i.status === 'PARTIAL' || i.status === 'OVERDUE')
+    .reduce((s, i) => s + Number(i.total), 0)
+  const dealsCount = client.invoices.filter((i) => i.status === 'PAID').length
 
   type FeedEvent = { date: Date; title: string; badge?: React.ReactNode; note?: string; href?: string }
   const feed: FeedEvent[] = [
@@ -100,6 +112,14 @@ export default async function ClientDetailPage({
         </Link>
       </div>
 
+      {/* Сводка по клиенту */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+        <Summary label="Оплачено всего" value={formatMoney(paidTotal)} />
+        <Summary label="В дебиторке" value={formatMoney(debtTotal)} danger={debtTotal > 0} />
+        <Summary label="Сделок (оплачено)" value={String(dealsCount)} />
+        <Summary label="Последняя активность" value={feed[0] ? new Date(feed[0].date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'} />
+      </div>
+
       <div className="flex-1 p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Левая колонка */}
@@ -112,7 +132,7 @@ export default async function ClientDetailPage({
               <InfoRow label="Язык" value={`${LANG_FLAG[client.language] ?? ''} ${client.language.toUpperCase()}`} />
               {client.notes && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-label text-gray-500 mb-1">Заметки</p>
+                  <p className="text-label text-gray-500 mb-1">Заметка</p>
                   <p className="text-body text-gray-900">{client.notes}</p>
                 </div>
               )}
@@ -131,15 +151,34 @@ export default async function ClientDetailPage({
               </div>
             </Card>
 
-            {client.yachts.length > 0 && (
-              <Card title="Яхты">
-                {client.yachts.map((y) => (
-                  <p key={y.id} className="text-body text-gray-900">
-                    ⛵ {y.model || 'Без названия'}{y.length ? ` · ${y.length} м` : ''}{y.marina ? ` · ${y.marina}` : ''}
-                  </p>
-                ))}
-              </Card>
-            )}
+            <div className="bg-white border border-gray-200 rounded-card shadow-e2 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide">Лодки</h2>
+                <AddBoatButton clientId={client.id} />
+              </div>
+              {client.yachts.length === 0 ? (
+                <p className="text-body text-gray-300 text-center py-3">Лодок пока нет</p>
+              ) : (
+                <div className="space-y-2">
+                  {client.yachts.map((y) => (
+                    <Link
+                      key={y.id}
+                      href={`/crm/clients/${client.id}/boats/${y.id}`}
+                      className="block px-3 py-2.5 rounded-control border border-gray-200 hover:border-gold hover:bg-gray-50/70 transition"
+                    >
+                      <p className="text-body font-medium text-gray-900">⛵ {y.name || y.model || 'Без названия'}</p>
+                      <p className="text-label text-gray-500 mt-0.5">
+                        {[y.model, y.length ? `${y.length} м` : null, y.marina].filter(Boolean).join(' · ') || '—'}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <NotesThread clientId={client.id} initial={client.noteEntries.map((n) => ({
+              id: n.id, text: n.text, createdAt: n.createdAt.toISOString(), authorName: n.author?.name ?? null,
+            }))} />
           </div>
 
           {/* Правая колонка */}
@@ -171,6 +210,15 @@ export default async function ClientDetailPage({
         </div>
       </div>
     </main>
+  )
+}
+
+function Summary({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <div>
+      <p className="text-label text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className={`text-body font-semibold tabular-nums ${danger ? 'text-danger' : 'text-gray-900'}`}>{value}</p>
+    </div>
   )
 }
 

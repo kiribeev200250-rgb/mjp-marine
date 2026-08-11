@@ -25,7 +25,10 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   const [clients, companyInfo, inventoryItems] = await Promise.all([
     prisma.client.findMany({
       where:   { companyId: session.user.companyId, active: true },
-      select:  { id: true, firstName: true, lastName: true, phone: true, marina: true, language: true },
+      select:  {
+        id: true, firstName: true, lastName: true, phone: true, marina: true, language: true,
+        yachts: { where: { archived: false }, select: { id: true, name: true, model: true }, orderBy: { createdAt: 'asc' } },
+      },
       orderBy: { firstName: 'asc' },
     }),
     prisma.companyInfo.findUnique({ where: { companyId: session.user.companyId } }),
@@ -38,6 +41,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
 
   const initialData: BuilderInitialData = {
     clientId:      invoice.clientId,
+    boatId:        invoice.boatId,
     language:      invoice.language,
     ivaRate:       invoice.ivaRate.toString(),
     irpfRate:      invoice.irpfRate.toString(),
@@ -74,7 +78,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
           mode="edit"
           documentId={invoice.id}
           initialData={initialData}
-          clients={clients}
+          clients={clients.map((c) => ({ ...c, boats: c.yachts.map((y) => ({ id: y.id, name: y.name, model: y.model })) }))}
           inventoryItems={inventoryItems.map((i) => ({ id: i.id, name: i.name, unit: i.unit, sellPrice: i.sellPrice.toString() }))}
           defaultIvaRate={String(companyInfo?.ivaRate ?? 21)}
           defaultIrpfRate={String(companyInfo?.irpfRate ?? 0)}

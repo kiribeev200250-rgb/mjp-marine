@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   requirePermission(session.user.role, session.user.permissions, 'SCHEDULE', 'CREATE')
 
   const body = await req.json()
-  const { title, description, clientId, marina, scheduledAt, startTime, endTime, isBacklog } = body
+  const { title, description, clientId, boatId, marina, scheduledAt, startTime, endTime, isBacklog } = body
 
   if (!title?.trim()) return NextResponse.json({ error: 'Название обязательно' }, { status: 422 })
 
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       description: description ?? '',
       marina:      marina ?? '',
       clientId:    clientId || null,
+      boatId:      boatId || null,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       startTime:   startTime  ? new Date(startTime)   : null,
       endTime:     endTime    ? new Date(endTime)      : null,

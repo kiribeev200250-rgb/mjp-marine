@@ -189,6 +189,7 @@ model Company {
   quotes      Quote[]
   references  ReferenceItem[]
   categories  Category[]
+  notes       Note[]
   auditLogs   AuditLog[]
   companyInfo CompanyInfo?
   goals       KpiGoal[]
@@ -215,6 +216,7 @@ model CrmUser {
 
   assignedTasks Task[]     @relation("TaskAssignee")
   auditLogs     AuditLog[]
+  notes         Note[]
 }
 
 // Хранилище сессий grammY (диалоги бота переживают серверлесс-инвокейшены)
@@ -304,6 +306,7 @@ model Client {
   invoices     Invoice[]
   finances     FinanceEntry[]
   stageHistory FunnelHistory[]
+  noteEntries  Note[]
 
   @@index([companyId, funnelStage])
   @@index([companyId, source])
@@ -342,11 +345,42 @@ model Yacht {
   id        String   @id @default(cuid())
   clientId  String
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String   @default("") // название лодки, отдельно от модели
   model     String   @default("")
   length    Decimal? @db.Decimal(5, 2)
+  engine    String   @default("") // двигатель/привод
   marina    String   @default("")
+  regNumber String   @default("")
   notes     String   @default("")
+  archived  Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  quotes      Quote[]
+  invoices    Invoice[]
+  tasks       Task[]
+  noteEntries Note[]    @relation("BoatNotes")
+
+  @@index([clientId])
+}
+
+// Датированные заметки — привязка либо к клиенту, либо к лодке (ровно одна).
+// Отдельно от Client.notes/Yacht.notes (тех единичных свободных полей) — здесь
+// растущая лента дописываемых записей с датой и автором.
+model Note {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  boatId    String?
+  boat      Yacht?   @relation("BoatNotes", fields: [boatId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    CrmUser? @relation(fields: [authorId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([companyId, clientId])
+  @@index([companyId, boatId])
 }
 
 // ─── ПРЕСМЕТЫ (QUOTES) ──────────────────────────────────────────
@@ -357,6 +391,8 @@ model Quote {
   company        Company     @relation(fields: [companyId], references: [id])
   clientId       String
   client         Client      @relation(fields: [clientId], references: [id])
+  boatId         String?
+  boat           Yacht?      @relation(fields: [boatId], references: [id])
   number         String
   status         QuoteStatus @default(DRAFT)
   language       String      @default("ru")
@@ -425,6 +461,8 @@ model Task {
   description         String     @default("")
   clientId            String?
   client              Client?    @relation(fields: [clientId], references: [id])
+  boatId              String?
+  boat                Yacht?     @relation(fields: [boatId], references: [id])
   quoteId             String?
   quote               Quote?     @relation(fields: [quoteId], references: [id])
   assigneeId          String?
@@ -615,6 +653,8 @@ model Invoice {
   company             Company       @relation(fields: [companyId], references: [id])
   clientId            String
   client              Client        @relation(fields: [clientId], references: [id])
+  boatId              String?
+  boat                Yacht?        @relation(fields: [boatId], references: [id])
   quoteId             String?
   quote               Quote?        @relation(fields: [quoteId], references: [id])
   number              String // F2025-001 — для черновиков временный вид "ЧЕРНОВИК-xxxx" до выпуска

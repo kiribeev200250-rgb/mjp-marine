@@ -45,10 +45,11 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const {
-    clientId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
+    clientId, boatId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
     clientNif, clientAddress, asDraft,
   } = body as {
     clientId: string
+    boatId?: string | null
     language?: string
     dueDate?: string
     ivaRate?: string | number
@@ -65,6 +66,11 @@ export async function POST(req: NextRequest) {
 
   const client = await prisma.client.findFirst({ where: { id: clientId, companyId: session.user.companyId } })
   if (!client) return NextResponse.json({ error: 'Клиент не найден' }, { status: 404 })
+
+  if (boatId) {
+    const boat = await prisma.yacht.findFirst({ where: { id: boatId, clientId } })
+    if (!boat) return NextResponse.json({ error: 'Лодка не найдена у этого клиента' }, { status: 404 })
+  }
 
   const companyInfo = await prisma.companyInfo.findUnique({ where: { companyId: session.user.companyId } })
   if (!companyInfo || companyInfo.legalName === 'ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ') {
@@ -97,6 +103,7 @@ export async function POST(req: NextRequest) {
         data: {
           companyId: session.user.companyId,
           clientId,
+          boatId: boatId || null,
           number,
           year:        numbering?.year ?? null,
           sequenceNum: numbering?.sequenceNum ?? null,
