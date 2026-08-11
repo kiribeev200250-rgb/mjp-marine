@@ -614,6 +614,11 @@ model FinanceEntry {
   receiptUrl     String?
   receiptDriveId String?
   sheetsSynced   Boolean          @default(false)
+  // ID строки из импортированной книги (например "EXP-001") — если задан,
+  // используется как ключ идемпотентности повторного импорта (см.
+  // lib/crm/services/importParser.ts). Namespaced на случай будущих
+  // источников импорта ("book:EXP-001").
+  importRef      String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -627,6 +632,7 @@ model FinanceEntry {
   reversalOf   FinanceEntry?  @relation("Reversal", fields: [reversalOfId], references: [id])
   reversals    FinanceEntry[] @relation("Reversal")
 
+  @@unique([companyId, importRef])
   @@index([companyId, type, date])
   @@index([categoryId])
   @@index([reversalOfId])
@@ -650,9 +656,12 @@ model CapitalEntry {
   amount       Decimal          @db.Decimal(12, 2)
   note         String           @default("")
   sheetsSynced Boolean          @default(false)
+  // См. FinanceEntry.importRef — тот же механизм идемпотентности импорта.
+  importRef    String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
+  @@unique([companyId, importRef])
   @@index([companyId, type, date])
 }
 

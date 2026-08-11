@@ -105,11 +105,14 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <h1 className="text-heading font-bold text-gray-900">Финансы</h1>
-        {/* Month nav */}
-        <div className="flex items-center gap-2">
-          <a href={`?month=${prev}`} className="px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition">‹</a>
-          <span className="text-body font-semibold text-gray-900 min-w-[140px] text-center capitalize">{monthLabel(ym)}</span>
-          <a href={`?month=${next}`} className={`px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition ${ym >= ymDefault ? 'opacity-30 pointer-events-none' : ''}`}>›</a>
+        <div className="flex items-center gap-4">
+          <a href="/crm/finance/import" className="text-body text-info hover:underline">Импорт из таблицы</a>
+          {/* Month nav */}
+          <div className="flex items-center gap-2">
+            <a href={`?month=${prev}`} className="px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition">‹</a>
+            <span className="text-body font-semibold text-gray-900 min-w-[140px] text-center capitalize">{monthLabel(ym)}</span>
+            <a href={`?month=${next}`} className={`px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition ${ym >= ymDefault ? 'opacity-30 pointer-events-none' : ''}`}>›</a>
+          </div>
         </div>
       </div>
 
