@@ -142,7 +142,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   return (
     <main className="flex-1 overflow-y-auto flex flex-col">
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-        <h1 className="text-heading font-bold text-gray-900">Аналитика</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-heading font-bold text-gray-900">Аналитика</h1>
+          <Link href="/crm/reports/pl" className="text-label text-gold hover:underline">P&L — финансовый центр →</Link>
+        </div>
         <div className="flex items-center gap-2">
           <Link href={`?month=${prev}`} className="px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition">‹</Link>
           <span className="text-body font-semibold text-gray-900 min-w-[140px] text-center capitalize">{monthLabel(ym)}</span>
