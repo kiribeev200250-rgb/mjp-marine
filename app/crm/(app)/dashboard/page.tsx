@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { KpiCard, Card, SectionHeader, Badge, FUNNEL_TONE } from '@/components/crm/ui'
 import { FUNNEL_STAGE_LABELS, formatMoney, isNegativeMoney } from '@/lib/crm/utils'
 import { RevenueChart } from '@/components/crm/dashboard/RevenueChart'
+import { computeCashSummary } from '@/lib/crm/services/cash'
 import Decimal from 'decimal.js'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -41,7 +42,7 @@ export default async function DashboardPage() {
 
   // ── KPI queries ────────────────────────────────────────────────────────────
   const [
-    [allFinances, reinvestments],
+    cashSummary,
     monthFinances,
     invoiceAgg,
     overdueCount,
@@ -53,17 +54,8 @@ export default async function DashboardPage() {
     recentAudit,
     chartFinances,
   ] = await Promise.all([
-    // 1. Касса: INCOME/EXPENSE/SALARY из FinanceEntry + REINVESTMENT из CapitalEntry
-    Promise.all([
-      prisma.financeEntry.findMany({
-        where:  { companyId, type: { in: ['INCOME','EXPENSE','SALARY'] } },
-        select: { type: true, amount: true },
-      }),
-      prisma.capitalEntry.findMany({
-        where:  { companyId, type: 'REINVESTMENT' },
-        select: { amount: true },
-      }),
-    ]),
+    // 1. Касса — единая формула, см. lib/crm/services/cash.ts
+    computeCashSummary(companyId),
     // 2. P&L this month
     prisma.financeEntry.findMany({
       where:  { companyId, date: { gte: monthStart, lte: now }, type: { in: ['INCOME','EXPENSE','SALARY'] } },
@@ -108,15 +100,7 @@ export default async function DashboardPage() {
 
   // ── KPI computations ───────────────────────────────────────────────────────
 
-  let cash = new Decimal(0)
-  for (const f of allFinances) {
-    const a = new Decimal(f.amount.toString())
-    if (f.type === 'INCOME') cash = cash.plus(a)
-    else                     cash = cash.minus(a)
-  }
-  for (const r of reinvestments) {
-    cash = cash.plus(new Decimal(r.amount.toString()))
-  }
+  const cash = cashSummary.cash
 
   let plMonth = new Decimal(0)
   for (const f of monthFinances) {
@@ -191,8 +175,8 @@ export default async function DashboardPage() {
           <KpiCard
             label="Касса"
             value={<span className={isNegativeMoney(cash) ? 'text-danger' : ''}>{formatMoney(cash)}</span>}
-            delta={cash.isZero() ? 'Нет данных' : undefined}
-            deltaTone="neutral"
+            delta={cash.isZero() ? 'Нет данных' : cashSummary.personalInProject.gt(0) ? `Личные: ${formatMoney(cashSummary.personalInProject)}` : undefined}
+            deltaTone={cashSummary.personalInProject.gt(0) ? 'danger' : 'neutral'}
           />
         </Link>
         <Link href="/crm/finance">

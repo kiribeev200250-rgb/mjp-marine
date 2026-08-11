@@ -3,6 +3,7 @@ import Decimal from 'decimal.js'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { nextFinanceAutoId } from '@/lib/crm/numbering'
 import { findOrCreateCategory } from '@/lib/crm/services/categories'
+import { recordVat } from '@/lib/crm/services/vat'
 
 type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 
@@ -123,10 +124,20 @@ export async function returnInvoiceMaterials(
 
 // Оплата фактуры: доход в P&L/кассу, снятие с дебиторки, воронка → «Оплачено».
 // Идемпотентно — повторный вызов на уже оплаченной фактуре ничего не делает.
+//
+// IVA не деньги компании — в P&L идёт только база (нетто). Полная сумма
+// (нетто+IVA) физически приходит на счёт (касса это видит через IVA repercutido,
+// см. ниже), но доходом/прибылью считается только нетто. IRPF (если есть) клиент
+// удерживает и платит в Hacienda сам — эти деньги в кассу вообще не попадают,
+// поэтому кассовые формулы (dashboard/finance/reports-pl) отдельно вычитают
+// Σ invoice.irpfAmount по оплаченным счетам.
 export async function recordPayment(
   tx: Tx,
   companyId: string,
-  invoice: { id: string; number: string; clientId: string; total: unknown; status: string; paymentMethod: string },
+  invoice: {
+    id: string; number: string; clientId: string; status: string; paymentMethod: string
+    subtotal: unknown; ivaAmount: unknown; ivaRate: unknown
+  },
   paymentMethod?: string,
 ): Promise<string[]> {
   const current = await tx.invoice.findUnique({ where: { id: invoice.id }, select: { status: true } })
@@ -134,39 +145,59 @@ export async function recordPayment(
 
   const year   = new Date().getFullYear()
   const autoId = await nextFinanceAutoId(companyId, 'INCOME', year)
-  const amount = new Decimal(String(invoice.total))
+  const netAmount = new Decimal(String(invoice.subtotal))
+  const ivaAmount = new Decimal(String(invoice.ivaAmount))
+  const ivaRate   = new Decimal(String(invoice.ivaRate))
   const category = await findOrCreateCategory(tx, companyId, 'INCOME', 'Работы по фактуре')
+  const now = new Date()
 
-  await tx.financeEntry.create({
+  const entry = await tx.financeEntry.create({
     data: {
       companyId,
       autoId,
       type:          'INCOME',
-      date:          new Date(),
+      date:          now,
       category:      category.name,
       categoryId:    category.id,
-      amountExpr:    amount.toString(),
-      amount,
+      amountExpr:    netAmount.toString(),
+      amount:        netAmount,
       paymentMethod: invoice.paymentMethod || paymentMethod || '',
       description:   `Оплата счёта ${invoice.number}`,
       clientId:      invoice.clientId,
       invoiceId:     invoice.id,
     },
   })
+
+  await recordVat(tx, companyId, {
+    direction:      'REPERCUTIDO',
+    date:           now,
+    baseAmount:     netAmount,
+    rate:           ivaRate,
+    amount:         ivaAmount,
+    invoiceId:      invoice.id,
+    financeEntryId: entry.id,
+    note:           `Счёт ${invoice.number}`,
+  })
+
   await tx.invoice.update({
     where: { id: invoice.id },
-    data:  { status: 'PAID', paidAt: new Date(), ...(paymentMethod && { paymentMethod }) },
+    data:  { status: 'PAID', paidAt: now, ...(paymentMethod && { paymentMethod }) },
   })
   await tx.client.update({ where: { id: invoice.clientId }, data: { funnelStage: 'PAID' } })
   await tx.funnelHistory.create({
     data: { clientId: invoice.clientId, fromStage: 'INVOICE_SENT', toStage: 'PAID', note: `Счёт ${invoice.number} оплачен` },
   })
 
-  return [
-    `Доход +${amount.toFixed(2)} € (${autoId}) зачислен в P&L и кассу`,
+  const grossReceived = netAmount.plus(ivaAmount)
+  const lines = [
+    `Доход +${netAmount.toFixed(2)} € (${autoId}) зачислен в P&L — это нетто, без IVA`,
     `Счёт ${invoice.number} снят с дебиторки`,
     `Клиент переведён на стадию «Оплачено»`,
   ]
+  if (ivaAmount.gt(0)) {
+    lines.push(`На счёт поступило ${grossReceived.toFixed(2)} € (нетто ${netAmount.toFixed(2)} € + IVA ${ivaAmount.toFixed(2)} €) — IVA отложен как repercutido, не прибыль`)
+  }
+  return lines
 }
 
 // Отмена оплаты: сторнирует связанный FinanceEntry (удаляет из P&L/кассы —
@@ -181,7 +212,7 @@ export async function reversePayment(
   if (current?.status !== 'PAID') return []
 
   const lines: string[] = []
-  const entry = await tx.financeEntry.findFirst({ where: { invoiceId: invoice.id, type: 'INCOME' } })
+  const entry = await tx.financeEntry.findFirst({ where: { invoiceId: invoice.id, type: 'INCOME' }, include: { vatEntry: true } })
   if (entry) {
     await tx.auditLog.create({
       data: {
@@ -190,12 +221,17 @@ export async function reversePayment(
         action: 'DELETE',
         entity: 'FinanceEntry',
         entityId: entry.id,
-        oldValue: { autoId: entry.autoId, amount: entry.amount.toString() },
+        oldValue: { autoId: entry.autoId, amount: entry.amount.toString(), vatAmount: entry.vatEntry?.amount.toString() },
         meta: { reason: 'unpay-invoice', invoiceId: invoice.id },
       },
     })
+    // VatEntry (repercutido) удаляется автоматически каскадом (onDelete: Cascade
+    // на financeEntryId) — отдельного удаления не требуется.
     await tx.financeEntry.delete({ where: { id: entry.id } })
     lines.push(`Доход ${entry.autoId} на ${new Decimal(entry.amount.toString()).toFixed(2)} € удалён из P&L и кассы`)
+    if (entry.vatEntry) {
+      lines.push(`IVA repercutido ${new Decimal(entry.vatEntry.amount.toString()).toFixed(2)} € по этому счёту тоже снят`)
+    }
   }
 
   await tx.invoice.update({ where: { id: invoice.id }, data: { status: 'ISSUED', paidAt: null } })

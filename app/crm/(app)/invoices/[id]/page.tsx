@@ -44,6 +44,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       client: true,
       quote:  { select: { id: true, number: true } },
       finances: true,
+      vatEntries: { where: { direction: 'REPERCUTIDO' } },
       stockMovements: { orderBy: { createdAt: 'desc' }, include: { item: { select: { name: true, unit: true } } } },
     },
   })
@@ -94,12 +95,28 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
           {invoice.finances.length > 0 && (
             <Card title="Связанные платежи">
-              {invoice.finances.map((f) => (
-                <div key={f.id} className="flex justify-between text-body">
-                  <span className="text-gray-500">{f.autoId}</span>
-                  <span className="text-success font-semibold tabular-nums">+{formatMoney(f.amount)}</span>
-                </div>
-              ))}
+              {invoice.finances.map((f) => {
+                const vat = invoice.vatEntries.find((v) => v.financeEntryId === f.id)
+                const gross = vat ? f.amount.plus(vat.amount) : f.amount
+                return (
+                  <div key={f.id} className="space-y-1">
+                    <div className="flex justify-between text-body">
+                      <span className="text-gray-500">{f.autoId} · получено</span>
+                      <span className="text-gray-900 font-semibold tabular-nums">{formatMoney(gross)}</span>
+                    </div>
+                    <div className="flex justify-between text-label pl-2">
+                      <span className="text-gray-500">— доход в P&L (нетто)</span>
+                      <span className="text-success tabular-nums">+{formatMoney(f.amount)}</span>
+                    </div>
+                    {vat && (
+                      <div className="flex justify-between text-label pl-2">
+                        <span className="text-gray-500">— IVA к уплате (не прибыль)</span>
+                        <span className="text-warning tabular-nums">{formatMoney(vat.amount)}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </Card>
           )}
 
@@ -125,7 +142,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                   <TrailRow
                     key={f.id}
                     date={f.createdAt}
-                    text={`Финансы: ${f.autoId} — доход ${formatMoney(f.amount)}`}
+                    text={`Финансы: ${f.autoId} — доход (нетто) ${formatMoney(f.amount)}`}
                   />
                 ))}
                 {auditTrail.map((a) => (

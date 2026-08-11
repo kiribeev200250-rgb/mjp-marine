@@ -3,6 +3,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/crm/permissions'
 import { parseAmountExpr } from '@/lib/crm/utils'
+import Decimal from 'decimal.js'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -20,37 +21,58 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const body = await req.json()
   const { category, amountExpr, date, paymentMethod, description } = body
 
-  let amount = existing.amount
+  // Если у записи уже есть IVA, введённая сумма по-прежнему брутто — пересчитываем
+  // нетто/vat по её текущей ставке (ставку саму по себе PATCH не меняет).
+  let amount    = existing.amount
+  let vatAmount = existing.vatAmount
   if (amountExpr != null) {
     try {
-      amount = parseAmountExpr(String(amountExpr))
-      if (amount.lte(0)) throw new Error('Сумма должна быть > 0')
+      const parsed = parseAmountExpr(String(amountExpr))
+      if (parsed.lte(0)) throw new Error('Сумма должна быть > 0')
+      if (existing.hasVat) {
+        const rate = new Decimal(existing.vatRate.toString())
+        amount    = parsed.div(rate.div(100).plus(1)).toDecimalPlaces(2)
+        vatAmount = parsed.minus(amount)
+      } else {
+        amount = parsed
+      }
     } catch (e: unknown) {
       return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректная сумма' }, { status: 400 })
     }
   }
 
-  const updated = await prisma.financeEntry.update({
-    where: { id },
-    data: {
-      ...(category      != null && { category:      category.trim()      }),
-      ...(amountExpr    != null && { amountExpr:    String(amountExpr), amount }),
-      ...(date          != null && { date:           new Date(date)       }),
-      ...(paymentMethod != null && { paymentMethod: paymentMethod.trim() }),
-      ...(description   != null && { description:   description.trim()   }),
-    },
-  })
+  const updated = await prisma.$transaction(async (tx) => {
+    const u = await tx.financeEntry.update({
+      where: { id },
+      data: {
+        ...(category      != null && { category:      category.trim()      }),
+        ...(amountExpr    != null && { amountExpr:    String(amountExpr), amount, vatAmount }),
+        ...(date          != null && { date:           new Date(date)       }),
+        ...(paymentMethod != null && { paymentMethod: paymentMethod.trim() }),
+        ...(description   != null && { description:   description.trim()   }),
+      },
+    })
 
-  await prisma.auditLog.create({
-    data: {
-      companyId: session.user.companyId,
-      userId:    session.user.id,
-      action:    'UPDATE',
-      entity:    'FinanceEntry',
-      entityId:  id,
-      oldValue:  { amount: existing.amount, category: existing.category },
-      newValue:  body,
-    },
+    if (amountExpr != null && existing.hasVat) {
+      await tx.vatEntry.updateMany({
+        where: { financeEntryId: id },
+        data:  { baseAmount: amount, amount: vatAmount },
+      })
+    }
+
+    await tx.auditLog.create({
+      data: {
+        companyId: session.user.companyId,
+        userId:    session.user.id,
+        action:    'UPDATE',
+        entity:    'FinanceEntry',
+        entityId:  id,
+        oldValue:  { amount: existing.amount, category: existing.category },
+        newValue:  body,
+      },
+    })
+
+    return u
   })
 
   return NextResponse.json(updated)

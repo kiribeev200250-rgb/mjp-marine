@@ -14,6 +14,7 @@ const TYPE_LABELS: Record<FinanceEntryType, string> = {
 }
 
 const PAYMENT_METHODS = ['Наличные', 'Карта', 'Перевод', 'Bizum']
+const VAT_RATES = [21, 10, 4]
 
 const TODAY = localDateStr(new Date())
 
@@ -40,6 +41,8 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
   const [type,          setType]          = useState<FinanceEntryType>('INCOME')
   const [category,      setCategory]      = useState<CategoryOption | null>(null)
   const [amountExpr,    setAmountExpr]    = useState('')
+  const [hasVat,        setHasVat]        = useState(false)
+  const [vatRate,       setVatRate]       = useState(VAT_RATES[0])
   const [date,          setDate]          = useState(TODAY)
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
   const [description,   setDescription]   = useState('')
@@ -63,7 +66,10 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
     const res = await fetch('/api/crm/finance', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ type, categoryId: category.id, amountExpr, date, paymentMethod, description }),
+      body:    JSON.stringify({
+        type, categoryId: category.id, amountExpr, date, paymentMethod, description,
+        hasVat: type === 'EXPENSE' && hasVat, vatRate,
+      }),
     })
     setSaving(false)
 
@@ -129,6 +135,44 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
           className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
         />
       </div>
+
+      {type === 'EXPENSE' && (
+        <div className="space-y-1.5">
+          <label className="flex items-center gap-2 text-label text-gray-700 cursor-pointer select-none">
+            <input type="checkbox" checked={hasVat} onChange={(e) => setHasVat(e.target.checked)} className="rounded" />
+            Сумма с IVA (введена брутто, как в чеке)
+          </label>
+          {hasVat && (
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-control overflow-hidden border border-gray-200">
+                {VAT_RATES.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setVatRate(r)}
+                    className={`px-2.5 py-1 text-label font-semibold transition ${
+                      vatRate === r ? 'bg-navy-900 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {r}%
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const gross = parseFloat(amountExpr.replace(',', '.'))
+                if (!gross || isNaN(gross)) return null
+                const net = gross / (1 + vatRate / 100)
+                const vat = gross - net
+                return (
+                  <span className="text-label text-gray-500">
+                    нетто {net.toFixed(2)} € · IVA {vat.toFixed(2)} €
+                  </span>
+                )
+              })()}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">

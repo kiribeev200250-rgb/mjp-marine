@@ -6,6 +6,8 @@ import { formatMoney } from '@/lib/crm/utils'
 import { KpiCard, ExportCsvButton } from '@/components/crm/ui'
 import { QuickEntryForm } from '@/components/crm/finance/QuickEntryForm'
 import { DeleteEntryButton } from '@/components/crm/finance/DeleteEntryButton'
+import { CapitalEntryButton } from '@/components/crm/finance/CapitalEntryButton'
+import { computeCashSummary } from '@/lib/crm/services/cash'
 import Decimal from 'decimal.js'
 
 interface SearchParams { month?: string }
@@ -50,7 +52,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const prev = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
   const next = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
 
-  const [monthEntries, allEntries, capitalEntries] = await Promise.all([
+  const [monthEntries, allEntries, cashSummary] = await Promise.all([
     // Current month finance entries
     prisma.financeEntry.findMany({
       where:   { companyId: session.user.companyId, date: { gte: from, lt: to } },
@@ -64,24 +66,17 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       take:    30,
       include: { client: { select: { firstName: true, lastName: true } }, categoryRef: { select: { name: true } } },
     }),
-    // All capital entries for cash-on-hand
-    prisma.capitalEntry.findMany({
-      where: { companyId: session.user.companyId, type: 'REINVESTMENT' },
-    }),
+    // Касса — единая формула (реинвестиции + доход/расход нетто + IVA − IRPF), см. lib/crm/services/cash.ts
+    computeCashSummary(session.user.companyId),
   ])
 
-  // KPI calculations
+  // KPI calculations (за месяц — уже нетто, IVA сюда не попадает)
   const income  = monthEntries.filter((e) => e.type === 'INCOME') .reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
   const expense = monthEntries.filter((e) => e.type === 'EXPENSE').reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
   const salary  = monthEntries.filter((e) => e.type === 'SALARY') .reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
   const pl      = income.minus(expense).minus(salary)
 
-  // Cash on hand = all-time income+reinvestment − expense − salary
-  const allIncome   = allEntries.filter((e) => e.type === 'INCOME') .reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
-  const allExpense  = allEntries.filter((e) => e.type === 'EXPENSE').reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
-  const allSalary   = allEntries.filter((e) => e.type === 'SALARY') .reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
-  const reinvest    = capitalEntries.reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
-  const cash        = allIncome.plus(reinvest).minus(allExpense).minus(allSalary)
+  const cash = cashSummary.cash
 
   // Expenses by category for this month
   const expenseEntries = monthEntries.filter((e) => e.type === 'EXPENSE' || e.type === 'SALARY')
@@ -119,10 +114,15 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       </div>
 
       {/* KPI row */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 grid grid-cols-4 gap-4">
+      <div className="bg-white border-b border-gray-100 px-6 py-4 grid grid-cols-5 gap-4">
         <KpiCard label="Доход за месяц"   value={formatMoney(income)}  deltaTone="success" />
         <KpiCard label="Расход + зарплата" value={formatMoney(expense.plus(salary))} deltaTone={expense.plus(salary).gt(0) ? 'danger' : 'neutral'} />
         <KpiCard label="Касса (всего)"    value={formatMoney(cash)}    deltaTone={cash.gte(0) ? 'success' : 'danger'} />
+        <KpiCard
+          label="Личные в проекте"
+          value={cashSummary.personalInProject.gt(0) ? formatMoney(cashSummary.personalInProject) : '—'}
+          deltaTone={cashSummary.personalInProject.gt(0) ? 'danger' : 'neutral'}
+        />
         <KpiCard
           label="P&L за месяц"
           value={formatMoney(pl)}
@@ -138,7 +138,10 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-subheading font-bold text-gray-900">Быстрый ввод</h2>
-            <a href="/crm/finance/categories" className="text-label text-gray-500 hover:text-gold transition">Категории</a>
+            <div className="flex items-center gap-3">
+              <CapitalEntryButton />
+              <a href="/crm/finance/categories" className="text-label text-gray-500 hover:text-gold transition">Категории</a>
+            </div>
           </div>
           <QuickEntryForm />
         </div>

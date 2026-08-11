@@ -7,6 +7,8 @@ import { prisma } from '@/lib/prisma'
 import { formatMoney, isNegativeMoney } from '@/lib/crm/utils'
 import { ExportCsvButton } from '@/components/crm/ui'
 import { PLGrid, type PLCategory, type PLEntry } from '@/components/crm/reports/PLGrid'
+import { VatGrid, type VatEntryRow } from '@/components/crm/reports/VatGrid'
+import { computeCashSummary } from '@/lib/crm/services/cash'
 
 interface SearchParams { year?: string }
 
@@ -41,8 +43,8 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
   const [
     categories,
     yearEntriesRaw,
-    allTimeByType,
-    capitalByType,
+    cashSummary,
+    vatEntriesYearRaw,
     outstandingInvoices,
     paidInvoicesYear,
     leadsCount,
@@ -59,8 +61,16 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
       where:  { companyId, date: { gte: yearStart, lt: yearEnd } },
       select: { id: true, categoryId: true, category: true, type: true, amount: true, date: true, autoId: true, description: true, paymentMethod: true },
     }),
-    prisma.financeEntry.groupBy({ by: ['type'], where: { companyId }, _sum: { amount: true } }),
-    prisma.capitalEntry.groupBy({ by: ['type'], where: { companyId }, _sum: { amount: true } }),
+    // Касса и капитал — единая формула, см. lib/crm/services/cash.ts
+    computeCashSummary(companyId),
+    prisma.vatEntry.findMany({
+      where:   { companyId, date: { gte: yearStart, lt: yearEnd } },
+      include: {
+        invoice:      { select: { id: true, number: true } },
+        financeEntry: { select: { autoId: true, description: true } },
+      },
+      orderBy: { date: 'desc' },
+    }),
     prisma.invoice.findMany({
       where:   { companyId, status: { in: ['ISSUED', 'PARTIAL', 'OVERDUE'] } },
       include: { client: { select: { id: true, firstName: true, lastName: true } } },
@@ -93,6 +103,13 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
     id: e.id, categoryId: e.categoryId, category: e.category, type: e.type,
     amount: e.amount.toString(), date: e.date.toISOString(), autoId: e.autoId,
     description: e.description, paymentMethod: e.paymentMethod,
+  }))
+
+  const vatEntriesYear: VatEntryRow[] = vatEntriesYearRaw.map((e) => ({
+    id: e.id, direction: e.direction, date: e.date.toISOString(),
+    amount: e.amount.toString(), baseAmount: e.baseAmount.toString(), rate: e.rate.toString(),
+    note: e.note, invoiceId: e.invoice?.id ?? null, invoiceNumber: e.invoice?.number ?? null,
+    financeAutoId: e.financeEntry?.autoId ?? null,
   }))
 
   // ── CSV rows (тот же расчёт, что в PLGrid — единый источник данных: yearEntriesRaw) ──
@@ -128,18 +145,7 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
   csvRows.push(['ПРИБЫЛЬ / УБЫТОК', ...monthProfit.map((m) => m.toNumber()), monthProfit.reduce((s, m) => s.plus(m), new Decimal(0)).toNumber()])
 
   // ── Блок 2: капитал и касса ──────────────────────────────────────────────
-  const capMap = Object.fromEntries(capitalByType.map((c) => [c.type, new Decimal(c._sum.amount?.toString() ?? 0)]))
-  const reinvested   = capMap['REINVESTMENT']   ?? new Decimal(0)
-  const startupAsset = capMap['STARTUP_ASSET']  ?? new Decimal(0)
-  const startupSunk  = capMap['STARTUP_SUNK']   ?? new Decimal(0)
-  const totalInvested = reinvested.plus(startupAsset).plus(startupSunk)
-
-  const byTypeMap = Object.fromEntries(allTimeByType.map((t) => [t.type, new Decimal(t._sum.amount?.toString() ?? 0)]))
-  const allIncome  = byTypeMap['INCOME']  ?? new Decimal(0)
-  const allExpense = byTypeMap['EXPENSE'] ?? new Decimal(0)
-  const allSalary  = byTypeMap['SALARY']  ?? new Decimal(0)
-  const cash = reinvested.plus(allIncome).minus(allExpense).minus(allSalary)
-  const personalInProject = cash.isNegative() ? cash.abs() : new Decimal(0)
+  const { reinvested, startupAsset, startupSunk, totalInvested, cash, personalInProject, vatRepercutido, vatSoportado, vatPayable } = cashSummary
 
   const plYearTotal  = monthProfit.reduce((s, m) => s.plus(m), new Decimal(0))
   const currentMonthIdx = year === today.getFullYear() ? today.getMonth() : null
@@ -238,15 +244,27 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
         {/* Блок 2 — Капитал и касса */}
         <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
           <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Капитал и касса</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-x-6 gap-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-x-6 gap-y-3">
             <Metric label="Вложено всего" value={formatMoney(totalInvested)} />
             <Metric label="— доинвестиции" value={formatMoney(reinvested)} sub />
             <Metric label="— стартовые (актив)" value={formatMoney(startupAsset)} sub />
             <Metric label="— стартовые (невозврат.)" value={formatMoney(startupSunk)} sub />
             <Metric label="Касса" value={formatMoney(cash)} danger={isNegativeMoney(cash)} />
+            <Metric label="— из них IVA к уплате" value={vatPayable.gt(0) ? formatMoney(vatPayable) : '—'} sub danger={vatPayable.gt(0)} />
             <Metric label="Личные в проекте" value={personalInProject.gt(0) ? formatMoney(personalInProject) : '—'} danger={personalInProject.gt(0)} />
             <Metric label={`P&L за ${year}`} value={formatMoney(plYearTotal)} danger={isNegativeMoney(plYearTotal)} />
           </div>
+        </div>
+
+        {/* Блок IVA — repercutido / soportado / к уплате по кварталам */}
+        <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
+          <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-1">IVA · {year}</h2>
+          <p className="text-label text-gray-500 mb-3">Не прибыль и не расход — деньги для государства. Только для контроля и modelo 303.</p>
+          {vatEntriesYear.length === 0 ? (
+            <p className="text-body text-gray-300 text-center py-4">За {year} год операций с IVA нет</p>
+          ) : (
+            <VatGrid entries={vatEntriesYear} />
+          )}
         </div>
 
         {/* Блок 1 — P&L таблица */}
