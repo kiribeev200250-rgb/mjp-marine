@@ -233,10 +233,15 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
           <span className="text-gray-500">/</span>
           <h1 className="text-heading font-bold text-gray-900">P&L — финансовый центр</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href={`?year=${prevYear}`} className="px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition">‹</Link>
-          <span className="text-body font-semibold text-gray-900 min-w-[60px] text-center">{year}</span>
-          <Link href={`?year=${nextYear}`} className={`px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition ${year >= today.getFullYear() ? 'opacity-30 pointer-events-none' : ''}`}>›</Link>
+        <div className="flex items-center gap-4">
+          <a href={`/api/crm/reports/gestor-export?year=${year}`} className="text-body text-info hover:underline">
+            Скачать для бухгалтера ({year})
+          </a>
+          <div className="flex items-center gap-2">
+            <Link href={`?year=${prevYear}`} className="px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition">‹</Link>
+            <span className="text-body font-semibold text-gray-900 min-w-[60px] text-center">{year}</span>
+            <Link href={`?year=${nextYear}`} className={`px-2.5 py-1 rounded-control border border-gray-200 text-label text-gray-500 hover:bg-gray-50 transition ${year >= today.getFullYear() ? 'opacity-30 pointer-events-none' : ''}`}>›</Link>
+          </div>
         </div>
       </div>
 

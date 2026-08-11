@@ -106,6 +106,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <h1 className="text-heading font-bold text-gray-900">Финансы</h1>
         <div className="flex items-center gap-4">
+          <a href="/crm/finance/recurring" className="text-body text-info hover:underline">Повторяющиеся расходы</a>
           <a href="/crm/finance/import" className="text-body text-info hover:underline">Импорт из таблицы</a>
           {/* Month nav */}
           <div className="flex items-center gap-2">

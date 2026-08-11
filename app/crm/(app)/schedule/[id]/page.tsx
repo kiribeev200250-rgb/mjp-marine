@@ -6,6 +6,7 @@ import { TaskForm } from '@/components/crm/schedule/TaskForm'
 import { QuickStatusPanel } from '@/components/crm/schedule/QuickStatusPanel'
 import { MaterialsSection, type TaskMaterial } from '@/components/crm/schedule/MaterialsSection'
 import { PhotosSection } from '@/components/crm/schedule/PhotosSection'
+import { SeasonalReminderPanel } from '@/components/crm/schedule/SeasonalReminderPanel'
 import { Badge, TASK_TONE } from '@/components/crm/ui'
 import { TASK_STATUS_LABELS } from '@/lib/crm/utils'
 import type { SerializedTask, ClientWithBoats } from '@/components/crm/schedule/types'
@@ -117,6 +118,9 @@ export default async function TaskDetailPage({
               <InfoRow label="Создана" value={new Date(task.createdAt).toLocaleDateString('ru-RU')} />
             </div>
             <QuickStatusPanel taskId={task.id} current={task.status} />
+            {task.status === 'DONE' && task.clientId && (
+              <SeasonalReminderPanel taskId={task.id} defaultTitle={`Повторный сервис: ${task.title}`} />
+            )}
           </div>
         </div>
       </div>

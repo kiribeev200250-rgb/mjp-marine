@@ -193,3 +193,45 @@ export async function sendWelcomeEmail(to: string, name: string, lang: string) {
     html: bodies[lang] ?? bodies.en,
   });
 }
+
+// Вежливое напоминание клиенту о просроченном счёте — из cron
+// (app/api/crm/cron/reminders/route.ts). БЕЗ вложения PDF: рендер PDF
+// использует react-pdf JSX, который ломается при импорте из app/api/**
+// (см. заметку по Этапу 6 в CLAUDE.md) — этот cron живёт в App Router, а не
+// в Pages Router, куда вынесены остальные PDF-роуты. Без публичной ссылки на
+// счёт — у Invoice (в отличие от Quote) нет publicToken/токена вообще.
+const OVERDUE_SUBJECTS: Record<string, (n: string) => string> = {
+  ru: (n) => `Напоминание об оплате — счёт ${n} — MJP Marine Service`,
+  en: (n) => `Payment reminder — invoice ${n} — MJP Marine Service`,
+  es: (n) => `Recordatorio de pago — factura ${n} — MJP Marine Service`,
+  uk: (n) => `Нагадування про оплату — рахунок ${n} — MJP Marine Service`,
+  pl: (n) => `Przypomnienie o płatności — faktura ${n} — MJP Marine Service`,
+};
+
+const OVERDUE_BODIES: Record<string, (name: string, number: string, total: string, dueDate: string) => string> = {
+  ru: (name, number, total, dueDate) =>
+    `<p>Здравствуйте, ${esc(name)}!</p><p>Напоминаем о неоплаченном счёте <b>${esc(number)}</b> на сумму <b>${esc(total)}</b> — срок оплаты был ${esc(dueDate)}.</p><p>Пожалуйста, свяжитесь с нами, если возникли вопросы по оплате.</p><p>— MJP Marine Service</p>`,
+  en: (name, number, total, dueDate) =>
+    `<p>Hello ${esc(name)},</p><p>This is a reminder that invoice <b>${esc(number)}</b> for <b>${esc(total)}</b> was due on ${esc(dueDate)} and remains unpaid.</p><p>Please get in touch if you have any questions about payment.</p><p>— MJP Marine Service</p>`,
+  es: (name, number, total, dueDate) =>
+    `<p>Hola ${esc(name)},</p><p>Le recordamos que la factura <b>${esc(number)}</b> por <b>${esc(total)}</b> venció el ${esc(dueDate)} y sigue pendiente de pago.</p><p>Contáctenos si tiene alguna duda sobre el pago.</p><p>— MJP Marine Service</p>`,
+  uk: (name, number, total, dueDate) =>
+    `<p>Вітаємо, ${esc(name)}!</p><p>Нагадуємо про неоплачений рахунок <b>${esc(number)}</b> на суму <b>${esc(total)}</b> — термін оплати був ${esc(dueDate)}.</p><p>Будь ласка, зв'яжіться з нами, якщо виникли питання щодо оплати.</p><p>— MJP Marine Service</p>`,
+  pl: (name, number, total, dueDate) =>
+    `<p>Witaj, ${esc(name)}!</p><p>Przypominamy o nieopłaconej fakturze <b>${esc(number)}</b> na kwotę <b>${esc(total)}</b> — termin płatności upłynął ${esc(dueDate)}.</p><p>Prosimy o kontakt w razie pytań dotyczących płatności.</p><p>— MJP Marine Service</p>`,
+};
+
+export async function sendOverdueInvoiceEmail(params: {
+  to: string; clientName: string; number: string; totalFormatted: string; dueDateFormatted: string; language: string;
+}) {
+  const lang = ['ru', 'en', 'es', 'uk', 'pl'].includes(params.language) ? params.language : 'ru';
+  const subject = (OVERDUE_SUBJECTS[lang] ?? OVERDUE_SUBJECTS.ru)(params.number);
+  const html = (OVERDUE_BODIES[lang] ?? OVERDUE_BODIES.ru)(params.clientName, params.number, params.totalFormatted, params.dueDateFormatted);
+
+  return resend.emails.send({
+    from: 'MJP Marine <noreply@mjpmarine.es>',
+    to: params.to,
+    subject,
+    html,
+  });
+}

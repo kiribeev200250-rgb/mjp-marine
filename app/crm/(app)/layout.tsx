@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCrmSession } from '@/lib/crm/session'
 import { CrmSidebar } from '@/components/crm/layout/CrmSidebar'
 import { CrmTopbar } from '@/components/crm/layout/CrmTopbar'
+import { CrmI18nProvider } from '@/components/crm/i18n/CrmI18nProvider'
 import { prisma } from '@/lib/prisma'
 
 export default async function CrmAppLayout({ children }: { children: React.ReactNode }) {
@@ -17,16 +18,18 @@ export default async function CrmAppLayout({ children }: { children: React.React
   const userInitial = userName.charAt(0).toUpperCase()
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <CrmSidebar
-        companyName={company?.name ?? 'MJP Marine'}
-        userName={userName}
-        roleLabel={session.user.role === 'ADMIN' ? 'Администратор' : 'Сотрудник'}
-      />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <CrmTopbar userName={userName} userInitial={userInitial} />
-        {children}
+    <CrmI18nProvider>
+      <div className="flex h-screen overflow-hidden bg-gray-50">
+        <CrmSidebar
+          companyName={company?.name ?? 'MJP Marine'}
+          userName={userName}
+          role={session.user.role === 'ADMIN' ? 'ADMIN' : 'EMPLOYEE'}
+        />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <CrmTopbar userName={userName} userInitial={userInitial} />
+          {children}
+        </div>
       </div>
-    </div>
+    </CrmI18nProvider>
   )
 }

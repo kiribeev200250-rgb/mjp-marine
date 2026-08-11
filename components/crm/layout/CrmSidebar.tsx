@@ -3,24 +3,26 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/crm/utils'
+import { useCrmI18n } from '@/components/crm/i18n/CrmI18nProvider'
 
-interface NavItem { href: string; icon: string; label: string }
+interface NavItem { href: string; icon: string; key: string }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/crm/dashboard',   icon: '◉',  label: 'Дашборд'     },
-  { href: '/crm/clients',     icon: '👥', label: 'Клиенты'     },
-  { href: '/crm/funnel',      icon: '⇒',  label: 'Воронка'     },
-  { href: '/crm/schedule',    icon: '📅', label: 'Планировщик' },
-  { href: '/crm/inventory',   icon: '📦', label: 'Склад'       },
-  { href: '/crm/finance',     icon: '💶', label: 'Финансы'     },
-  { href: '/crm/invoices',    icon: '🧾', label: 'Счета'       },
-  { href: '/crm/reports',     icon: '📊', label: 'Аналитика'   },
+  { href: '/crm/dashboard',   icon: '◉',  key: 'dashboard'  },
+  { href: '/crm/clients',     icon: '👥', key: 'clients'    },
+  { href: '/crm/funnel',      icon: '⇒',  key: 'funnel'     },
+  { href: '/crm/schedule',    icon: '📅', key: 'schedule'   },
+  { href: '/crm/inventory',   icon: '📦', key: 'inventory'  },
+  { href: '/crm/finance',     icon: '💶', key: 'finance'    },
+  { href: '/crm/invoices',    icon: '🧾', key: 'invoices'   },
+  { href: '/crm/reports',     icon: '📊', key: 'reports'    },
 ]
 
-interface Props { companyName: string; userName: string; roleLabel?: string }
+interface Props { companyName: string; userName: string; role: 'ADMIN' | 'EMPLOYEE' }
 
-export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудник' }: Props) {
+export function CrmSidebar({ companyName, userName, role }: Props) {
   const pathname = usePathname() ?? ''
+  const { t } = useCrmI18n()
 
   const navLink = (href: string) => cn(
     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-body transition-all',
@@ -37,7 +39,7 @@ export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудн�
           <span className="text-gold text-2xl">⚓</span>
           <div>
             <div className="text-white font-semibold text-subheading leading-tight">{companyName}</div>
-            <div className="text-white/60 text-label">CRM</div>
+            <div className="text-white/60 text-label">{t('crmSubtitle')}</div>
           </div>
         </div>
       </div>
@@ -49,7 +51,7 @@ export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудн�
           return (
             <Link key={item.href} href={item.href} className={navLink(item.href)}>
               <span className="w-5 text-center text-base">{item.icon}</span>
-              <span>{item.label}</span>
+              <span>{t(item.key)}</span>
               {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold" />}
             </Link>
           )
@@ -60,11 +62,11 @@ export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудн�
       <div className="border-t border-white/5 p-3 space-y-0.5">
         <Link href="/crm/settings" className={navLink('/crm/settings')}>
           <span className="w-5 text-center">⚙</span>
-          <span>Настройки</span>
+          <span>{t('settings')}</span>
         </Link>
         <Link href="/crm/style-guide" className={navLink('/crm/style-guide')}>
           <span className="w-5 text-center">🎨</span>
-          <span>Style Guide</span>
+          <span>{t('styleGuide')}</span>
         </Link>
 
         <div className="flex items-center gap-3 px-3 py-2.5 mt-1">
@@ -73,7 +75,7 @@ export function CrmSidebar({ companyName, userName, roleLabel = 'Сотрудн�
           </div>
           <div className="min-w-0">
             <div className="text-white/80 text-label font-medium truncate">{userName}</div>
-            <div className="text-white/55 text-label">{roleLabel}</div>
+            <div className="text-white/55 text-label">{role === 'ADMIN' ? t('admin') : t('employee')}</div>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendTelegram, notifyAdmins } from '@/lib/crm/telegram/notify'
+import { sendOverdueInvoiceEmail } from '@/lib/resend'
 import { formatMoney } from '@/lib/crm/utils'
 
 export const runtime = 'nodejs'
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const results = { digests: 0, overdue: 0, lowStock: 0 }
+  const results = { digests: 0, overdue: 0, overdueClientEmails: 0, lowStock: 0, seasonalReminders: 0 }
 
   const start = new Date(); start.setHours(0, 0, 0, 0)
   const end   = new Date(); end.setHours(23, 59, 59, 999)
@@ -43,9 +44,12 @@ export async function GET(req: NextRequest) {
     results.digests++
   }
 
-  // 2. Просроченные счета — переводим в OVERDUE и уведомляем админов компании
+  // 2. Просроченные счета — переводим в OVERDUE, уведомляем админов компании
+  // и (если у клиента есть email) шлём ему вежливое напоминание. Без PDF-
+  // вложения и без ссылки на счёт — см. комментарий у sendOverdueInvoiceEmail.
   const overdueInvoices = await prisma.invoice.findMany({
     where: { status: { in: ['ISSUED', 'PARTIAL'] }, dueDate: { lt: start } },
+    include: { client: { select: { email: true, language: true } } },
   })
   const overdueByCompany = new Map<string, typeof overdueInvoices>()
   for (const inv of overdueInvoices) {
@@ -53,6 +57,22 @@ export async function GET(req: NextRequest) {
     if (!overdueByCompany.has(inv.companyId)) overdueByCompany.set(inv.companyId, [])
     overdueByCompany.get(inv.companyId)!.push(inv)
     results.overdue++
+
+    if (inv.client.email) {
+      try {
+        await sendOverdueInvoiceEmail({
+          to: inv.client.email,
+          clientName: inv.clientName,
+          number: inv.number,
+          totalFormatted: formatMoney(inv.total),
+          dueDateFormatted: inv.dueDate ? fmtDate(inv.dueDate) : '—',
+          language: inv.client.language || inv.language,
+        })
+        results.overdueClientEmails++
+      } catch (e) {
+        console.error('[cron/reminders] Не удалось отправить письмо клиенту', inv.id, e)
+      }
+    }
   }
   for (const [companyId, invoices] of overdueByCompany) {
     const list = invoices.map((i) => `${i.number} — ${i.clientName} — ${formatMoney(i.total)} (срок ${i.dueDate ? fmtDate(i.dueDate) : '—'})`).join('\n')
@@ -74,6 +94,34 @@ export async function GET(req: NextRequest) {
   for (const [companyId, items] of lowByCompany) {
     const list = items.map((it) => `${it.name} — ${it.qtyInStock.toString()} ${it.unit} (мин. ${it.qtyMinAlert.toString()})`).join('\n')
     await notifyAdmins(companyId, `⚠ Низкий остаток на складе:\n${list}`)
+  }
+
+  // 4. Сезонные напоминания (ТО и т.п.) — созревшие Reminder(SEASONAL_SERVICE)
+  // превращаются в новую задачу-бэклог для того же клиента, владелец
+  // уведомляется. sent=true ставится сразу после создания задачи — не
+  // раньше, чтобы сбой на полпути не «съел» напоминание молча.
+  const dueReminders = await prisma.reminder.findMany({
+    where: { type: 'SEASONAL_SERVICE', sent: false, scheduledAt: { lte: end } },
+  })
+  for (const reminder of dueReminders) {
+    const task = await prisma.task.create({
+      data: {
+        companyId: reminder.companyId,
+        title: reminder.title,
+        clientId: reminder.clientId,
+        isBacklog: true,
+        status: 'NEW',
+      },
+    })
+    await prisma.reminder.update({ where: { id: reminder.id }, data: { sent: true, sentAt: new Date() } })
+    await prisma.auditLog.create({
+      data: {
+        companyId: reminder.companyId, action: 'CREATE', entity: 'Task', entityId: task.id,
+        newValue: { title: reminder.title }, meta: { via: 'cron_seasonal_reminder', reminderId: reminder.id },
+      },
+    })
+    await notifyAdmins(reminder.companyId, `🔔 Сезонное напоминание: «${reminder.title}» → добавлено в бэклог`)
+    results.seasonalReminders++
   }
 
   return NextResponse.json({ ok: true, ...results })

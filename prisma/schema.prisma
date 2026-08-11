@@ -179,22 +179,23 @@ model Company {
   name      String
   createdAt DateTime @default(now())
 
-  users       CrmUser[]
-  clients     Client[]
-  tasks       Task[]
-  inventory   InventoryItem[]
-  finances    FinanceEntry[]
-  capitals    CapitalEntry[]
-  vatEntries  VatEntry[]
-  invoices    Invoice[]
-  quotes      Quote[]
-  references  ReferenceItem[]
-  categories  Category[]
-  notes       Note[]
-  auditLogs   AuditLog[]
-  companyInfo CompanyInfo?
-  goals       KpiGoal[]
-  reminders   Reminder[]
+  users             CrmUser[]
+  clients           Client[]
+  tasks             Task[]
+  inventory         InventoryItem[]
+  finances          FinanceEntry[]
+  capitals          CapitalEntry[]
+  vatEntries        VatEntry[]
+  invoices          Invoice[]
+  quotes            Quote[]
+  references        ReferenceItem[]
+  categories        Category[]
+  notes             Note[]
+  auditLogs         AuditLog[]
+  companyInfo       CompanyInfo?
+  goals             KpiGoal[]
+  reminders         Reminder[]
+  recurringExpenses RecurringExpense[]
 }
 
 model CrmUser {
@@ -573,7 +574,8 @@ model Category {
   sortOrder Int          @default(0)
   archived  Boolean      @default(false)
 
-  entries FinanceEntry[]
+  entries           FinanceEntry[]
+  recurringExpenses RecurringExpense[]
 
   @@unique([companyId, kind, name])
   @@index([companyId, kind, archived])
@@ -622,7 +624,8 @@ model FinanceEntry {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  vatEntry VatEntry?
+  vatEntry            VatEntry?
+  recurringOccurrence RecurringExpenseOccurrence?
 
   // Сторно-запись ссылается на операцию, которую она отменяет (полностью или
   // частично) — проведённые операции никогда не удаляются и не редактируются
@@ -642,6 +645,64 @@ enum FinanceEntryType {
   INCOME // Доход
   EXPENSE // Расход
   SALARY // Зарплата
+}
+
+// Шаблон повторяющегося расхода (аренда, лизинг, связь…). Сам по себе НИКОГДА
+// не создаёт FinanceEntry — только генерирует RecurringExpenseOccurrence на
+// каждый период, которые владелец подтверждает вручную (см. ниже).
+model RecurringExpense {
+  id            String              @id @default(cuid())
+  companyId     String
+  company       Company             @relation(fields: [companyId], references: [id])
+  category      String
+  categoryId    String?
+  categoryRef   Category?           @relation(fields: [categoryId], references: [id])
+  amount        Decimal             @db.Decimal(12, 2)
+  paymentMethod String              @default("")
+  description   String              @default("")
+  frequency     RecurrenceFrequency @default(MONTHLY)
+  dayOfMonth    Int                 @default(1) // 1-28, для MONTHLY и MONTHLY-компоненты YEARLY
+  monthOfYear   Int? // 1-12, только для YEARLY
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  occurrences RecurringExpenseOccurrence[]
+
+  @@index([companyId, active])
+}
+
+enum RecurrenceFrequency {
+  MONTHLY
+  WEEKLY
+  YEARLY
+}
+
+// Один период конкретного повторяющегося расхода. Генерируется заранее
+// (см. lib/crm/services/recurringExpenses.ts), но НЕ становится тратой сама
+// по себе — только по явному подтверждению владельца (confirm → FinanceEntry).
+// @@unique на (recurringExpenseId, period) — сам по себе защищает от
+// задвоения генерации на один и тот же период.
+model RecurringExpenseOccurrence {
+  id                 String                    @id @default(cuid())
+  recurringExpenseId String
+  recurringExpense   RecurringExpense          @relation(fields: [recurringExpenseId], references: [id], onDelete: Cascade)
+  period             String // "2026-08" (MONTHLY) | "2026-W33" (WEEKLY) | "2026" (YEARLY)
+  dueDate            DateTime
+  status             RecurringOccurrenceStatus @default(PENDING)
+  financeEntryId     String?                   @unique
+  financeEntry       FinanceEntry?             @relation(fields: [financeEntryId], references: [id])
+  confirmedAt        DateTime?
+  createdAt          DateTime                  @default(now())
+
+  @@unique([recurringExpenseId, period])
+  @@index([recurringExpenseId, status])
+}
+
+enum RecurringOccurrenceStatus {
+  PENDING
+  CONFIRMED
+  SKIPPED
 }
 
 // Вложения — НЕ входят в P&L никогда
