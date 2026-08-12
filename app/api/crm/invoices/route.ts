@@ -3,7 +3,7 @@ import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
-import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
+import { parseJobsInput, jobsToCreateInput, companyInfoSnapshot, type JobInput } from '@/lib/crm/documentJobs'
 import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 import type { InvoiceStatus } from '@prisma/client'
@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
   const irpf       = new Decimal(irpfRate ?? 0)
   if (iva.lt(0) || iva.gt(100))  return NextResponse.json({ error: 'Ставка IVA должна быть от 0 до 100%' },  { status: 400 })
   if (irpf.lt(0) || irpf.gt(100)) return NextResponse.json({ error: 'Ставка IRPF должна быть от 0 до 100%' }, { status: 400 })
-  const ivaAmount  = subtotal.times(iva).div(100)
-  const irpfAmount = subtotal.times(irpf).div(100)
+  const ivaAmount  = subtotal.times(iva).div(100).toDecimalPlaces(2)
+  const irpfAmount = subtotal.times(irpf).div(100).toDecimalPlaces(2)
   const total      = subtotal.plus(ivaAmount).minus(irpfAmount)
 
   try {
@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
           clientName:    `${client.firstName} ${client.lastName}`.trim(),
           clientNif:     clientNif ?? '',
           clientAddress: clientAddress ?? '',
+          ...(!asDraft && companyInfoSnapshot(companyInfo)),
           notes:         notes ?? '',
           jobs: { create: jobsToCreateInput(parsedJobs) },
         },

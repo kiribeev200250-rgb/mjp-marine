@@ -114,7 +114,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const subtotal  = jobsTotal.plus(materialsTotal)
   const rate      = new Decimal(ivaRate ?? existing.ivaRate)
-  const ivaAmount = subtotal.times(rate).div(100)
+  const ivaAmount = subtotal.times(rate).div(100).toDecimalPlaces(2)
   const total     = subtotal.plus(ivaAmount)
 
   try {

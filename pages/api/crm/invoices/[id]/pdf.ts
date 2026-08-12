@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getCrmSessionApi } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
-import { renderDocumentPdf } from '@/lib/crm/pdf'
+import { renderDocumentPdf, resolveInvoiceCompanyInfo } from '@/lib/crm/pdf'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getCrmSessionApi(req, res)
@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     date:       invoice.date,
     dueDate:    invoice.dueDate,
     language:   invoice.language,
-    company:    { ...companyInfo, logoUrl: companyInfo.logoUrl },
+    company:    resolveInvoiceCompanyInfo(invoice, companyInfo),
     clientName: invoice.clientName,
     clientNif:  invoice.clientNif,
     clientAddress: invoice.clientAddress,

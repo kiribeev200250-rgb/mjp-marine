@@ -208,7 +208,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             <SectionHeader title="Прибыльность по видам работ" />
             <MarginTable rows={marginWorkTypes} labelHeader="Работа" />
           </Card>
-          <p className="text-label text-gray-400">
+          <p className="text-label text-gray-500">
             Выручка — нетто по счёту (без IVA), материалы — по текущей закупочной цене склада. Себестоимость труда не учтена — в системе нет ставки часа.
           </p>
         </div>

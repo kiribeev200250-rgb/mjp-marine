@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getCrmSessionApi } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
-import { renderDocumentPdf } from '@/lib/crm/pdf'
+import { renderDocumentPdf, resolveInvoiceCompanyInfo } from '@/lib/crm/pdf'
 import { sendDocumentEmail } from '@/lib/resend'
 import { formatMoney } from '@/lib/crm/utils'
 
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     date:       invoice.date,
     dueDate:    invoice.dueDate,
     language:   invoice.language,
-    company:    { ...companyInfo, logoUrl: companyInfo.logoUrl },
+    company:    resolveInvoiceCompanyInfo(invoice, companyInfo),
     clientName: invoice.clientName,
     clientNif:  invoice.clientNif,
     clientAddress: invoice.clientAddress,
@@ -73,9 +73,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       language:       invoice.language,
       pdfStream:      stream,
     })
-  } catch {
-    return res.status(502).json({ error: 'Не удалось отправить письмо' })
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Не удалось отправить письмо'
+    await prisma.invoice.update({ where: { id }, data: { lastEmailError: message, lastEmailSentAt: null } })
+    return res.status(502).json({ error: message })
   }
+
+  await prisma.invoice.update({ where: { id }, data: { lastEmailSentAt: new Date(), lastEmailError: null } })
 
   await prisma.auditLog.create({
     data: {

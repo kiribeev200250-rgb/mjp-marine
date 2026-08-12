@@ -795,8 +795,28 @@ model Invoice {
   clientName          String
   clientNif           String        @default("")
   clientAddress       String        @default("")
+  // Снапшот реквизитов КОМПАНИИ на момент выпуска (та же логика, что и для
+  // клиента выше) — null, пока счёт DRAFT (ещё не зафиксирован). Заполняется
+  // один раз при переходе в ISSUED и больше не меняется: если владелец потом
+  // сменит банковский счёт/название компании в настройках, уже выпущенные
+  // счета не должны задним числом показывать новые реквизиты — это фискальный
+  // документ, PDF которого обязан оставаться тем же, что видел клиент/Hacienda.
+  companyLegalName    String?
+  companyNif          String?
+  companyAddress      String?
+  companyCity         String?
+  companyPostalCode   String?
+  companyCountry      String?
+  companyBankAccount  String?
+  companyLogoUrl      String?
   notes               String        @default("")
   pdfUrl              String?
+  // Фактический статус последней попытки отправки клиенту по почте — не
+  // «предположительно отправлено», а результат реального ответа Resend API.
+  // lastEmailError != null ⇒ последняя попытка провалилась, показываем в UI,
+  // а не только в логах (см. lib/resend.ts assertSent).
+  lastEmailSentAt     DateTime?
+  lastEmailError      String?
   // Списание материалов со склада произошло при выставлении (идемпотентность
   // каскада «фактура → склад»); при аннулировании материалы возвращаются и флаг сбрасывается.
   materialsWrittenOff Boolean       @default(false)

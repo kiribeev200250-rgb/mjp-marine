@@ -101,6 +101,17 @@ export async function sendContactEmail(data: {
 
 // ─── CRM: пресметы и счета ──────────────────────────────────────────────────
 
+// resend.emails.send() НЕ бросает исключение на ошибке API (напр. домен не
+// верифицирован) — возвращает { data: null, error: {...} } как обычный
+// успешный Promise. Без этой проверки вызывающий код (try/catch) никогда не
+// увидит сбой — именно так «Отправить клиенту» показывал успех, когда письмо
+// физически не уходило. Оборачиваем каждый send(), чтобы ошибка API
+// становилась настоящим исключением и доходила до try/catch вызывающей стороны.
+async function assertSent<T extends { error: { message: string } | null }>(result: T): Promise<T> {
+  if (result.error) throw new Error(result.error.message || 'Resend API error');
+  return result;
+}
+
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
@@ -158,8 +169,8 @@ export async function sendDocumentEmail(params: {
   const html = (CRM_BODIES[params.kind][lang] ?? CRM_BODIES[params.kind].ru)(params.clientName, params.totalFormatted, params.publicLink);
   const pdfBuffer = await streamToBuffer(params.pdfStream);
 
-  return resend.emails.send({
-    from: 'MJP Marine <noreply@mjpmarine.es>',
+  return assertSent(await resend.emails.send({
+    from: 'MJP Marine <noreply@mjpmarine.com>',
     to: params.to,
     subject,
     html,
@@ -169,7 +180,7 @@ export async function sendDocumentEmail(params: {
         content: pdfBuffer,
       },
     ],
-  });
+  }));
 }
 
 export async function sendWelcomeEmail(to: string, name: string, lang: string) {
@@ -186,12 +197,12 @@ export async function sendWelcomeEmail(to: string, name: string, lang: string) {
     uk: `<p>Привіт, ${name}!</p><p>Дякуємо за підписку! Ви отримуватимете сезонні поради та нагадування про обслуговування.</p><p>— Команда MJP Marine Service</p>`,
   };
 
-  await resend.emails.send({
-    from: 'MJP Marine <noreply@mjpmarine.es>',
+  await assertSent(await resend.emails.send({
+    from: 'MJP Marine <noreply@mjpmarine.com>',
     to,
     subject: subjects[lang] ?? subjects.en,
     html: bodies[lang] ?? bodies.en,
-  });
+  }));
 }
 
 // Вежливое напоминание клиенту о просроченном счёте — из cron
@@ -228,10 +239,10 @@ export async function sendOverdueInvoiceEmail(params: {
   const subject = (OVERDUE_SUBJECTS[lang] ?? OVERDUE_SUBJECTS.ru)(params.number);
   const html = (OVERDUE_BODIES[lang] ?? OVERDUE_BODIES.ru)(params.clientName, params.number, params.totalFormatted, params.dueDateFormatted);
 
-  return resend.emails.send({
-    from: 'MJP Marine <noreply@mjpmarine.es>',
+  return assertSent(await resend.emails.send({
+    from: 'MJP Marine <noreply@mjpmarine.com>',
     to: params.to,
     subject,
     html,
-  });
+  }));
 }

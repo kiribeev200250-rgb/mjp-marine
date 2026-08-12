@@ -3,6 +3,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
 import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
+import { companyInfoSnapshot } from '@/lib/crm/documentJobs'
 import { prisma } from '@/lib/prisma'
 
 // POST — выпустить черновик счёта: назначает сквозной номер (только тут он
@@ -20,13 +21,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Счёт уже выпущен' }, { status: 400 })
   }
 
+  const companyInfo = await prisma.companyInfo.findUnique({ where: { companyId: session.user.companyId } })
+  if (!companyInfo || companyInfo.legalName === 'ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ') {
+    return NextResponse.json({ error: 'Заполните реквизиты компании в настройках перед выставлением счёта' }, { status: 400 })
+  }
+
   try {
     const invoice = await prisma.$transaction(async (tx) => {
       const { number, year, sequenceNum } = await nextDocumentNumber(tx, session.user.companyId, 'invoice')
 
       const inv = await tx.invoice.update({
         where: { id },
-        data: { number, year, sequenceNum, status: 'ISSUED', date: new Date() },
+        data: { number, year, sequenceNum, status: 'ISSUED', date: new Date(), ...companyInfoSnapshot(companyInfo) },
         include: { jobs: { include: { materials: true } } },
       })
 

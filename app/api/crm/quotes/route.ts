@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
 
   const subtotal  = jobsTotal.plus(materialsTotal)
   const rate      = new Decimal(ivaRate ?? 21)
-  const ivaAmount = subtotal.times(rate).div(100)
+  const ivaAmount = subtotal.times(rate).div(100).toDecimalPlaces(2)
   const total     = subtotal.plus(ivaAmount)
 
   try {

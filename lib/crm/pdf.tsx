@@ -165,6 +165,44 @@ export interface PdfCompanyInfo {
   logoUrl?:    string | null
 }
 
+interface InvoiceCompanySnapshot {
+  companyLegalName:   string | null
+  companyNif:         string | null
+  companyAddress:     string | null
+  companyCity:        string | null
+  companyPostalCode:  string | null
+  companyCountry:     string | null
+  companyBankAccount: string | null
+  companyLogoUrl:     string | null
+}
+
+interface LiveCompanyInfo {
+  legalName: string; nif: string; address: string; city: string; postalCode: string
+  country: string; email: string; phone: string; bankAccount: string; logoUrl: string | null
+}
+
+// Выбирает реквизиты компании для PDF счёта: снапшот на момент выпуска, если
+// он есть (companyLegalName != null ⇒ счёт уже был ISSUED и зафиксирован),
+// иначе — текущие настройки (черновик ещё ничего не зафиксировал). См.
+// companyInfoSnapshot в documentJobs.ts — та же пара, что и для клиента.
+// email/phone — всегда из текущих настроек: это контактные данные, не
+// фискальный реквизит, их смена не делает старый PDF «неверным».
+export function resolveInvoiceCompanyInfo(invoice: InvoiceCompanySnapshot, live: LiveCompanyInfo): PdfCompanyInfo {
+  if (invoice.companyLegalName == null) return live
+  return {
+    legalName:   invoice.companyLegalName,
+    nif:         invoice.companyNif ?? '',
+    address:     invoice.companyAddress ?? '',
+    city:        invoice.companyCity ?? '',
+    postalCode:  invoice.companyPostalCode ?? '',
+    country:     invoice.companyCountry ?? '',
+    bankAccount: invoice.companyBankAccount ?? '',
+    logoUrl:     invoice.companyLogoUrl,
+    email:       live.email,
+    phone:       live.phone,
+  }
+}
+
 export interface PdfDocumentData {
   kind:           'invoice' | 'quote'
   number:         string

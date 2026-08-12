@@ -374,7 +374,7 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
 
         {/* Блок 4 — прогноз */}
         <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 p-5">
-          <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Прогноз и масштабирование <span className="normal-case text-gray-400">(среднее за последние 3 закрытых месяца)</span></h2>
+          <h2 className="text-label text-gray-500 uppercase tracking-wide font-semibold mb-3">Прогноз и масштабирование <span className="normal-case text-gray-500">(среднее за последние 3 закрытых месяца)</span></h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3">
             <Metric label="Средняя выручка/мес" value={formatMoney(avgIncome)} />
             <Metric label="Средний расход/мес" value={formatMoney(avgExpense.plus(avgSalary))} />
@@ -404,7 +404,7 @@ function NumRow({ label, value, pct, danger }: { label: React.ReactNode; value: 
     <div className="flex items-center justify-between py-1 text-body">
       <span className="text-gray-700 truncate max-w-[65%]">{label}</span>
       <span className={`tabular-nums font-medium ${danger ? 'text-danger' : 'text-gray-900'}`}>
-        {value}{pct != null ? <span className="text-gray-400 font-normal"> · {pct.toFixed(0)}%</span> : null}
+        {value}{pct != null ? <span className="text-gray-500 font-normal"> · {pct.toFixed(0)}%</span> : null}
       </span>
     </div>
   )

@@ -78,9 +78,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           number={invoice.number}
           status={invoice.status}
           hasEmail={!!invoice.client.email}
-          isAdmin={session.user.role === 'ADMIN'}
           paidNet={paidNet.toString()}
           ivaRate={invoice.ivaRate.toString()}
+          lastEmailSentAt={invoice.lastEmailSentAt?.toISOString() ?? null}
+          lastEmailError={invoice.lastEmailError}
         />
       </div>
 
@@ -296,7 +297,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 function TrailRow({ date, text }: { date: Date; text: string }) {
   return (
     <div className="flex gap-3">
-      <span className="text-gray-400 text-label w-24 shrink-0 tabular-nums">{fmtDateTime(date)}</span>
+      <span className="text-gray-500 text-label w-24 shrink-0 tabular-nums">{fmtDateTime(date)}</span>
       <span className="text-gray-700 text-label flex-1">{text}</span>
     </div>
   )

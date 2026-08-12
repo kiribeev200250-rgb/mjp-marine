@@ -8,16 +8,17 @@ import { RefundModal } from './RefundModal'
 import type { InvoiceStatus } from '@prisma/client'
 
 interface Props {
-  id:          string
-  status:      InvoiceStatus
-  hasEmail:    boolean
-  isAdmin:     boolean
-  paidNet:     string
-  ivaRate:     string
-  number:      string
+  id:              string
+  status:          InvoiceStatus
+  hasEmail:        boolean
+  paidNet:         string
+  ivaRate:         string
+  number:          string
+  lastEmailSentAt: string | null
+  lastEmailError:  string | null
 }
 
-export function InvoiceActions({ id, status, hasEmail, isAdmin, paidNet, ivaRate, number }: Props) {
+export function InvoiceActions({ id, status, hasEmail, paidNet, ivaRate, number, lastEmailSentAt, lastEmailError }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -97,16 +98,6 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin, paidNet, ivaRate
     router.push(`/crm/invoices/${copy.id}/edit`)
   }
 
-  async function handlePurge() {
-    if (!confirm('Удалить счёт безвозвратно? Это нельзя отменить, и номер останется дырой в сквозной нумерации — для налоговой лучше «Отменить счёт», а не удалять.')) return
-    setBusy('purge'); setError(null)
-    const res = await fetch(`/api/crm/invoices/${id}/purge`, { method: 'DELETE' })
-    setBusy(null)
-    if (!res.ok) { setError((await res.json().catch(() => ({}))).error ?? 'Ошибка'); return }
-    router.push('/crm/invoices')
-    router.refresh()
-  }
-
   const isDraft = status === 'DRAFT'
   const isPaid  = status === 'PAID'
   const isFinal = isPaid || status === 'CANCELLED'
@@ -162,11 +153,6 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin, paidNet, ivaRate
             Удалить черновик
           </Button>
         )}
-        {isAdmin && !isDraft && status !== 'PAID' && (
-          <Button variant="danger" size="sm" loading={busy === 'purge'} onClick={handlePurge}>
-            🗑 Удалить безвозвратно
-          </Button>
-        )}
       </div>
       {!hasEmail && !isDraft && !isFinal && (
         <p className="text-label text-gray-500">У клиента нет email — отправка недоступна.</p>
@@ -175,6 +161,14 @@ export function InvoiceActions({ id, status, hasEmail, isAdmin, paidNet, ivaRate
         <p className="text-label text-gray-500">Черновик не занимает сквозной номер, пока не будет выпущен.</p>
       )}
       {sent && <p className="text-label text-success">Письмо отправлено.</p>}
+      {!sent && lastEmailError && (
+        <p className="text-label text-danger">⚠ Письмо не отправлено: {lastEmailError}</p>
+      )}
+      {!sent && !lastEmailError && lastEmailSentAt && (
+        <p className="text-label text-gray-500">
+          Письмо отправлено {new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(lastEmailSentAt))}
+        </p>
+      )}
       {error && <p className="text-label text-danger">{error}</p>}
       {cascade && cascade.length > 0 && (
         <div className="bg-info/10 border border-info/30 rounded-control px-3 py-2 space-y-1">

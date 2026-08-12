@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const results = { digests: 0, overdue: 0, overdueClientEmails: 0, lowStock: 0, seasonalReminders: 0 }
+  const results = { digests: 0, overdue: 0, overdueClientEmails: 0, overdueClientEmailFailures: 0, lowStock: 0, seasonalReminders: 0 }
 
   const start = new Date(); start.setHours(0, 0, 0, 0)
   const end   = new Date(); end.setHours(23, 59, 59, 999)
@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
     include: { client: { select: { email: true, language: true } } },
   })
   const overdueByCompany = new Map<string, typeof overdueInvoices>()
+  const emailFailuresByCompany = new Map<string, string[]>()
   for (const inv of overdueInvoices) {
     await prisma.invoice.update({ where: { id: inv.id }, data: { status: 'OVERDUE' } })
     if (!overdueByCompany.has(inv.companyId)) overdueByCompany.set(inv.companyId, [])
@@ -69,14 +70,26 @@ export async function GET(req: NextRequest) {
           language: inv.client.language || inv.language,
         })
         results.overdueClientEmails++
+        await prisma.invoice.update({ where: { id: inv.id }, data: { lastEmailSentAt: new Date(), lastEmailError: null } })
       } catch (e) {
+        const message = e instanceof Error ? e.message : String(e)
         console.error('[cron/reminders] Не удалось отправить письмо клиенту', inv.id, e)
+        await prisma.invoice.update({ where: { id: inv.id }, data: { lastEmailError: message } })
+        results.overdueClientEmailFailures++
+        if (!emailFailuresByCompany.has(inv.companyId)) emailFailuresByCompany.set(inv.companyId, [])
+        emailFailuresByCompany.get(inv.companyId)!.push(`${inv.number} — ${inv.clientName}`)
       }
     }
   }
   for (const [companyId, invoices] of overdueByCompany) {
     const list = invoices.map((i) => `${i.number} — ${i.clientName} — ${formatMoney(i.total)} (срок ${i.dueDate ? fmtDate(i.dueDate) : '—'})`).join('\n')
     await notifyAdmins(companyId, `🔴 Просроченные счета:\n${list}`)
+  }
+  // Живой канал-фолбэк: если письмо клиенту не ушло (напр. домен отправки не
+  // верифицирован в Resend), владелец не должен узнавать об этом только из
+  // логов Vercel — Telegram уже работает, используем его как запасной канал.
+  for (const [companyId, failed] of emailFailuresByCompany) {
+    await notifyAdmins(companyId, `✉️⚠ Не удалось отправить письмо-напоминание клиенту по ${failed.length} счёт(ам):\n${failed.join('\n')}\n\nПроверьте настройки отправки почты (Resend).`)
   }
 
   // 3. Низкий остаток склада — по компаниям

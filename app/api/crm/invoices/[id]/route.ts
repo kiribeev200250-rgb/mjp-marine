@@ -141,8 +141,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const irpf       = new Decimal(irpfRate ?? existing.irpfRate)
   if (iva.lt(0) || iva.gt(100))  return NextResponse.json({ error: 'Ставка IVA должна быть от 0 до 100%' },  { status: 400 })
   if (irpf.lt(0) || irpf.gt(100)) return NextResponse.json({ error: 'Ставка IRPF должна быть от 0 до 100%' }, { status: 400 })
-  const ivaAmount  = subtotal.times(iva).div(100)
-  const irpfAmount = subtotal.times(irpf).div(100)
+  const ivaAmount  = subtotal.times(iva).div(100).toDecimalPlaces(2)
+  const irpfAmount = subtotal.times(irpf).div(100).toDecimalPlaces(2)
   const total      = subtotal.plus(ivaAmount).minus(irpfAmount)
 
   try {

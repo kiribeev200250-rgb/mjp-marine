@@ -3,6 +3,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
 import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
+import { companyInfoSnapshot } from '@/lib/crm/documentJobs'
 import { prisma } from '@/lib/prisma'
 
 // POST /api/crm/quotes/[id]/convert — создать счёт на основе пресмета
@@ -26,6 +27,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Заполните реквизиты компании в настройках перед выставлением счёта' }, { status: 400 })
   }
 
+  const irpfAmount = quote.subtotal.mul(companyInfo.irpfRate).div(100).toDecimalPlaces(2)
+
   try {
     const invoice = await prisma.$transaction(async (tx) => {
       const { number, year, sequenceNum } = await nextDocumentNumber(tx, session.user.companyId, 'invoice')
@@ -44,9 +47,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           materialsTotal: quote.materialsTotal,
           subtotal:       quote.subtotal,
           ivaAmount:      quote.ivaAmount,
-          irpfAmount:     quote.subtotal.mul(companyInfo.irpfRate).div(100),
-          total:          quote.total.minus(quote.subtotal.mul(companyInfo.irpfRate).div(100)),
+          irpfAmount:     irpfAmount,
+          total:          quote.total.minus(irpfAmount),
           clientName:     `${quote.client.firstName} ${quote.client.lastName}`.trim(),
+          ...companyInfoSnapshot(companyInfo),
           notes:          quote.notes,
           jobs: {
             create: quote.jobs.map((job) => ({

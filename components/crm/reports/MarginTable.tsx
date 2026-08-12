@@ -46,7 +46,7 @@ export function MarginTable({ rows, labelHeader, limit = 8, emptyText = 'Нет 
         </tbody>
       </table>
       {rows.length > limit && (
-        <p className="text-label text-gray-400 text-center pt-2">и ещё {rows.length - limit}…</p>
+        <p className="text-label text-gray-500 text-center pt-2">и ещё {rows.length - limit}…</p>
       )}
     </div>
   )

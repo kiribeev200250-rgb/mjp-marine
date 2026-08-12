@@ -1,7 +1,27 @@
 import Decimal from 'decimal.js'
+import type { CompanyInfo } from '@prisma/client'
 
 // Общая иерархия «работа → материалы» для Quote и Invoice (QuoteJob/InvoiceJob
 // используют одинаковые поля, поэтому парсинг и построение Prisma-инпута общие).
+
+// Снапшот реквизитов компании в момент выпуска счёта — тот же принцип, что и
+// снапшот клиента (clientName/clientNif/clientAddress): выпущенный фискальный
+// документ не должен задним числом менять банковский счёт/название компании,
+// если владелец поменяет их в настройках позже. Вызывать ТОЛЬКО при переходе
+// в ISSUED — черновик снапшота не имеет (companyXxx остаются null), рендерится
+// из текущих настроек, пока не зафиксирован.
+export function companyInfoSnapshot(companyInfo: CompanyInfo) {
+  return {
+    companyLegalName:   companyInfo.legalName,
+    companyNif:         companyInfo.nif,
+    companyAddress:     companyInfo.address,
+    companyCity:        companyInfo.city,
+    companyPostalCode:  companyInfo.postalCode,
+    companyCountry:     companyInfo.country,
+    companyBankAccount: companyInfo.bankAccount,
+    companyLogoUrl:     companyInfo.logoUrl,
+  }
+}
 
 export interface JobMaterialInput {
   name: string
@@ -59,12 +79,16 @@ export function parseJobsInput(jobs: JobInput[]): { jobs: ParsedJob[]; jobsTotal
     // Три режима стоимости работы, в порядке приоритета (сервер считает сам,
     // не доверяя клиентскому расчёту): часы × норма; количество × цена за ед.
     // (напр. «свечи зажигания» 8 шт, «обслуживание сейлдрайвов» 2 шт);
-    // иначе — фиксированная сумма, введённая вручную.
-    const laborCost = laborHours != null && laborRate != null
+    // иначе — фиксированная сумма, введённая вручную. Округляем до центов
+    // СРАЗУ здесь (не позже) — иначе колонка `laborCost` в БД (Decimal(12,2))
+    // округлит независимо от суммы строк на документе, и «сумма строк» на
+    // экране/PDF может разойтись с «итого» на цент при дробных часах.
+    const laborCost = (laborHours != null && laborRate != null
       ? laborHours.times(laborRate)
       : quantity != null && unitPrice != null
       ? quantity.times(unitPrice)
       : new Decimal(j.laborCost || 0)
+    ).toDecimalPlaces(2)
     if (laborCost.lt(0)) throw new Error('Стоимость работы не может быть отрицательной')
 
     const materials: ParsedMaterial[] = (j.materials ?? []).map((m) => {
@@ -77,7 +101,7 @@ export function parseJobsInput(jobs: JobInput[]): { jobs: ParsedJob[]; jobsTotal
         name: m.name.trim(),
         quantity,
         unitPrice,
-        total: quantity.times(unitPrice),
+        total: quantity.times(unitPrice).toDecimalPlaces(2),
         inventoryItemId: m.inventoryItemId || null,
       }
     })

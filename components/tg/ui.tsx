@@ -61,7 +61,7 @@ export function TgKpi({ label, value, tone = 'default' }: { label: string; value
 
 export function TgEmpty({ text }: { text: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-10 text-gray-400 text-sm gap-2">
+    <div className="flex flex-col items-center justify-center py-10 text-gray-500 text-sm gap-2">
       <span className="text-3xl">🗂</span>
       {text}
     </div>

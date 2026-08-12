@@ -49,6 +49,8 @@ const MODELS_IN_DEPENDENCY_ORDER = [
   // всегда идёт раньше своего сторно в массиве)
   'capitalEntry',        // → Company
   'financeEntry',         // → Company, Category?, Client?, Invoice?, FinanceEntry (self)?
+  'recurringExpense',      // → Company, Category?
+  'recurringExpenseOccurrence', // → RecurringExpense, FinanceEntry? (после financeEntry — важно для FK)
   'vatEntry',              // → Company, Invoice?, FinanceEntry?
   'stockMovement',          // → Company, InventoryItem, Invoice?, Task?
 
