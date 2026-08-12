@@ -10,8 +10,14 @@ export function DeleteEntryButton({ id }: { id: string }) {
   async function handleDelete() {
     if (!confirm('Удалить эту запись?')) return
     setBusy(true)
-    await fetch(`/api/crm/finance/${id}`, { method: 'DELETE' })
-    router.refresh()
+    const res = await fetch(`/api/crm/finance/${id}`, { method: 'DELETE' })
+    setBusy(false)
+    if (res.ok) {
+      router.refresh()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      alert(d.error ?? 'Не удалось удалить')
+    }
   }
 
   return (

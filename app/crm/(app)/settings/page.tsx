@@ -2,6 +2,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { CompanyInfoForm } from './CompanyInfoForm'
 import { UsersSection } from './UsersSection'
 import { FbLeadAdsForm } from './FbLeadAdsForm'
+import { PeriodLocksSection } from './PeriodLocksSection'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 
@@ -19,12 +20,17 @@ export default async function SettingsPage() {
 
   const companyId = session.user.companyId
 
-  const [companyInfo, users] = await Promise.all([
+  const [companyInfo, users, periodLocks] = await Promise.all([
     prisma.companyInfo.findUnique({ where: { companyId } }),
     prisma.crmUser.findMany({
       where:   { companyId },
       orderBy: { createdAt: 'asc' },
       select:  { id: true, name: true, email: true, role: true, active: true, createdAt: true, telegramId: true },
+    }),
+    prisma.periodLock.findMany({
+      where:   { companyId },
+      orderBy: { startDate: 'desc' },
+      include: { closedBy: { select: { name: true } } },
     }),
   ])
 
@@ -55,6 +61,26 @@ export default async function SettingsPage() {
             Facebook Lead Ads
           </h2>
           <FbLeadAdsForm data={companyInfo} />
+        </section>
+
+        <section>
+          <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide mb-4">
+            Закрытие периодов
+          </h2>
+          <p className="text-label text-gray-500 -mt-3 mb-4">
+            Внутри закрытого периода финансовые операции нельзя редактировать или удалять —
+            только сторнировать записью в открытом периоде.
+          </p>
+          <PeriodLocksSection
+            locks={periodLocks.map((l) => ({
+              id:        l.id,
+              label:     l.label,
+              startDate: l.startDate.toISOString(),
+              endDate:   l.endDate.toISOString(),
+              closedAt:  l.closedAt.toISOString(),
+              closedBy:  l.closedBy,
+            }))}
+          />
         </section>
       </div>
     </main>

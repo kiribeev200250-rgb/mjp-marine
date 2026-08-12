@@ -9,6 +9,7 @@ import { ExportCsvButton } from '@/components/crm/ui'
 import { PLGrid, type PLCategory, type PLEntry } from '@/components/crm/reports/PLGrid'
 import { VatGrid, type VatEntryRow } from '@/components/crm/reports/VatGrid'
 import { computeCashSummary } from '@/lib/crm/services/cash'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 
 interface SearchParams { year?: string }
 
@@ -152,10 +153,16 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
   const plCurrentMonth = currentMonthIdx !== null ? monthProfit[currentMonthIdx] : new Decimal(0)
 
   // ── Блок 3: клиентские/операционные показатели ───────────────────────────
-  const outstandingSum = outstandingInvoices.reduce((s, i) => s.plus(i.total.toString()), new Decimal(0))
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const balances = await outstandingBalances(outstandingInvoices)
+  const outstandingSum = outstandingInvoices.reduce(
+    (s, i) => s.plus(balances.get(i.id)!),
+    new Decimal(0),
+  )
   const overdueList = outstandingInvoices
     .filter((i) => i.dueDate && i.dueDate < today)
-    .map((i) => ({ ...i, daysOverdue: daysBetween(today, i.dueDate!) }))
+    .map((i) => ({ ...i, daysOverdue: daysBetween(today, i.dueDate!), remaining: balances.get(i.id)! }))
 
   const marinaMap = new Map<string, Decimal>()
   for (const inv of paidInvoicesYear) {
@@ -308,7 +315,7 @@ export default async function PLReportPage({ searchParams }: { searchParams: Pro
                       <td className="py-1.5"><Link href={`/crm/invoices/${inv.id}`} className="font-mono text-gray-900 hover:text-gold transition">{inv.number}</Link></td>
                       <td className="py-1.5"><Link href={`/crm/clients/${inv.client.id}`} className="text-gray-700 hover:text-gold transition">{inv.clientName}</Link></td>
                       <td className="py-1.5 text-right tabular-nums text-danger font-medium">{inv.daysOverdue}</td>
-                      <td className="py-1.5 text-right tabular-nums text-danger font-medium">{formatMoney(inv.total)}</td>
+                      <td className="py-1.5 text-right tabular-nums text-danger font-medium">{formatMoney(inv.remaining)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -196,6 +196,8 @@ model Company {
   goals             KpiGoal[]
   reminders         Reminder[]
   recurringExpenses RecurringExpense[]
+  periodLocks       PeriodLock[]
+  sequenceCounters  SequenceCounter[]
 }
 
 model CrmUser {
@@ -216,9 +218,10 @@ model CrmUser {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  assignedTasks Task[]     @relation("TaskAssignee")
+  assignedTasks Task[]       @relation("TaskAssignee")
   auditLogs     AuditLog[]
   notes         Note[]
+  closedPeriods PeriodLock[]
 }
 
 // Хранилище сессий grammY (диалоги бота переживают серверлесс-инвокейшены)
@@ -235,31 +238,36 @@ enum CrmRole {
 
 // Реквизиты компании для счетов — заполняется в настройках CRM
 model CompanyInfo {
-  id             String  @id @default(cuid())
-  companyId      String  @unique
-  company        Company @relation(fields: [companyId], references: [id])
-  legalName      String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
-  nif            String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
-  address        String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
-  city           String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
-  postalCode     String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
-  country        String  @default("España")
-  email          String  @default("")
-  phone          String  @default("")
-  bankAccount    String  @default("")
-  logoUrl        String?
-  ivaRate        Decimal @default(21) @db.Decimal(5, 2)
-  irpfRate       Decimal @default(0) @db.Decimal(5, 2)
-  invoicePrefix  String  @default("F")
-  quotePrefix    String  @default("P")
-  nextInvoiceNum Int     @default(1)
-  nextQuoteNum   Int     @default(1)
-  currentYear    Int     @default(2025)
+  id                       String  @id @default(cuid())
+  companyId                String  @unique
+  company                  Company @relation(fields: [companyId], references: [id])
+  legalName                String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
+  nif                      String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
+  address                  String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
+  city                     String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
+  postalCode               String  @default("ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ")
+  country                  String  @default("España")
+  email                    String  @default("")
+  phone                    String  @default("")
+  bankAccount              String  @default("")
+  logoUrl                  String?
+  ivaRate                  Decimal @default(21) @db.Decimal(5, 2)
+  irpfRate                 Decimal @default(0) @db.Decimal(5, 2)
+  invoicePrefix            String  @default("F")
+  quotePrefix              String  @default("P")
+  nextInvoiceNum           Int     @default(1)
+  nextQuoteNum             Int     @default(1)
+  currentYear              Int     @default(2025)
   // Facebook Lead Ads — по умолчанию выключено
-  fbEnabled      Boolean @default(false)
-  fbAppId        String?
-  fbPageToken    String?
-  fbVerifyToken  String?
+  fbEnabled                Boolean @default(false)
+  fbAppId                  String?
+  fbPageToken              String?
+  fbVerifyToken            String?
+  // Пороги детекции финансовых аномалий (см. lib/crm/services/anomalies.ts) —
+  // во сколько раз расход должен превышать обычный по категории и абсолютная
+  // сумма "подозрительно крупной" операции. Настраиваемые, с разумными дефолтами.
+  anomalyExpenseMultiplier Decimal @default(3) @db.Decimal(5, 2)
+  anomalyLargeAmountEur    Decimal @default(1000) @db.Decimal(12, 2)
 }
 
 // ─── АУДИТ ──────────────────────────────────────────────────────
@@ -722,8 +730,16 @@ model CapitalEntry {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
+  // Тот же паттерн сторно, что у FinanceEntry — проведённое вложение (тип,
+  // сумма) никогда не редактируется напрямую, только компенсируется обратной
+  // записью того же type с отрицательной amount, ссылающейся сюда.
+  reversalOfId String?
+  reversalOf   CapitalEntry?  @relation("CapitalReversal", fields: [reversalOfId], references: [id])
+  reversals    CapitalEntry[] @relation("CapitalReversal")
+
   @@unique([companyId, importRef])
   @@index([companyId, type, date])
+  @@index([reversalOfId])
 }
 
 // Три типа вложений — строго
@@ -939,4 +955,39 @@ model KpiGoal {
   createdAt DateTime @default(now())
 
   @@unique([companyId, year, month])
+}
+
+// ─── ЗАКРЫТИЕ ПЕРИОДА ────────────────────────────────────────────
+// Закрытый период (месяц/квартал/год) защищает проведённые финансовые операции
+// от правки/удаления задним числом — правки квартальных IVA-отчётов и годовой
+// декларации после подачи. Закрывает только ADMIN; исправление операции внутри
+// закрытого периода — только сторно новой записью в открытом периоде.
+model PeriodLock {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id])
+  startDate  DateTime // включительно
+  endDate    DateTime // исключая — первый день следующего периода
+  label      String // "Август 2026" / "3 квартал 2026" / "2026 год" — для UI и аудита
+  closedAt   DateTime @default(now())
+  closedById String?
+  closedBy   CrmUser? @relation(fields: [closedById], references: [id])
+
+  @@index([companyId, startDate, endDate])
+}
+
+// ─── АТОМАРНАЯ НУМЕРАЦИЯ ─────────────────────────────────────────
+// Счётчики для FinanceEntry.autoId / CapitalEntry.autoId — раньше считались
+// через count(), что давало гонку при параллельном вводе (см. lib/crm/numbering.ts).
+// key: "FINANCE:EXPENSE" | "FINANCE:INCOME" | "FINANCE:SALARY" | "CAPITAL".
+// Инкремент — атомарный upsert внутри той же транзакции, что создание записи.
+model SequenceCounter {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+  key       String
+  year      Int
+  value     Int     @default(0)
+
+  @@unique([companyId, key, year])
 }

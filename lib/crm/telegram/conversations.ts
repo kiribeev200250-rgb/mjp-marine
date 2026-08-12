@@ -115,21 +115,23 @@ export async function moneyEntryConversation(
   // журнала повторов — Decimal и другие поля Prisma-модели не клонируются,
   // возвращаем только простой примитив.
   const autoId = await conversation.external(async () => {
-    const year   = new Date().getFullYear()
-    const newId  = await nextFinanceAutoId(user.companyId, type, year)
-    const e = await prisma.financeEntry.create({
-      data: {
-        companyId:     user.companyId,
-        autoId:        newId,
-        type,
-        date:          new Date(),
-        category,
-        amountExpr:    amount.toString(),
-        amount,
-        paymentMethod,
-        description:   'Через Telegram-бота',
-        ...(receiptUrl && { receiptUrl }),
-      },
+    const year = new Date().getFullYear()
+    const e = await prisma.$transaction(async (tx) => {
+      const newId = await nextFinanceAutoId(tx, user.companyId, type, year)
+      return tx.financeEntry.create({
+        data: {
+          companyId:     user.companyId,
+          autoId:        newId,
+          type,
+          date:          new Date(),
+          category,
+          amountExpr:    amount.toString(),
+          amount,
+          paymentMethod,
+          description:   'Через Telegram-бота',
+          ...(receiptUrl && { receiptUrl }),
+        },
+      })
     })
     await writeAudit({
       companyId: user.companyId,
@@ -165,18 +167,20 @@ export async function investConversation(conversation: Convo, ctx: MyContext) {
   const source = sourceText === '.' ? '' : sourceText
 
   const autoId = await conversation.external(async () => {
-    const year  = new Date().getFullYear()
-    const newId = await nextCapitalAutoId(user.companyId, year)
-    const e = await prisma.capitalEntry.create({
-      data: {
-        companyId: user.companyId,
-        autoId:    newId,
-        type:      'REINVESTMENT',
-        date:      new Date(),
-        source,
-        amount,
-        note:      'Через Telegram-бота',
-      },
+    const year = new Date().getFullYear()
+    const e = await prisma.$transaction(async (tx) => {
+      const newId = await nextCapitalAutoId(tx, user.companyId, year)
+      return tx.capitalEntry.create({
+        data: {
+          companyId: user.companyId,
+          autoId:    newId,
+          type:      'REINVESTMENT',
+          date:      new Date(),
+          source,
+          amount,
+          note:      'Через Telegram-бота',
+        },
+      })
     })
     await writeAudit({
       companyId: user.companyId,
@@ -267,10 +271,9 @@ export async function stockConversation(conversation: Convo, ctx: MyContext) {
     const currentStock = new Decimal(item!.qtyInStock.toString())
     const newStock      = Decimal.max(0, currentStock.minus(qty))
     const total          = qty.mul(unitPrice)
-    const incomeAutoId   = kind === 'SELL' ? await nextFinanceAutoId(user.companyId, 'INCOME', new Date().getFullYear()) : ''
 
-    await prisma.$transaction([
-      prisma.stockMovement.create({
+    await prisma.$transaction(async (tx) => {
+      await tx.stockMovement.create({
         data: {
           companyId: user.companyId,
           itemId:    item!.id,
@@ -280,12 +283,12 @@ export async function stockConversation(conversation: Convo, ctx: MyContext) {
           total,
           note:      'Через Telegram-бота',
         },
-      }),
-      prisma.inventoryItem.update({
+      })
+      await tx.inventoryItem.update({
         where: { id: item!.id },
         data:  { qtyInStock: newStock },
-      }),
-      prisma.auditLog.create({
+      })
+      await tx.auditLog.create({
         data: {
           companyId: user.companyId,
           userId:    user.id,
@@ -296,23 +299,23 @@ export async function stockConversation(conversation: Convo, ctx: MyContext) {
           newValue:  { type: kind, qty, newStock },
           meta:      { via: 'telegram' },
         },
-      }),
-      ...(kind === 'SELL'
-        ? [prisma.financeEntry.create({
-            data: {
-              companyId:   user.companyId,
-              autoId:      incomeAutoId,
-              type:        'INCOME' as const,
-              date:        new Date(),
-              category:    'Продажа запчастей',
-              amountExpr:  total.toString(),
-              amount:      total,
-              description: `Продажа: ${item!.name}`,
-            },
-          })]
-        : []
-      ),
-    ])
+      })
+      if (kind === 'SELL') {
+        const incomeAutoId = await nextFinanceAutoId(tx, user.companyId, 'INCOME', new Date().getFullYear())
+        await tx.financeEntry.create({
+          data: {
+            companyId:   user.companyId,
+            autoId:      incomeAutoId,
+            type:        'INCOME' as const,
+            date:        new Date(),
+            category:    'Продажа запчастей',
+            amountExpr:  total.toString(),
+            amount:      total,
+            description: `Продажа: ${item!.name}`,
+          },
+        })
+      }
+    })
 
     const lowStock = newStock.lt(new Decimal(item!.qtyMinAlert.toString()))
     return { newStock: newStock.toString(), lowStock }

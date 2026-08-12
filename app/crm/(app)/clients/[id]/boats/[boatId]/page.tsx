@@ -7,6 +7,7 @@ import { Badge, INVOICE_TONE, QUOTE_TONE, TASK_TONE, Button } from '@/components
 import { BoatEditForm } from '@/components/crm/clients/BoatEditForm'
 import { NotesThread } from '@/components/crm/clients/NotesThread'
 import { computeBoatMargin } from '@/lib/crm/services/profitability'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 
 function fmtDate(d: Date) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(d)
@@ -34,7 +35,11 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
   ])
 
   const paidTotal = invoices.filter((i) => i.status === 'PAID').reduce((s, i) => s + Number(i.total), 0)
-  const debtTotal = invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIAL' || i.status === 'OVERDUE').reduce((s, i) => s + Number(i.total), 0)
+  const debtInvoices = invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIAL' || i.status === 'OVERDUE')
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const balances = await outstandingBalances(debtInvoices)
+  const debtTotal = debtInvoices.reduce((s, i) => s + balances.get(i.id)!.toNumber(), 0)
   const margin = await computeBoatMargin(boatId)
 
   type FeedEvent = { date: Date; title: string; badge?: React.ReactNode; href?: string }

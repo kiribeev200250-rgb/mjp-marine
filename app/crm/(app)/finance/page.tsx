@@ -7,6 +7,8 @@ import { KpiCard, ExportCsvButton } from '@/components/crm/ui'
 import { QuickEntryForm } from '@/components/crm/finance/QuickEntryForm'
 import { DeleteEntryButton } from '@/components/crm/finance/DeleteEntryButton'
 import { CapitalEntryButton } from '@/components/crm/finance/CapitalEntryButton'
+import { ReverseEntryButton } from '@/components/crm/finance/ReverseEntryButton'
+import { CapitalHistoryTable } from '@/components/crm/finance/CapitalHistoryTable'
 import { computeCashSummary } from '@/lib/crm/services/cash'
 import Decimal from 'decimal.js'
 
@@ -52,7 +54,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const prev = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
   const next = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`
 
-  const [monthEntries, allEntries, cashSummary] = await Promise.all([
+  const [monthEntries, allEntries, cashSummary, capitalEntries] = await Promise.all([
     // Current month finance entries
     prisma.financeEntry.findMany({
       where:   { companyId: session.user.companyId, date: { gte: from, lt: to } },
@@ -68,6 +70,12 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     }),
     // Касса — единая формула (реинвестиции + доход/расход нетто + IVA − IRPF), см. lib/crm/services/cash.ts
     computeCashSummary(session.user.companyId),
+    // История вложений капитала — не входит в P&L, отдельный список (см. FIX_2 P1)
+    prisma.capitalEntry.findMany({
+      where:   { companyId: session.user.companyId },
+      orderBy: { date: 'desc' },
+      take:    20,
+    }),
   ])
 
   // KPI calculations (за месяц — уже нетто, IVA сюда не попадает)
@@ -227,7 +235,10 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                         {isNeg ? '−' : '+'}{formatMoney(signedAmount.abs())}
                       </span>
                       <span className="text-label text-gray-500 font-mono">{e.autoId}</span>
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                        {!e.invoiceId && !e.reversalOfId && (
+                          <ReverseEntryButton endpoint={`/api/crm/finance/${e.id}/reverse`} label={`операцию ${e.autoId}`} />
+                        )}
                         {!e.invoiceId && <DeleteEntryButton id={e.id} />}
                       </span>
                     </div>
@@ -237,6 +248,10 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
             </div>
           )}
         </div>
+      </div>
+
+      <div className="px-6 pb-6">
+        <CapitalHistoryTable entries={capitalEntries} />
       </div>
     </div>
   )

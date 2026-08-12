@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { PrismaClient } from '@prisma/client'
 // Относительный импорт (не '@/lib/prisma') намеренно — этот модуль запускается
 // и из Next.js (алиас работает), и напрямую через ts-node в scripts/backup.ts
 // (алиас не настроен, tsconfig-paths не подключен) — см. package.json db:backup.
@@ -23,6 +24,8 @@ const MODELS_IN_DEPENDENCY_ORDER = [
   'company',
   'crmUser', 'companyInfo', 'category', 'referenceItem', 'kpiGoal', // → Company
   'telegramSession', // самостоятельная (ключ — не FK)
+  'periodLock',      // → Company, CrmUser?
+  'sequenceCounter', // → Company
 
   // Клиенты и лодки
   'client',            // → Company
@@ -123,14 +126,17 @@ export async function runAndUploadBackup(): Promise<{ path: string; sizeBytes: n
 // строгом порядке зависимостей. skipDuplicates — безопасно повторно запускать
 // на БД, где часть строк уже есть (например, восстанавливаешь только то, что
 // пропало). options.onlyModels — восстановить не всё, а конкретные таблицы
-// (используется в проверочном частичном восстановлении).
+// (используется в проверочном частичном восстановлении). options.client —
+// восстановить в ДРУГУЮ базу, не в основную (используется ежемесячным
+// dry-run'ом восстановления, см. runBackupRestoreDryRun ниже).
 export async function restoreDatabaseBackup(
   payload: BackupPayload,
-  options?: { onlyModels?: string[] },
+  options?: { onlyModels?: string[]; client?: PrismaClient },
 ): Promise<Record<string, number>> {
   const restored: Record<string, number> = {}
+  const db = options?.client ?? prisma
 
-  await prisma.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     for (const model of payload.order) {
       if (options?.onlyModels && !options.onlyModels.includes(model)) continue
       const rows = payload.tables[model]
@@ -144,4 +150,55 @@ export async function restoreDatabaseBackup(
   })
 
   return restored
+}
+
+export interface DryRunReport {
+  configured:  boolean
+  ok?:         boolean
+  error?:      string
+  tableCount?: number
+  rowCount?:   number
+  mismatches?: { table: string; expected: number; restored: number }[]
+}
+
+// Ежемесячная проверка «бэкап реально восстановим», не только «делается» —
+// см. app/api/crm/cron/backup-restore-check/route.ts. Экспортирует текущую
+// БД и восстанавливает снапшот в ОТДЕЛЬНУЮ тестовую базу (не в продакшен —
+// восстановление использует skipDuplicates, но гонять его по продакшену всё
+// равно незачем и рискованно). Тестовая база — пустой Supabase-проект с той
+// же схемой (см. docs/backup-recovery.md, "Проверка восстановления"),
+// её URL — в BACKUP_RESTORE_TEST_DATABASE_URL. Без этой переменной проверка
+// не запускается — вызывающий код обязан явно сообщить об этом (configured:
+// false), а не молчать, будто всё проверено.
+export async function runBackupRestoreDryRun(): Promise<DryRunReport> {
+  const testUrl = process.env.BACKUP_RESTORE_TEST_DATABASE_URL
+  if (!testUrl) return { configured: false }
+
+  const payload = await exportDatabaseBackup()
+  const testClient = new PrismaClient({ datasources: { db: { url: testUrl } } })
+
+  try {
+    await restoreDatabaseBackup(payload, { client: testClient })
+
+    const mismatches: DryRunReport['mismatches'] = []
+    for (const model of payload.order) {
+      const expected = payload.tables[model]?.length ?? 0
+      if (expected === 0) continue
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const restoredCount = await (testClient as any)[model].count()
+      if (restoredCount < expected) mismatches.push({ table: model, expected, restored: restoredCount })
+    }
+
+    return {
+      configured:  true,
+      ok:          mismatches.length === 0,
+      mismatches,
+      tableCount:  Object.keys(payload.tables).length,
+      rowCount:    Object.values(payload.tables).reduce((s, rows) => s + rows.length, 0),
+    }
+  } catch (e: unknown) {
+    return { configured: true, ok: false, error: e instanceof Error ? e.message : String(e) }
+  } finally {
+    await testClient.$disconnect()
+  }
 }

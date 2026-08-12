@@ -68,14 +68,16 @@ export async function POST(req: Request) {
   }
 
   const year = new Date().getFullYear()
-  const autoId = await nextFinanceAutoId(session.companyId, type, year)
 
-  const entry = await prisma.financeEntry.create({
-    data: {
-      companyId: session.companyId, autoId, type, date: new Date(),
-      category: category.trim(), amountExpr: String(amountExpr ?? amount.toString()), amount,
-      paymentMethod: (paymentMethod ?? '').trim(), description: (description ?? 'Через Telegram Mini App').trim(),
-    },
+  const entry = await prisma.$transaction(async (tx) => {
+    const autoId = await nextFinanceAutoId(tx, session.companyId, type, year)
+    return tx.financeEntry.create({
+      data: {
+        companyId: session.companyId, autoId, type, date: new Date(),
+        category: category.trim(), amountExpr: String(amountExpr ?? amount.toString()), amount,
+        paymentMethod: (paymentMethod ?? '').trim(), description: (description ?? 'Через Telegram Mini App').trim(),
+      },
+    })
   })
 
   await writeAudit({

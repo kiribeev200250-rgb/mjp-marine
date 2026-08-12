@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { companyId, legalName, nif, address, city, postalCode, country,
             email, phone, bankAccount, ivaRate, irpfRate,
-            invoicePrefix, quotePrefix } = body
+            invoicePrefix, quotePrefix,
+            anomalyExpenseMultiplier, anomalyLargeAmountEur } = body
 
     if (companyId !== session.user.companyId) {
       return NextResponse.json({ error: 'Запрещено' }, { status: 403 })
@@ -33,6 +34,8 @@ export async function POST(req: NextRequest) {
         irpfRate: new Decimal(irpfRate || 0),
         invoicePrefix: invoicePrefix || 'F',
         quotePrefix:   quotePrefix   || 'P',
+        anomalyExpenseMultiplier: new Decimal(anomalyExpenseMultiplier || 3),
+        anomalyLargeAmountEur:    new Decimal(anomalyLargeAmountEur    || 1000),
       },
       update: {
         legalName, nif, address, city, postalCode, country,
@@ -41,6 +44,8 @@ export async function POST(req: NextRequest) {
         irpfRate: new Decimal(irpfRate || 0),
         invoicePrefix: invoicePrefix || 'F',
         quotePrefix:   quotePrefix   || 'P',
+        anomalyExpenseMultiplier: new Decimal(anomalyExpenseMultiplier || 3),
+        anomalyLargeAmountEur:    new Decimal(anomalyLargeAmountEur    || 1000),
       },
     })
 

@@ -32,7 +32,11 @@ export async function writeOffInvoiceMaterials(
   if (current?.materialsWrittenOff) return []
 
   const lines: string[] = []
-  const alerts: string[] = []
+  // Отдельные бакеты: уход в минус (списано больше, чем физически было — сбой
+  // учёта, а не просто "пора дозаказать") vs обычное "ниже точки заказа".
+  // Разный тон алерта — иначе владелец привыкает игнорировать оба как одно.
+  const negativeAlerts: string[] = []
+  const lowStockAlerts: string[] = []
 
   for (const job of jobs) {
     for (const m of job.materials) {
@@ -60,12 +64,12 @@ export async function writeOffInvoiceMaterials(
       await tx.inventoryItem.update({ where: { id: item.id }, data: { qtyInStock: newStock } })
 
       let line = `${item.name} ×${qty.toString()} ${item.unit}`
-      if (newStock.lt(0)) {
-        line += ' — остаток ушёл в минус, дозакажите'
-        alerts.push(`${item.name}: ${newStock.toString()} ${item.unit} (дефицит)`)
+      if (newStock.isNegative()) {
+        line += ' — остаток ушёл в минус, списано больше, чем было в наличии'
+        negativeAlerts.push(`${item.name}: ${newStock.toString()} ${item.unit}`)
       } else if (item.qtyMinAlert.gt(0) && newStock.lt(new Decimal(item.qtyMinAlert.toString()))) {
         line += ' — ниже минимального остатка'
-        alerts.push(`${item.name}: ${newStock.toString()} ${item.unit} (мин. ${item.qtyMinAlert.toString()})`)
+        lowStockAlerts.push(`${item.name}: ${newStock.toString()} ${item.unit} (мин. ${item.qtyMinAlert.toString()})`)
       }
       lines.push(line)
     }
@@ -73,8 +77,11 @@ export async function writeOffInvoiceMaterials(
 
   await tx.invoice.update({ where: { id: invoice.id }, data: { materialsWrittenOff: true } })
 
-  if (alerts.length > 0) {
-    void notifyAdmins(companyId, `⚠ Счёт ${invoice.number}: остаток ниже нормы —\n${alerts.join('\n')}`)
+  if (negativeAlerts.length > 0) {
+    void notifyAdmins(companyId, `🔴 Счёт ${invoice.number}: остаток ушёл в минус — проверьте склад —\n${negativeAlerts.join('\n')}`)
+  }
+  if (lowStockAlerts.length > 0) {
+    void notifyAdmins(companyId, `⚠ Счёт ${invoice.number}: остаток ниже нормы —\n${lowStockAlerts.join('\n')}`)
   }
 
   return lines
@@ -144,7 +151,7 @@ export async function recordPayment(
   if (current?.status === 'PAID') return []
 
   const year   = new Date().getFullYear()
-  const autoId = await nextFinanceAutoId(companyId, 'INCOME', year)
+  const autoId = await nextFinanceAutoId(tx, companyId, 'INCOME', year)
   const netAmount = new Decimal(String(invoice.subtotal))
   const ivaAmount = new Decimal(String(invoice.ivaAmount))
   const ivaRate   = new Decimal(String(invoice.ivaRate))
@@ -234,7 +241,7 @@ export async function refundPayment(
   const grossRefund = netRefundAmount.plus(ivaRefund)
 
   const year   = new Date().getFullYear()
-  const autoId = await nextFinanceAutoId(companyId, 'INCOME', year)
+  const autoId = await nextFinanceAutoId(tx, companyId, 'INCOME', year)
   const category = await findOrCreateCategory(tx, companyId, 'INCOME', 'Работы по фактуре')
   const now = new Date()
 

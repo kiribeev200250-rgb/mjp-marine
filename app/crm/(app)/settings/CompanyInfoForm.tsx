@@ -61,6 +61,24 @@ export function CompanyInfoForm({ companyId, data }: Props) {
           <Field label="Префикс пресметов" name="quotePrefix"  defaultValue={data?.quotePrefix   ?? 'P'} />
         </div>
 
+        <div className="md:col-span-2">
+          <p className="text-label text-gray-500 uppercase tracking-wide mb-2">Пороги алертов о финансовых аномалиях</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="Расход в N раз больше обычного"
+              name="anomalyExpenseMultiplier"
+              defaultValue={data?.anomalyExpenseMultiplier?.toString() ?? '3'}
+              type="number"
+            />
+            <Field
+              label="Крупная операция от, €"
+              name="anomalyLargeAmountEur"
+              defaultValue={data?.anomalyLargeAmountEur?.toString() ?? '1000'}
+              type="number"
+            />
+          </div>
+        </div>
+
         <div className="md:col-span-2 flex items-center gap-4 pt-2">
           <Button type="submit" loading={saving}>Сохранить</Button>
           {success && <span className="text-success text-body">Сохранено ✓</span>}

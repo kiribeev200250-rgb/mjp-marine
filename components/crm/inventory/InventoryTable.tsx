@@ -59,16 +59,17 @@ export function InventoryTable({ items }: Props) {
             </thead>
             <tbody>
               {items.map((item, i) => {
-                const qty      = new Decimal(item.qtyInStock.toString())
-                const minAlert = new Decimal(item.qtyMinAlert.toString())
-                const isLow    = minAlert.gt(0) && qty.lt(minAlert)
-                const isOut    = qty.lte(0)
+                const qty        = new Decimal(item.qtyInStock.toString())
+                const minAlert   = new Decimal(item.qtyMinAlert.toString())
+                const isNegative = qty.isNegative()
+                const isOut      = qty.isZero()
+                const isLow      = !isNegative && !isOut && minAlert.gt(0) && qty.lt(minAlert)
 
                 return (
                   <tr
                     key={item.id}
                     className={`border-b border-gray-100 last:border-0 transition-colors ${
-                      isOut ? 'bg-danger/5' : isLow ? 'bg-warning/5' : i % 2 === 1 ? 'bg-gray-50/30' : ''
+                      isNegative ? 'bg-danger/10' : isOut ? 'bg-danger/5' : isLow ? 'bg-warning/5' : i % 2 === 1 ? 'bg-gray-50/30' : ''
                     } hover:bg-gray-50/70`}
                   >
                     <td className="px-4 py-3">
@@ -85,11 +86,13 @@ export function InventoryTable({ items }: Props) {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
+                        {isNegative && <span className="w-2 h-2 rounded-full bg-danger shrink-0 animate-pulse" title="Остаток ушёл в минус — списано больше, чем было в наличии" />}
                         {isOut && <span className="w-2 h-2 rounded-full bg-danger shrink-0" title="Нет в наличии" />}
-                        {isLow && !isOut && <span className="w-2 h-2 rounded-full bg-warning shrink-0" title="Мало" />}
-                        <span className={`text-body tabular-nums font-medium ${isOut ? 'text-danger' : isLow ? 'text-warning' : 'text-gray-900'}`}>
+                        {isLow && <span className="w-2 h-2 rounded-full bg-warning shrink-0" title="Мало" />}
+                        <span className={`text-body tabular-nums font-medium ${isNegative || isOut ? 'text-danger' : isLow ? 'text-warning' : 'text-gray-900'}`}>
                           {fmtQty(item.qtyInStock)} {item.unit}
                         </span>
+                        {isNegative && <Badge tone="danger">Дефицит</Badge>}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-body text-gray-500 tabular-nums">

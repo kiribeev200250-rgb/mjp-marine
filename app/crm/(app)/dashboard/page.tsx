@@ -5,6 +5,7 @@ import { KpiCard, Card, SectionHeader, Badge, FUNNEL_TONE } from '@/components/c
 import { FUNNEL_STAGE_LABELS, formatMoney, isNegativeMoney } from '@/lib/crm/utils'
 import { RevenueChart } from '@/components/crm/dashboard/RevenueChart'
 import { computeCashSummary } from '@/lib/crm/services/cash'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 import { hasPermission } from '@/lib/crm/permissions'
 import Decimal from 'decimal.js'
 
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
   const [
     cashSummary,
     monthFinances,
-    invoiceAgg,
+    outstandingInvoices,
     overdueCount,
     tasksToday,
     totalClients,
@@ -73,10 +74,10 @@ export default async function DashboardPage() {
       select: { type: true, amount: true },
     }) : [],
     // 3. Accounts receivable
-    canInvoices ? prisma.invoice.aggregate({
-      where: { companyId, status: { in: ['ISSUED','PARTIAL','OVERDUE'] } },
-      _sum:  { total: true },
-    }) : null,
+    canInvoices ? prisma.invoice.findMany({
+      where:  { companyId, status: { in: ['ISSUED','PARTIAL','OVERDUE'] } },
+      select: { id: true, total: true, ivaRate: true },
+    }) : [],
     // 4. Overdue count
     canInvoices ? prisma.invoice.count({ where: { companyId, status: 'OVERDUE' } }) : 0,
     // 5. Tasks today
@@ -120,7 +121,13 @@ export default async function DashboardPage() {
     else                     plMonth = plMonth.minus(a)
   }
 
-  const receivable   = new Decimal((invoiceAgg?._sum.total ?? 0).toString())
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const balances = await outstandingBalances(outstandingInvoices)
+  const receivable = outstandingInvoices.reduce(
+    (s, i) => s.plus(balances.get(i.id)!),
+    new Decimal(0),
+  )
   const conversion   = totalClients > 0 ? Math.round((paidClients / totalClients) * 100) : 0
   const isPlaceholder = companyInfo?.legalName === 'ЗАПОЛНИТЬ ПЕРЕД ИСПОЛЬЗОВАНИЕМ'
 

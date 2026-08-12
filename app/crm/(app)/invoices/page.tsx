@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { formatMoney, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS } from '@/lib/crm/utils'
 import { Badge, Button, DataTable, ExportCsvButton, INVOICE_TONE, QUOTE_TONE, type Column } from '@/components/crm/ui'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 import type { Invoice, Quote, Client } from '@prisma/client'
 
 interface SearchParams { tab?: string }
@@ -36,9 +37,13 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     }),
   ])
 
-  const totalOutstanding = invoices
+  const outstandingInvoices = invoices
     .filter((i) => i.status === 'ISSUED' || i.status === 'PARTIAL' || i.status === 'OVERDUE')
-    .reduce((s, i) => s + Number(i.total), 0)
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const balances = await outstandingBalances(outstandingInvoices)
+  const totalOutstanding = outstandingInvoices
+    .reduce((s, i) => s + balances.get(i.id)!.toNumber(), 0)
 
   type InvoiceRow = Invoice & { client: Pick<Client, 'id' | 'firstName' | 'lastName'> }
   type QuoteRow   = Quote   & { client: Pick<Client, 'id' | 'firstName' | 'lastName'> }

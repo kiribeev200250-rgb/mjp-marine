@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { writeAudit } from '@/lib/crm/audit'
 import { TASK_STATUS_LABELS, formatMoney } from '@/lib/crm/utils'
 import { recordPayment } from '@/lib/crm/services/invoiceCascade'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 import { prismaStorage } from './session-storage'
 import { getLinkedUser, can } from './auth'
 import { parseTaskStatus } from './status'
@@ -72,9 +73,12 @@ async function sendInvoiceList(ctx: MyContext, user: { id: string; companyId: st
   const list: InvoiceListEntry[] = invoices.map((inv, i) => ({ index: i + 1, id: inv.id, number: inv.number }))
   ctx.session.lastInvoiceList = list
 
-  const total = invoices.reduce((s, inv) => s.plus(inv.total.toString()), new Decimal(0))
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const remaining = await outstandingBalances(invoices)
+  const total = invoices.reduce((s, inv) => s.plus(remaining.get(inv.id)!), new Decimal(0))
   const text = invoices.map((inv, i) =>
-    `${i + 1}. ${inv.number} · ${inv.clientName} · ${formatMoney(inv.total)}`,
+    `${i + 1}. ${inv.number} · ${inv.clientName} · ${formatMoney(remaining.get(inv.id)!)}`,
   ).join('\n')
 
   await ctx.reply(`Неоплаченные счета (всего ${formatMoney(total)}):\n${text}\n\n/pay <№> — отметить оплаченным`)

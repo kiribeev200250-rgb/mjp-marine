@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { nextCapitalAutoId } from '@/lib/crm/numbering'
+import { findActivePeriodLock } from '@/lib/crm/periodLock'
 import type { CapitalEntryType } from '@prisma/client'
 
 const VALID_TYPES: CapitalEntryType[] = ['REINVESTMENT', 'STARTUP_ASSET', 'STARTUP_SUNK']
@@ -54,18 +55,25 @@ export async function POST(req: NextRequest) {
   const entryDate = date ? new Date(date) : new Date()
   if (isNaN(entryDate.getTime())) return NextResponse.json({ error: 'Некорректная дата' }, { status: 400 })
   const year      = entryDate.getFullYear()
-  const autoId    = await nextCapitalAutoId(session.user.companyId, year)
 
-  const entry = await prisma.capitalEntry.create({
-    data: {
-      companyId: session.user.companyId,
-      autoId,
-      type,
-      date:   entryDate,
-      source: (source ?? '').trim(),
-      amount,
-      note:   (note ?? '').trim(),
-    },
+  const lock = await findActivePeriodLock(session.user.companyId, entryDate)
+  if (lock) {
+    return NextResponse.json({ error: `Период «${lock.label}» закрыт — новую операцию задним числом создать нельзя` }, { status: 403 })
+  }
+
+  const entry = await prisma.$transaction(async (tx) => {
+    const autoId = await nextCapitalAutoId(tx, session.user.companyId, year)
+    return tx.capitalEntry.create({
+      data: {
+        companyId: session.user.companyId,
+        autoId,
+        type,
+        date:   entryDate,
+        source: (source ?? '').trim(),
+        amount,
+        note:   (note ?? '').trim(),
+      },
+    })
   })
 
   await writeAudit({

@@ -33,25 +33,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const unitPrice = type === 'SELL' ? new Decimal(item.sellPrice.toString()) : new Decimal(item.costPrice.toString())
   const total = qtyDec.mul(unitPrice)
 
-  const incomeAutoId = type === 'SELL'
-    ? await nextFinanceAutoId(session.companyId, 'INCOME', new Date().getFullYear())
-    : null
-
-  await prisma.$transaction([
-    prisma.stockMovement.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.stockMovement.create({
       data: { companyId: session.companyId, itemId, type, qty: qtyDec, unitPrice, total, note: 'Через Telegram Mini App' },
-    }),
-    prisma.inventoryItem.update({ where: { id: itemId }, data: { qtyInStock: newStock } }),
-    ...(type === 'SELL' && incomeAutoId
-      ? [prisma.financeEntry.create({
-          data: {
-            companyId: session.companyId, autoId: incomeAutoId, type: 'INCOME' as const, date: new Date(),
-            category: 'Продажа запчастей', amountExpr: total.toString(), amount: total,
-            description: `Продажа: ${item.name}`,
-          },
-        })]
-      : []),
-  ])
+    })
+    await tx.inventoryItem.update({ where: { id: itemId }, data: { qtyInStock: newStock } })
+    if (type === 'SELL') {
+      const incomeAutoId = await nextFinanceAutoId(tx, session.companyId, 'INCOME', new Date().getFullYear())
+      await tx.financeEntry.create({
+        data: {
+          companyId: session.companyId, autoId: incomeAutoId, type: 'INCOME' as const, date: new Date(),
+          category: 'Продажа запчастей', amountExpr: total.toString(), amount: total,
+          description: `Продажа: ${item.name}`,
+        },
+      })
+    }
+  })
 
   await writeAudit({
     companyId: session.companyId, userId: session.id, action: 'STOCK_MOVE',

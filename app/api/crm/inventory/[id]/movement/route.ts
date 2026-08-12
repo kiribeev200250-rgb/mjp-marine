@@ -59,17 +59,14 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const total = type !== 'ORDER' ? qtyDec.abs().mul(priceDec) : new Decimal(0)
 
   // Продажа со склада создаёт доход автоматически (см. SPEC М3)
-  const incomeAutoId = type === 'SELL'
-    ? await nextFinanceAutoId(session.user.companyId, 'INCOME', new Date().getFullYear())
-    : null
   const sellCategory = type === 'SELL'
     ? await findOrCreateCategory(prisma, session.user.companyId, 'INCOME', 'Продажа запчастей')
     : null
 
   let movement
   try {
-    ;[movement] = await prisma.$transaction([
-      prisma.stockMovement.create({
+    movement = await prisma.$transaction(async (tx) => {
+      const m = await tx.stockMovement.create({
         data: {
           companyId: session.user.companyId,
           itemId,
@@ -80,12 +77,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
           note:      note?.trim() ?? '',
           ...(taskId && { taskId }),
         },
-      }),
-      prisma.inventoryItem.update({
+      })
+      await tx.inventoryItem.update({
         where: { id: itemId },
         data:  { qtyInStock: newStock, qtyOrdered: newOrdered },
-      }),
-      prisma.auditLog.create({
+      })
+      await tx.auditLog.create({
         data: {
           companyId: session.user.companyId,
           userId:    session.user.id,
@@ -96,24 +93,25 @@ export async function POST(req: NextRequest, { params }: Ctx) {
           newValue:  { type, qty: qtyDec, newStock },
           meta:      { note },
         },
-      }),
-      ...(type === 'SELL'
-        ? [prisma.financeEntry.create({
-            data: {
-              companyId:   session.user.companyId,
-              autoId:      incomeAutoId!,
-              type:        'INCOME' as const,
-              date:        new Date(),
-              category:    sellCategory!.name,
-              categoryId:  sellCategory!.id,
-              amountExpr:  total.toString(),
-              amount:      total,
-              description: `Продажа: ${item.name}`,
-            },
-          })]
-        : []
-      ),
-    ])
+      })
+      if (type === 'SELL') {
+        const incomeAutoId = await nextFinanceAutoId(tx, session.user.companyId, 'INCOME', new Date().getFullYear())
+        await tx.financeEntry.create({
+          data: {
+            companyId:   session.user.companyId,
+            autoId:      incomeAutoId,
+            type:        'INCOME' as const,
+            date:        new Date(),
+            category:    sellCategory!.name,
+            categoryId:  sellCategory!.id,
+            amountExpr:  total.toString(),
+            amount:      total,
+            description: `Продажа: ${item.name}`,
+          },
+        })
+      }
+      return m
+    })
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Операция не выполнена — ничего не изменилось' }, { status: 400 })
   }

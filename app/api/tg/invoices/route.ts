@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getTgSession } from '@/lib/crm/telegram/webapp-auth'
 import { hasPermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 
 // GET /api/tg/invoices — дебиторка: неоплаченные счета (ISSUED/PARTIAL/OVERDUE)
 export async function GET(req: Request) {
@@ -16,11 +17,15 @@ export async function GET(req: Request) {
     orderBy: [{ dueDate: 'asc' }, { date: 'asc' }],
     select: {
       id: true, number: true, status: true, date: true, dueDate: true,
-      total: true, clientName: true, clientId: true,
+      total: true, ivaRate: true, clientName: true, clientId: true,
     },
   })
 
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const balances = await outstandingBalances(invoices)
+
   return NextResponse.json(invoices.map((i) => ({
-    ...i, total: i.total.toString(), date: i.date.toISOString(), dueDate: i.dueDate?.toISOString() ?? null,
+    ...i, total: balances.get(i.id)!.toString(), date: i.date.toISOString(), dueDate: i.dueDate?.toISOString() ?? null,
   })))
 }

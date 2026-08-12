@@ -7,6 +7,7 @@ import { Badge, FUNNEL_TONE, TASK_TONE, INVOICE_TONE, QUOTE_TONE, Button } from 
 import { NotesThread } from '@/components/crm/clients/NotesThread'
 import { AddBoatButton } from '@/components/crm/clients/AddBoatButton'
 import { computeClientMargin } from '@/lib/crm/services/profitability'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 
 const STAGE_ORDER = Object.keys(FSL)
 
@@ -54,9 +55,13 @@ export default async function ClientDetailPage({
   const paidTotal = client.invoices
     .filter((i) => i.status === 'PAID')
     .reduce((s, i) => s + Number(i.total), 0)
-  const debtTotal = client.invoices
+  const debtInvoices = client.invoices
     .filter((i) => i.status === 'ISSUED' || i.status === 'PARTIAL' || i.status === 'OVERDUE')
-    .reduce((s, i) => s + Number(i.total), 0)
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const balances = await outstandingBalances(debtInvoices)
+  const debtTotal = debtInvoices
+    .reduce((s, i) => s + balances.get(i.id)!.toNumber(), 0)
   const dealsCount = client.invoices.filter((i) => i.status === 'PAID').length
   const margin = await computeClientMargin(client.id)
 

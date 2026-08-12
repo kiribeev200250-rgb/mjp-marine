@@ -10,6 +10,7 @@ import { KpiGoalCard } from '@/components/crm/reports/KpiGoalCard'
 import { BarList } from '@/components/crm/reports/BarList'
 import { MarginTable } from '@/components/crm/reports/MarginTable'
 import { marginByBoat, marginByClient, marginByWorkType } from '@/lib/crm/services/profitability'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 import type { InvoiceStatus } from '@prisma/client'
 
 interface SearchParams { month?: string }
@@ -143,7 +144,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   }
 
   const avgTicket = new Decimal((invoiceAgg._avg.total ?? 0).toString())
-  const outstandingSum = outstandingInvoices.reduce((s, i) => s.plus(i.total.toString()), new Decimal(0))
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const balances = await outstandingBalances(outstandingInvoices)
+  const outstandingSum = outstandingInvoices.reduce(
+    (s, i) => s.plus(balances.get(i.id)!),
+    new Decimal(0),
+  )
 
   const today = new Date()
 
@@ -250,7 +257,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               headers={['Номер', 'Клиент', 'Дата', 'Срок оплаты', 'Сумма', 'Статус']}
               rows={outstandingInvoices.map((r) => [
                 r.number, r.clientName, fmtDate(r.date), fmtDate(r.dueDate),
-                Number(r.total), INVOICE_STATUS_LABELS[r.status] ?? r.status,
+                Number(balances.get(r.id)), INVOICE_STATUS_LABELS[r.status] ?? r.status,
               ])}
             />
           </div>
@@ -271,6 +278,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 <tbody>
                   {outstandingInvoices.map((inv) => {
                     const isOverdue = inv.status === 'OVERDUE' || (inv.dueDate && inv.dueDate < today)
+                    const remaining = balances.get(inv.id)!
                     return (
                       <tr key={inv.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/70 transition">
                         <td className="px-5 py-2.5">
@@ -280,7 +288,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                           <Link href={`/crm/clients/${inv.client.id}`} className="text-gray-900 hover:text-gold transition">{inv.clientName}</Link>
                         </td>
                         <td className={`px-5 py-2.5 tabular-nums ${isOverdue ? 'text-danger font-medium' : 'text-gray-900'}`}>{fmtDate(inv.dueDate)}</td>
-                        <td className={`px-5 py-2.5 text-right tabular-nums font-medium ${isOverdue ? 'text-danger' : 'text-gray-900'}`}>{formatMoney(inv.total)}</td>
+                        <td className={`px-5 py-2.5 text-right tabular-nums font-medium ${isOverdue ? 'text-danger' : 'text-gray-900'}`}>{formatMoney(remaining)}</td>
                         <td className="px-5 py-2.5">
                           <Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'}>{INVOICE_STATUS_LABELS[inv.status] ?? inv.status}</Badge>
                         </td>

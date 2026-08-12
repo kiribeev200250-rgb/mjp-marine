@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/crm/permissions'
 import { parseAmountExpr } from '@/lib/crm/utils'
 import { nextFinanceAutoId } from '@/lib/crm/numbering'
 import { recordVat } from '@/lib/crm/services/vat'
+import { findActivePeriodLock } from '@/lib/crm/periodLock'
 import type { FinanceEntryType } from '@prisma/client'
 
 const VALID_TYPES: FinanceEntryType[] = ['INCOME', 'EXPENSE', 'SALARY']
@@ -86,9 +87,14 @@ export async function POST(req: NextRequest) {
   const entryDate = date ? new Date(date) : new Date()
   if (isNaN(entryDate.getTime())) return NextResponse.json({ error: 'Некорректная дата' }, { status: 400 })
   const year      = entryDate.getFullYear()
-  const autoId    = await nextFinanceAutoId(session.user.companyId, type, year)
+
+  const lock = await findActivePeriodLock(session.user.companyId, entryDate)
+  if (lock) {
+    return NextResponse.json({ error: `Период «${lock.label}» закрыт — новую операцию задним числом создать нельзя` }, { status: 403 })
+  }
 
   const entry = await prisma.$transaction(async (tx) => {
+    const autoId = await nextFinanceAutoId(tx, session.user.companyId, type, year)
     const e = await tx.financeEntry.create({
       data: {
         companyId:     session.user.companyId,

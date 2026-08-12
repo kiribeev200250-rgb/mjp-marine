@@ -3,6 +3,7 @@ import { getTgSession } from '@/lib/crm/telegram/webapp-auth'
 import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 import type { FunnelStage } from '@prisma/client'
 
 export async function GET(req: Request) {
@@ -18,14 +19,19 @@ export async function GET(req: Request) {
     select: {
       id: true, firstName: true, lastName: true, marina: true, source: true,
       funnelStage: true, phone: true, email: true,
-      invoices: { where: { status: { in: ['ISSUED', 'PARTIAL', 'OVERDUE'] } }, select: { total: true } },
+      invoices: { where: { status: { in: ['ISSUED', 'PARTIAL', 'OVERDUE'] } }, select: { id: true, total: true, ivaRate: true } },
     },
   })
+
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const allInvoices = clients.flatMap((c) => c.invoices)
+  const balances = await outstandingBalances(allInvoices)
 
   return NextResponse.json(
     clients.map((c) => ({
       ...c,
-      openInvoiceTotal: c.invoices.reduce((s, i) => s + Number(i.total), 0),
+      openInvoiceTotal: c.invoices.reduce((s, i) => s + balances.get(i.id)!.toNumber(), 0),
       invoices: undefined,
     })),
   )

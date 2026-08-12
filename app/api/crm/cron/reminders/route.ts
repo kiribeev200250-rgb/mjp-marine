@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendTelegram, notifyAdmins } from '@/lib/crm/telegram/notify'
 import { sendOverdueInvoiceEmail } from '@/lib/resend'
 import { formatMoney } from '@/lib/crm/utils'
+import { detectFinancialAnomalies } from '@/lib/crm/services/anomalies'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const results = { digests: 0, overdue: 0, overdueClientEmails: 0, overdueClientEmailFailures: 0, lowStock: 0, seasonalReminders: 0 }
+  const results = { digests: 0, overdue: 0, overdueClientEmails: 0, overdueClientEmailFailures: 0, lowStock: 0, seasonalReminders: 0, anomalies: 0 }
 
   const start = new Date(); start.setHours(0, 0, 0, 0)
   const end   = new Date(); end.setHours(23, 59, 59, 999)
@@ -135,6 +136,17 @@ export async function GET(req: NextRequest) {
     })
     await notifyAdmins(reminder.companyId, `🔔 Сезонное напоминание: «${reminder.title}» → добавлено в бэклог`)
     results.seasonalReminders++
+  }
+
+  // 5. Финансовые аномалии за сегодня — по всем компаниям (не только тем, где
+  // сработали проверки выше). Пороги простые и настраиваемые (Настройки → см.
+  // lib/crm/services/anomalies.ts).
+  const companies = await prisma.company.findMany({ select: { id: true } })
+  for (const { id: companyId } of companies) {
+    const findings = await detectFinancialAnomalies(companyId, start)
+    if (findings.length === 0) continue
+    await notifyAdmins(companyId, `📊 Финансовые аномалии сегодня:\n${findings.join('\n')}`)
+    results.anomalies += findings.length
   }
 
   return NextResponse.json({ ok: true, ...results })

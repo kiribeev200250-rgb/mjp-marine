@@ -3,6 +3,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
 import { requirePermission } from '@/lib/crm/permissions'
 import { parseAmountExpr } from '@/lib/crm/utils'
+import { findActivePeriodLock } from '@/lib/crm/periodLock'
 import Decimal from 'decimal.js'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -17,6 +18,14 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     where: { id, companyId: session.user.companyId },
   })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const lock = await findActivePeriodLock(session.user.companyId, existing.date)
+  if (lock) {
+    return NextResponse.json(
+      { error: `Период «${lock.label}» закрыт — правка запрещена. Исправление — сторно новой записью в открытом периоде` },
+      { status: 403 },
+    )
+  }
 
   const body = await req.json()
   const { category, amountExpr, date, paymentMethod, description } = body
@@ -104,6 +113,14 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     return NextResponse.json(
       { error: 'Операция по счёту не удаляется напрямую — используйте возврат/отмену оплаты счёта' },
       { status: 400 },
+    )
+  }
+
+  const lock = await findActivePeriodLock(session.user.companyId, existing.date)
+  if (lock) {
+    return NextResponse.json(
+      { error: `Период «${lock.label}» закрыт — удаление запрещено. Исправление — сторно новой записью в открытом периоде` },
+      { status: 403 },
     )
   }
 

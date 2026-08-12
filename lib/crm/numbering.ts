@@ -41,27 +41,32 @@ const FINANCE_PREFIX: Record<FinanceEntryType, string> = {
   SALARY:  'SAL',
 }
 
-// Счётчик по count() записей за год — как в app/api/crm/finance/route.ts.
-// Не атомарно (без $transaction на уровне БД), но коллизии крайне маловероятны
-// при текущей нагрузке (один пользователь Telegram-бота вводит записи вручную).
-export async function nextFinanceAutoId(companyId: string, type: FinanceEntryType, year: number): Promise<string> {
-  const prefix = FINANCE_PREFIX[type]
-  const count = await prisma.financeEntry.count({
-    where: {
-      companyId,
-      type,
-      date: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) },
-    },
+// Атомарный инкремент счётчика через upsert по уникальному (companyId, key, year) —
+// конкурентные вставки сериализуются на уровне строки в Postgres (тот же принцип,
+// что и nextDocumentNumber выше). ОБЯЗАТЕЛЬНО вызывать внутри prisma.$transaction
+// вместе с созданием самой записи, иначе номер может быть "зарезервирован", но не
+// использован при откате транзакции (не страшно — просто пропуск в нумерации).
+async function nextSequence(tx: Tx, companyId: string, key: string, year: number): Promise<number> {
+  const counter = await tx.sequenceCounter.upsert({
+    where:  { companyId_key_year: { companyId, key, year } },
+    create: { companyId, key, year, value: 1 },
+    update: { value: { increment: 1 } },
   })
-  return `${prefix}-${year}-${String(count + 1).padStart(3, '0')}`
+  return counter.value
 }
 
-export async function nextCapitalAutoId(companyId: string, year: number): Promise<string> {
-  const count = await prisma.capitalEntry.count({
-    where: {
-      companyId,
-      date: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) },
-    },
-  })
-  return `INV-${year}-${String(count + 1).padStart(3, '0')}`
+// Раньше считался через count() записей за год — гонка при параллельном вводе
+// (два сотрудника одновременно создают расходы → могли получить один и тот же
+// autoId). Теперь — атомарный счётчик, см. nextSequence. Вызывать ТОЛЬКО внутри
+// prisma.$transaction.
+export async function nextFinanceAutoId(tx: Tx, companyId: string, type: FinanceEntryType, year: number): Promise<string> {
+  const prefix = FINANCE_PREFIX[type]
+  const seq    = await nextSequence(tx, companyId, `FINANCE:${type}`, year)
+  return `${prefix}-${year}-${String(seq).padStart(3, '0')}`
+}
+
+// См. nextFinanceAutoId — тот же атомарный паттерн. Вызывать ТОЛЬКО внутри prisma.$transaction.
+export async function nextCapitalAutoId(tx: Tx, companyId: string, year: number): Promise<string> {
+  const seq = await nextSequence(tx, companyId, 'CAPITAL', year)
+  return `INV-${year}-${String(seq).padStart(3, '0')}`
 }

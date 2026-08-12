@@ -95,7 +95,7 @@ CRM строится **внутри существующего проекта с
 | Маршруты | `/(public)`, `/admin`, `/go` | `/crm` |
 | Auth | next-auth → `AdminUser` | next-auth (отдельные options) → `CrmUser` |
 | DB-таблицы | `SiteConfig`, `GalleryItem`, … | `crm_*` — префикс или отдельная Prisma-схема |
-| Supabase RLS | без RLS (только серверный код) | строгие RLS-политики по `company_id` |
+| Supabase RLS | без RLS (только серверный код) | без RLS-защиты на практике — Prisma-роль обходит RLS (`rolbypassrls`), см. `docs/security.md`; изоляция по `company_id` держится на серверном коде |
 | Деплой | общий Vercel | общий Vercel |
 | Зависимости | нет от CRM | нет от сайта (кроме UI-kit и i18n) |
 
@@ -127,10 +127,12 @@ CRM строится **внутри существующего проекта с
 Одна Supabase Postgres БД, один Prisma-клиент. CRM-модели отличаются от
 сайтовых префиксом (концептуально) — в Prisma они просто разные модели.
 
-Supabase RLS на CRM-таблицах: все операции разрешены только для `service_role`
-(backend) или аутентифицированных пользователей своей компании (если в будущем
-понадобится прямой Supabase-клиент). Сейчас весь доступ — только через Prisma
-на сервере (route handlers / server actions).
+Весь доступ — только через Prisma на сервере (route handlers / server
+actions), под ролью с `rolbypassrls: true` — RLS-политики, даже если их
+завести на CRM-таблицах, этим соединением не применяются, изоляция по
+`companyId` целиком держится на серверном коде (`where: { companyId }` +
+`requirePermission`). Подробности и что изменится, если появится прямой
+Supabase-клиент (например, для будущего realtime) — `docs/security.md`.
 
 ---
 

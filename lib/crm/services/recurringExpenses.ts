@@ -102,7 +102,7 @@ export async function confirmOccurrence(
 
   const tpl = occurrence.recurringExpense
   const year = occurrence.dueDate.getFullYear()
-  const autoId = await nextFinanceAutoId(companyId, 'EXPENSE', year)
+  const autoId = await nextFinanceAutoId(tx, companyId, 'EXPENSE', year)
   const amount = new Decimal(tpl.amount.toString())
 
   const entry = await tx.financeEntry.create({

@@ -3,6 +3,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 import type { FunnelStage, ClientSource } from '@prisma/client'
 
 // GET /api/crm/funnel — все клиенты сгруппированные по стадиям (для канбана)
@@ -36,12 +37,21 @@ export async function GET(req: NextRequest) {
       _count: { select: { invoices: true, tasks: true } },
       invoices: {
         where:  { status: { in: ['ISSUED', 'PARTIAL', 'OVERDUE'] } },
-        select: { total: true },
+        select: { id: true, total: true, ivaRate: true },
       },
     },
   })
 
-  return NextResponse.json(clients)
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const allInvoices = clients.flatMap((c) => c.invoices)
+  const balances = await outstandingBalances(allInvoices)
+  const result = clients.map((c) => ({
+    ...c,
+    invoices: c.invoices.map((i) => ({ total: balances.get(i.id)!.toString() })),
+  }))
+
+  return NextResponse.json(result)
 }
 
 // PATCH /api/crm/funnel — сменить стадию (drag-and-drop)

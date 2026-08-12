@@ -2,6 +2,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
 import { KanbanBoard } from '@/components/crm/funnel/KanbanBoard'
 import type { FunnelClient } from '@/components/crm/funnel/KanbanCard'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 
 export default async function FunnelPage() {
   const session = await getCrmSession()
@@ -23,7 +24,7 @@ export default async function FunnelPage() {
       _count:   { select: { invoices: true, tasks: true } },
       invoices: {
         where:  { status: { in: ['ISSUED', 'PARTIAL', 'OVERDUE'] } },
-        select: { total: true },
+        select: { id: true, total: true, ivaRate: true },
       },
       tasks: {
         orderBy: { createdAt: 'desc' },
@@ -33,10 +34,15 @@ export default async function FunnelPage() {
     },
   })
 
+  // Для PARTIAL (частично возвращённая ранее оплата) остаток к получению —
+  // total за вычетом уже зачтённого дохода, не весь total (см. lib/crm/services/ar.ts)
+  const allInvoices = clients.flatMap((c) => c.invoices)
+  const balances = await outstandingBalances(allInvoices)
+
   const serialized: FunnelClient[] = clients.map((c) => ({
     ...c,
     updatedAt:  c.updatedAt.toISOString(),
-    invoices:   c.invoices.map((inv) => ({ total: inv.total })),
+    invoices:   c.invoices.map((inv) => ({ total: balances.get(inv.id)!.toString() })),
     latestTask: c.tasks[0] ?? null,
   }))
 
