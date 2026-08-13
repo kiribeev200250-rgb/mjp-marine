@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
+import { clientScopeWhere } from '@/lib/crm/scope'
 import type { ClientSource, FunnelStage } from '@prisma/client'
 
 // GET /api/crm/clients — список клиентов с поиском и фильтрами
 export async function GET(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'CLIENTS', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'CLIENTS', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const { searchParams } = req.nextUrl
   const q       = searchParams.get('q')?.trim()
   const stage   = searchParams.get('stage') as FunnelStage | null
@@ -34,6 +36,9 @@ export async function GET(req: NextRequest) {
         { marina:    { contains: q, mode: 'insensitive' as const } },
       ],
     }),
+    // Область видимости (своя марина) перекрывает выбор фильтра марины в UI —
+    // не даёт запросить чужую марину через query-параметр.
+    ...clientScopeWhere(session.user),
   }
 
   const [clients, total] = await Promise.all([
@@ -57,8 +62,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'CLIENTS', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'CLIENTS', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const { firstName, lastName, phone, email, source, language,
           marina, notes, funnelStage } = body

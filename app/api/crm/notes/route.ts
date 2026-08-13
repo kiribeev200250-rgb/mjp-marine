@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 
 // POST /api/crm/notes — добавить датированную заметку к клиенту или к лодке
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'CLIENTS', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'CLIENTS', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const { clientId, boatId, text } = body as { clientId?: string; boatId?: string; text?: string }
 

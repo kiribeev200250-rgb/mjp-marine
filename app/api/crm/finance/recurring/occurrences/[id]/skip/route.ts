@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { skipOccurrence } from '@/lib/crm/services/recurringExpenses'
 
@@ -10,8 +10,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   await skipOccurrence(session.user.companyId, id)
 
   await writeAudit({

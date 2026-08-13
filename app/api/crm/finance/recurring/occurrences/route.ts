@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { ensureOccurrences } from '@/lib/crm/services/recurringExpenses'
 
@@ -10,8 +10,9 @@ import { ensureOccurrences } from '@/lib/crm/services/recurringExpenses'
 export async function GET() {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   await ensureOccurrences(session.user.companyId)
 
   const occurrences = await prisma.recurringExpenseOccurrence.findMany({

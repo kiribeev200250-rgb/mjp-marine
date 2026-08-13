@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { parseWorkbook } from '@/lib/crm/services/importParser'
 
@@ -28,8 +28,9 @@ function matchCategory(
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const form = await req.formData()
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'Файл не передан' }, { status: 400 })

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission, ADMIN_PERMISSIONS } from '@/lib/crm/permissions'
+import { hasPermission, ADMIN_PERMISSIONS } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { writeAudit } from '@/lib/crm/audit'
 
@@ -10,9 +10,12 @@ export async function POST(req: NextRequest) {
     const session = await getCrmSession()
     if (!session) return NextResponse.json({ error: 'Не авт��ризован' }, { status: 401 })
 
-    requirePermission(session.user.role, session.user.permissions, 'SETTINGS', 'CREATE')
+    if (!hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'CREATE')) {
 
-    const { companyId, name, email, password, role } = await req.json()
+      return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+
+    }
+    const { companyId, name, email, password, role, scope, marina } = await req.json()
 
     if (companyId !== session.user.companyId) {
       return NextResponse.json({ error: 'Запрещено' }, { status: 403 })
@@ -32,7 +35,11 @@ export async function POST(req: NextRequest) {
     const permissions = role === 'ADMIN' ? ADMIN_PERMISSIONS : {}
 
     const user = await prisma.crmUser.create({
-      data: { companyId, name, email, password: hashed, role, permissions },
+      data: {
+        companyId, name, email, password: hashed, role, permissions,
+        scope:  scope === 'OWN_TASKS' || scope === 'OWN_MARINA' ? scope : 'ALL',
+        marina: typeof marina === 'string' ? marina.trim() : '',
+      },
     })
 
     await writeAudit({

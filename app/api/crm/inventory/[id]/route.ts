@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -9,8 +9,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'INVENTORY', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVENTORY', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const item = await prisma.inventoryItem.findFirst({
     where:   { id, companyId: session.user.companyId },
     include: {
@@ -30,8 +31,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'INVENTORY', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVENTORY', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const { name, category, unit, qtyMinAlert, costPrice, sellPrice, supplier, notes } = body
 
@@ -73,8 +75,9 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'INVENTORY', 'DELETE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVENTORY', 'DELETE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   await prisma.inventoryItem.update({ where: { id }, data: { active: false } })
 
   await prisma.auditLog.create({

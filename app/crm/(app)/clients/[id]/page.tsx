@@ -8,6 +8,7 @@ import { NotesThread } from '@/components/crm/clients/NotesThread'
 import { AddBoatButton } from '@/components/crm/clients/AddBoatButton'
 import { computeClientMargin } from '@/lib/crm/services/profitability'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { clientScopeWhere } from '@/lib/crm/scope'
 
 const STAGE_ORDER = Object.keys(FSL)
 
@@ -35,7 +36,7 @@ export default async function ClientDetailPage({
   if (!session) return null
 
   const client = await prisma.client.findFirst({
-    where: { id, companyId: session.user.companyId },
+    where: { id, companyId: session.user.companyId, ...clientScopeWhere(session.user) },
     include: {
       yachts:       { where: { archived: false }, orderBy: { createdAt: 'asc' } },
       stageHistory: { orderBy: { createdAt: 'desc' } },

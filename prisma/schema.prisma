@@ -210,6 +210,13 @@ model CrmUser {
   role                  CrmRole   @default(EMPLOYEE)
   // Матрица прав: { "CLIENTS": ["VIEW","CREATE"], "FINANCE": ["VIEW"] }
   permissions           Json      @default("{}")
+  // Доступ на уровне ЗАПИСИ (не модуль×действие, а какие именно записи внутри
+  // модуля видны) — см. lib/crm/scope.ts. ADMIN всегда видит всё, независимо
+  // от этого поля. Дефолт ALL — текущее поведение не меняется, пока явно не
+  // назначить сотруднику более узкую область.
+  scope                 CrmScope  @default(ALL)
+  // Марина сотрудника — используется только при scope=OWN_MARINA.
+  marina                String    @default("")
   telegramId            String?   @unique
   // Код для привязки Telegram (/link <код>) — одноразовый, с истечением
   telegramLinkCode      String?   @unique
@@ -234,6 +241,15 @@ model TelegramSession {
 enum CrmRole {
   ADMIN
   EMPLOYEE
+}
+
+// Область видимости записей внутри модуля (не путать с CrmRole/permissions —
+// это ОТДЕЛЬНОЕ измерение: "какие именно задачи/клиенты видны", а не "какие
+// действия разрешены"). См. lib/crm/scope.ts.
+enum CrmScope {
+  ALL // видит все записи компании (текущее поведение, дефолт; всегда для ADMIN)
+  OWN_TASKS // только свои задачи (SCHEDULE)
+  OWN_MARINA // только своя марина (SCHEDULE + CLIENTS/FUNNEL)
 }
 
 // Реквизиты компании для счетов — заполняется в настройках CRM
@@ -491,6 +507,11 @@ model Task {
   plannedMaterials    Json       @default("[]")
   materialsWrittenOff Boolean    @default(false)
   completedAt         DateTime?
+  // Оптимистичная блокировка: инкрементируется на каждый PATCH. Клиент
+  // присылает версию, с которой открывал форму — если она разошлась с
+  // текущей, правка отклоняется (409), а не тихо перезаписывает чужие
+  // изменения. См. lib/crm/optimisticLock.ts.
+  version             Int        @default(0)
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
@@ -836,6 +857,8 @@ model Invoice {
   // Списание материалов со склада произошло при выставлении (идемпотентность
   // каскада «фактура → склад»); при аннулировании материалы возвращаются и флаг сбрасывается.
   materialsWrittenOff Boolean       @default(false)
+  // Оптимистичная блокировка на PUT (полное редактирование DRAFT) — см. Task.version.
+  version             Int           @default(0)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 

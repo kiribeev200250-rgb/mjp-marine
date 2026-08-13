@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomInt } from 'node:crypto'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
 
@@ -9,8 +9,9 @@ import { prisma } from '@/lib/prisma'
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const { userId } = await req.json()
   const user = await prisma.crmUser.findFirst({ where: { id: userId, companyId: session.user.companyId } })
   if (!user) return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
@@ -30,8 +31,9 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const { userId } = await req.json()
   const user = await prisma.crmUser.findFirst({ where: { id: userId, companyId: session.user.companyId } })
   if (!user) return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })

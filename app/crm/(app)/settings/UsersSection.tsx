@@ -11,11 +11,19 @@ interface User {
   active:     boolean
   createdAt:  Date
   telegramId: string | null
+  scope:      string
+  marina:     string
 }
 
 interface Props {
   companyId: string
   users:     User[]
+}
+
+const SCOPE_LABEL: Record<string, string> = {
+  ALL:        'Всё',
+  OWN_TASKS:  'Только свои задачи',
+  OWN_MARINA: 'Только своя марина',
 }
 
 export function UsersSection({ companyId, users }: Props) {
@@ -24,6 +32,7 @@ export function UsersSection({ companyId, users }: Props) {
   const [error,    setError]    = useState('')
   const [codeFor,  setCodeFor]  = useState<{ userId: string; code: string } | null>(null)
   const [tgBusy,   setTgBusy]   = useState<string | null>(null)
+  const [scope,    setScope]    = useState('ALL')
   const [linked,   setLinked]   = useState<Record<string, boolean>>(
     Object.fromEntries(users.map((u) => [u.id, !!u.telegramId])),
   )
@@ -64,12 +73,15 @@ export function UsersSection({ companyId, users }: Props) {
         email:    form.get('email'),
         password: form.get('password'),
         role:     form.get('role'),
+        scope:    form.get('scope'),
+        marina:   form.get('marina'),
       }),
     })
 
     setSaving(false)
     if (res.ok) {
       setShowForm(false)
+      setScope('ALL')
       window.location.reload()
     } else {
       const d = await res.json().catch(() => ({}))
@@ -87,6 +99,7 @@ export function UsersSection({ companyId, users }: Props) {
             <th className="text-gray-500 font-medium text-left px-5 py-3 text-label uppercase tracking-wide">Email</th>
             <th className="text-gray-500 font-medium text-left px-5 py-3 text-label uppercase tracking-wide">Роль</th>
             <th className="text-gray-500 font-medium text-left px-5 py-3 text-label uppercase tracking-wide">Статус</th>
+            <th className="text-gray-500 font-medium text-left px-5 py-3 text-label uppercase tracking-wide">Область видимости</th>
             <th className="text-gray-500 font-medium text-left px-5 py-3 text-label uppercase tracking-wide">Telegram</th>
           </tr>
         </thead>
@@ -104,6 +117,10 @@ export function UsersSection({ companyId, users }: Props) {
                 <span className={`text-label font-medium ${u.active ? 'text-success' : 'text-gray-500'}`}>
                   {u.active ? 'Активен' : 'Отключён'}
                 </span>
+              </td>
+              <td className="px-5 py-3 text-label text-gray-500">
+                {u.role === 'ADMIN' ? 'Всё' : SCOPE_LABEL[u.scope] ?? u.scope}
+                {u.role !== 'ADMIN' && u.scope === 'OWN_MARINA' && u.marina && ` (${u.marina})`}
               </td>
               <td className="px-5 py-3">
                 {codeFor?.userId === u.id ? (
@@ -154,6 +171,14 @@ export function UsersSection({ companyId, users }: Props) {
               <option value="EMPLOYEE">Сотрудник</option>
               <option value="ADMIN">Администратор</option>
             </Select>
+            <Select name="scope" value={scope} onChange={(e) => setScope(e.target.value)}>
+              <option value="ALL">Видит всё (как раньше)</option>
+              <option value="OWN_TASKS">Только свои задачи</option>
+              <option value="OWN_MARINA">Только своя марина</option>
+            </Select>
+            {scope === 'OWN_MARINA' && (
+              <Input name="marina" required placeholder="Название марины" autoComplete="off" />
+            )}
 
             {error && (
               <p className="sm:col-span-2 text-danger text-label">{error}</p>

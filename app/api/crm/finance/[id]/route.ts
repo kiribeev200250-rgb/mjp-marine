@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { parseAmountExpr } from '@/lib/crm/utils'
 import { findActivePeriodLock } from '@/lib/crm/periodLock'
 import Decimal from 'decimal.js'
@@ -12,8 +12,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const existing = await prisma.financeEntry.findFirst({
     where: { id, companyId: session.user.companyId },
   })
@@ -102,8 +103,9 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'DELETE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'DELETE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const existing = await prisma.financeEntry.findFirst({
     where: { id, companyId: session.user.companyId },
   })

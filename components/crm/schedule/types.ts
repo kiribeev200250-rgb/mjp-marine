@@ -12,6 +12,7 @@ export interface SerializedTask {
   boatId:      string | null
   completedAt: string | null
   createdAt:   string
+  version:     number
   client: {
     id:        string
     firstName: string

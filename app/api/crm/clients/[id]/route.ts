@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
+import { clientScopeWhere } from '@/lib/crm/scope'
 import type { FunnelStage } from '@prisma/client'
 
 // GET /api/crm/clients/[id] — карточка клиента со всей историей
@@ -13,10 +14,11 @@ export async function GET(
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'CLIENTS', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'CLIENTS', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const client = await prisma.client.findFirst({
-    where: { id, companyId: session.user.companyId },
+    where: { id, companyId: session.user.companyId, ...clientScopeWhere(session.user) },
     include: {
       yachts:       true,
       stageHistory: { orderBy: { createdAt: 'desc' } },
@@ -39,13 +41,14 @@ export async function PATCH(
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'CLIENTS', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'CLIENTS', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const companyId = session.user.companyId
 
   const existing = await prisma.client.findFirst({
-    where: { id, companyId },
+    where: { id, companyId, ...clientScopeWhere(session.user) },
   })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 
@@ -101,11 +104,12 @@ export async function DELETE(
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'CLIENTS', 'DELETE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'CLIENTS', 'DELETE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const companyId = session.user.companyId
   const existing  = await prisma.client.findFirst({
-    where: { id, companyId },
+    where: { id, companyId, ...clientScopeWhere(session.user) },
   })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 

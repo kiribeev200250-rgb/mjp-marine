@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
 import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
@@ -12,8 +12,9 @@ import type { QuoteStatus } from '@prisma/client'
 export async function GET(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVOICES', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const { searchParams } = req.nextUrl
   const status = searchParams.get('status') as QuoteStatus | null
   const q      = searchParams.get('q')?.trim()
@@ -42,8 +43,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVOICES', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const { clientId, boatId, language, validUntil, ivaRate, notes, jobs } = body as {
     clientId: string

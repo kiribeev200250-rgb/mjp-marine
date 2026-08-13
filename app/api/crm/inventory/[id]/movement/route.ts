@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { nextFinanceAutoId } from '@/lib/crm/numbering'
 import { findOrCreateCategory } from '@/lib/crm/services/categories'
@@ -16,8 +16,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { id: itemId } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'INVENTORY', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVENTORY', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const { type, qty, unitPrice, taskId, note } = body
 

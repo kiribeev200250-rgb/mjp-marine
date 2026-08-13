@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { clientScopeWhere } from '@/lib/crm/scope'
 import type { FunnelStage, ClientSource } from '@prisma/client'
 
 // GET /api/crm/funnel — все клиенты сгруппированные по стадиям (для канбана)
 export async function GET(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FUNNEL', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FUNNEL', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const { searchParams } = req.nextUrl
   const marina  = searchParams.get('marina')
   const source  = searchParams.get('source')
@@ -22,6 +24,8 @@ export async function GET(req: NextRequest) {
       active:    true,
       ...(marina && { marina }),
       ...(source && { source: source as ClientSource }),
+      // Область видимости (своя марина) перекрывает выбор фильтра марины в UI.
+      ...clientScopeWhere(session.user),
     },
     orderBy: { updatedAt: 'desc' },
     select: {
@@ -58,8 +62,9 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FUNNEL', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FUNNEL', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const { clientId, toStage, note } = await req.json() as {
     clientId: string
     toStage:  FunnelStage
@@ -67,7 +72,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const existing = await prisma.client.findFirst({
-    where: { id: clientId, companyId: session.user.companyId },
+    where: { id: clientId, companyId: session.user.companyId, ...clientScopeWhere(session.user) },
     select: { funnelStage: true },
   })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })

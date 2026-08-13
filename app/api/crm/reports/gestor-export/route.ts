@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { INVOICE_STATUS_LABELS } from '@/lib/crm/utils'
 
@@ -20,8 +20,9 @@ function n(d: unknown): number {
 export async function GET(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'REPORTS', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'REPORTS', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const year = parseInt(req.nextUrl.searchParams.get('year') ?? '') || new Date().getFullYear()
   const yearStart = new Date(year, 0, 1)
   const yearEnd = new Date(year + 1, 0, 1)

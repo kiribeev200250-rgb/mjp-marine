@@ -3,6 +3,7 @@ import { getTgSession } from '@/lib/crm/telegram/webapp-auth'
 import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
+import { taskScopeWhere } from '@/lib/crm/scope'
 
 // GET /api/tg/tasks — задачи на сегодня + бэклог
 export async function GET(req: Request) {
@@ -21,12 +22,13 @@ export async function GET(req: Request) {
       where: {
         companyId: session.companyId,
         scheduledAt: { gte: todayStart, lt: todayEnd },
+        ...taskScopeWhere(session),
       },
       orderBy: [{ startTime: 'asc' }, { createdAt: 'asc' }],
       include: { client: { select: { id: true, firstName: true, lastName: true, marina: true } } },
     }),
     prisma.task.findMany({
-      where: { companyId: session.companyId, isBacklog: true, status: { notIn: ['DONE'] } },
+      where: { companyId: session.companyId, isBacklog: true, status: { notIn: ['DONE'] }, ...taskScopeWhere(session) },
       orderBy: { createdAt: 'asc' },
       include: { client: { select: { id: true, firstName: true, lastName: true, marina: true } } },
     }),

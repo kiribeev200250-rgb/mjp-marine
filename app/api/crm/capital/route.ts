@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { nextCapitalAutoId } from '@/lib/crm/numbering'
 import { findActivePeriodLock } from '@/lib/crm/periodLock'
@@ -14,8 +14,9 @@ const VALID_TYPES: CapitalEntryType[] = ['REINVESTMENT', 'STARTUP_ASSET', 'START
 export async function GET(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const entries = await prisma.capitalEntry.findMany({
     where:   { companyId: session.user.companyId },
     orderBy: { date: 'desc' },
@@ -29,8 +30,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const { type, amount: amountRaw, source, date, note } = body as {
     type?: CapitalEntryType

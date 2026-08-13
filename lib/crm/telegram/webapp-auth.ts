@@ -47,6 +47,8 @@ export interface TgSessionUser {
   companyId:   string
   role:        'ADMIN' | 'EMPLOYEE'
   permissions: PermissionMatrix
+  scope:       'ALL' | 'OWN_TASKS' | 'OWN_MARINA'
+  marina:      string
   name:        string
   telegramId?: string
 }
@@ -65,8 +67,9 @@ export async function getTgSession(req: Request): Promise<TgSessionUser | null> 
       if (user && user.active) {
         return {
           id: user.id, companyId: user.companyId, role: user.role,
-          permissions: user.permissions as PermissionMatrix, name: user.name,
-          telegramId: user.telegramId ?? undefined,
+          permissions: user.permissions as PermissionMatrix,
+          scope: user.scope, marina: user.marina,
+          name: user.name, telegramId: user.telegramId ?? undefined,
         }
       }
       return null // валидный Telegram-пользователь, но аккаунт не привязан
@@ -77,7 +80,9 @@ export async function getTgSession(req: Request): Promise<TgSessionUser | null> 
   if (crmSession) {
     return {
       id: crmSession.user.id, companyId: crmSession.user.companyId, role: crmSession.user.role,
-      permissions: crmSession.user.permissions, name: crmSession.user.name,
+      permissions: crmSession.user.permissions,
+      scope: crmSession.user.scope, marina: crmSession.user.marina,
+      name: crmSession.user.name,
     }
   }
 

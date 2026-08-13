@@ -48,6 +48,8 @@ export const crmAuthOptions: NextAuthOptions = {
           companyId:   user.companyId,
           role:        user.role as string,
           permissions: user.permissions as PermissionMatrix,
+          scope:       user.scope as string,
+          marina:      user.marina,
         }
       },
     }),
@@ -59,6 +61,8 @@ export const crmAuthOptions: NextAuthOptions = {
         token.companyId   = (user as unknown as Record<string, unknown>).companyId as string
         token.role        = (user as unknown as Record<string, unknown>).role as string
         token.permissions = (user as unknown as Record<string, unknown>).permissions as PermissionMatrix
+        token.scope       = (user as unknown as Record<string, unknown>).scope as string
+        token.marina      = (user as unknown as Record<string, unknown>).marina as string
       }
       return token
     },
@@ -69,6 +73,8 @@ export const crmAuthOptions: NextAuthOptions = {
         u.companyId   = token.companyId
         u.role        = token.role
         u.permissions = token.permissions
+        u.scope       = token.scope
+        u.marina      = token.marina
       }
       return session
     },

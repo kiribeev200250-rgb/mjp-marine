@@ -6,6 +6,7 @@ import { ClientsTable } from '@/components/crm/clients/ClientsTable'
 import { ClientFilters } from '@/components/crm/clients/ClientFilters'
 import { ExportCsvButton } from '@/components/crm/ui'
 import { FUNNEL_STAGE_LABELS } from '@/lib/crm/utils'
+import { clientScopeWhere } from '@/lib/crm/scope'
 import type { ClientSource, FunnelStage } from '@prisma/client'
 
 interface SearchParams {
@@ -42,6 +43,9 @@ export default async function ClientsPage({
         { marina:    { contains: searchParams.q, mode: 'insensitive' as const } },
       ],
     }),
+    // Область видимости (своя марина) перекрывает выбор фильтра марины в UI —
+    // не даёт запросить чужую марину через query-параметр.
+    ...clientScopeWhere(session.user),
   }
 
   const [clients, total] = await Promise.all([

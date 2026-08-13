@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { nextCapitalAutoId } from '@/lib/crm/numbering'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -13,8 +13,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const existing = await prisma.capitalEntry.findFirst({
     where: { id, companyId: session.user.companyId },
   })

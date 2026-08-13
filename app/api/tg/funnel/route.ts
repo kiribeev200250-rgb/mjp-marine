@@ -4,6 +4,7 @@ import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { clientScopeWhere } from '@/lib/crm/scope'
 import type { FunnelStage } from '@prisma/client'
 
 export async function GET(req: Request) {
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   }
 
   const clients = await prisma.client.findMany({
-    where:  { companyId: session.companyId, active: true },
+    where:  { companyId: session.companyId, active: true, ...clientScopeWhere(session) },
     orderBy: { updatedAt: 'desc' },
     select: {
       id: true, firstName: true, lastName: true, marina: true, source: true,
@@ -47,7 +48,7 @@ export async function PATCH(req: Request) {
   const { clientId, toStage } = await req.json() as { clientId: string; toStage: FunnelStage }
 
   const existing = await prisma.client.findFirst({
-    where:  { id: clientId, companyId: session.companyId },
+    where:  { id: clientId, companyId: session.companyId, ...clientScopeWhere(session) },
     select: { funnelStage: true },
   })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })

@@ -25,7 +25,7 @@ export default async function SettingsPage() {
     prisma.crmUser.findMany({
       where:   { companyId },
       orderBy: { createdAt: 'asc' },
-      select:  { id: true, name: true, email: true, role: true, active: true, createdAt: true, telegramId: true },
+      select:  { id: true, name: true, email: true, role: true, active: true, createdAt: true, telegramId: true, scope: true, marina: true },
     }),
     prisma.periodLock.findMany({
       where:   { companyId },

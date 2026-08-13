@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
 import type { CategoryKind } from '@prisma/client'
@@ -11,8 +11,9 @@ const VALID_KINDS: CategoryKind[] = ['INCOME', 'EXPENSE', 'SALARY']
 export async function GET(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const kind = req.nextUrl.searchParams.get('kind') as CategoryKind | null
   if (kind && !VALID_KINDS.includes(kind)) {
     return NextResponse.json({ error: 'Некорректный тип категории' }, { status: 400 })
@@ -31,8 +32,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json()
   const { kind, name } = body as { kind?: CategoryKind; name?: string }
 

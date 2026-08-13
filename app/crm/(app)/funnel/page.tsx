@@ -3,13 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { KanbanBoard } from '@/components/crm/funnel/KanbanBoard'
 import type { FunnelClient } from '@/components/crm/funnel/KanbanCard'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { clientScopeWhere } from '@/lib/crm/scope'
 
 export default async function FunnelPage() {
   const session = await getCrmSession()
   if (!session) return null
 
   const clients = await prisma.client.findMany({
-    where:   { companyId: session.user.companyId, active: true },
+    where:   { companyId: session.user.companyId, active: true, ...clientScopeWhere(session.user) },
     orderBy: { updatedAt: 'desc' },
     select: {
       id:          true,

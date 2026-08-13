@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
 
@@ -8,8 +8,9 @@ import { prisma } from '@/lib/prisma'
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const { fbEnabled, fbAppId, fbPageToken, fbVerifyToken } = await req.json()
 
   const prev = await prisma.companyInfo.findUnique({ where: { companyId: session.user.companyId } })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 
 // POST — дублировать счёт (любого статуса) в новый черновик: тот же клиент,
@@ -11,8 +11,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVOICES', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const source = await prisma.invoice.findFirst({
     where:   { id, companyId: session.user.companyId },
     include: { jobs: { orderBy: { sortOrder: 'asc' }, include: { materials: { orderBy: { sortOrder: 'asc' } } } } },

@@ -67,6 +67,7 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
       scheduledAt: buildDatetime(form.scheduledAt, ''),
       startTime:   buildDatetime(form.scheduledAt, form.startTime),
       endTime:     buildDatetime(form.scheduledAt, form.endTime),
+      ...(isEdit && { version: task!.version }),
     }
 
     try {

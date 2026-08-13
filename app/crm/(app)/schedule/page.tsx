@@ -3,6 +3,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
 import { SchedulerBoard } from '@/components/crm/schedule/SchedulerBoard'
 import type { SerializedTask, ClientWithBoats } from '@/components/crm/schedule/types'
+import { taskScopeWhere, clientScopeWhere } from '@/lib/crm/scope'
 
 export default async function SchedulePage() {
   const session = await getCrmSession()
@@ -14,6 +15,7 @@ export default async function SchedulePage() {
     prisma.task.findMany({
       where: {
         companyId: session.user.companyId,
+        ...taskScopeWhere(session.user),
         OR: [
           { status: { notIn: ['DONE'] } },
           { completedAt: { gte: fourteenDaysAgo } },
@@ -26,7 +28,7 @@ export default async function SchedulePage() {
       },
     }),
     prisma.client.findMany({
-      where:   { companyId: session.user.companyId, active: true },
+      where:   { companyId: session.user.companyId, active: true, ...clientScopeWhere(session.user) },
       select:  {
         id: true, firstName: true, lastName: true,
         yachts: { where: { archived: false }, select: { id: true, name: true, model: true }, orderBy: { createdAt: 'asc' } },
@@ -49,6 +51,7 @@ export default async function SchedulePage() {
     boatId:      t.boatId,
     completedAt: t.completedAt?.toISOString() ?? null,
     createdAt:   t.createdAt.toISOString(),
+    version:     t.version,
     client:      t.client,
     boat:        t.boat,
   }))

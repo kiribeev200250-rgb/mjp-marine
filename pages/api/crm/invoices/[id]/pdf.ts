@@ -1,15 +1,14 @@
 // Pages Router API route (не app/api) — см. комментарий в quotes/[id]/pdf.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getCrmSessionApi } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { renderDocumentPdf, resolveInvoiceCompanyInfo } from '@/lib/crm/pdf'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getCrmSessionApi(req, res)
   if (!session) return res.status(401).json({ error: 'Не авторизован' })
-  requirePermission(session.user.role, session.user.permissions, 'INVOICES', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'INVOICES', 'VIEW')) return res.status(403).json({ error: 'Недостаточно прав' })
   const id = String(req.query.id)
   const invoice = await prisma.invoice.findFirst({
     where: { id, companyId: session.user.companyId },

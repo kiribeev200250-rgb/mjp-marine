@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { prisma } from '@/lib/prisma'
+import { taskScopeWhere } from '@/lib/crm/scope'
 import type { TaskStatus } from '@prisma/client'
 
 interface TaskMaterial { itemId: string; name: string; unit: string; qty: string }
@@ -60,7 +61,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
   }
 
-  const existing = await prisma.task.findFirst({ where: { id, companyId: session.companyId } })
+  const existing = await prisma.task.findFirst({ where: { id, companyId: session.companyId, ...taskScopeWhere(session) } })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 
   const { status } = await req.json() as { status: TaskStatus }

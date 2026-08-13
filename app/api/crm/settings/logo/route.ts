@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
 import { uploadCompanyLogo, deleteCompanyLogo, isStorageConfigured } from '@/lib/crm/storage'
@@ -14,8 +14,9 @@ const ALLOWED = { 'image/png': 'png', 'image/webp': 'webp', 'image/jpeg': 'jpg',
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   if (!isStorageConfigured()) {
     return NextResponse.json({ error: 'Загрузка файлов не настроена — обратитесь к администратору' }, { status: 503 })
   }
@@ -58,8 +59,9 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const prev = await prisma.companyInfo.findUnique({ where: { companyId: session.user.companyId } })
   if (!prev) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 

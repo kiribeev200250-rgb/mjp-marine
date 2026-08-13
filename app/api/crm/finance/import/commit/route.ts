@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Decimal from 'decimal.js'
 import type { CapitalEntryType, CategoryKind, FinanceEntryType, PrismaClient } from '@prisma/client'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
 
@@ -75,8 +75,9 @@ async function resolveCategory(
 export async function POST(req: NextRequest) {
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'CREATE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const body = await req.json().catch(() => null)
   const sheet = body?.sheet as ImportSheet | undefined
   const rows  = body?.rows as CommitRow[] | undefined

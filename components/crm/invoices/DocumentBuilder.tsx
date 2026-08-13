@@ -85,6 +85,8 @@ export interface BuilderInitialData {
   paymentMethod?: string
   notes: string
   jobs: BuilderInitialJob[]
+  // Только для invoice — оптимистичная блокировка на PUT, см. lib/crm/optimisticLock.ts
+  version?: number
 }
 
 interface Props {
@@ -290,7 +292,11 @@ export function DocumentBuilder({
       ? (isInvoice ? `/api/crm/invoices/${documentId}` : `/api/crm/quotes/${documentId}`)
       : (isInvoice ? '/api/crm/invoices' : '/api/crm/quotes')
     const payload = isInvoice
-      ? { clientId, boatId: boatId || null, language, dueDate: dueDate || undefined, ivaRate, irpfRate, paymentMethod, notes, jobs: cleanJobs, ...(!isEdit && { asDraft }) }
+      ? {
+          clientId, boatId: boatId || null, language, dueDate: dueDate || undefined, ivaRate, irpfRate, paymentMethod, notes, jobs: cleanJobs,
+          ...(!isEdit && { asDraft }),
+          ...(isEdit && { version: initialData?.version }),
+        }
       : { clientId, boatId: boatId || null, language, validUntil: validUntil || undefined, ivaRate, notes, jobs: cleanJobs }
 
     const res = await fetch(endpoint, {

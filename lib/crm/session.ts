@@ -10,6 +10,8 @@ export interface CrmSessionUser {
   companyId:   string
   role:        'ADMIN' | 'EMPLOYEE'
   permissions: PermissionMatrix
+  scope:       'ALL' | 'OWN_TASKS' | 'OWN_MARINA'
+  marina:      string
 }
 
 export interface CrmSession {

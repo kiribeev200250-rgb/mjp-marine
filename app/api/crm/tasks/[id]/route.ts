@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
-import { requirePermission } from '@/lib/crm/permissions'
+import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { prisma } from '@/lib/prisma'
+import { taskScopeWhere } from '@/lib/crm/scope'
+import { checkVersion } from '@/lib/crm/optimisticLock'
 import type { PrismaClient, TaskStatus } from '@prisma/client'
 
 type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
@@ -18,10 +20,11 @@ export async function GET(
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SCHEDULE', 'VIEW')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SCHEDULE', 'VIEW')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const task = await prisma.task.findFirst({
-    where: { id, companyId: session.user.companyId },
+    where: { id, companyId: session.user.companyId, ...taskScopeWhere(session.user) },
     include: {
       client: { select: { id: true, firstName: true, lastName: true } },
       boat:   { select: { id: true, name: true, model: true } },
@@ -89,18 +92,22 @@ export async function PATCH(
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SCHEDULE', 'EDIT')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SCHEDULE', 'EDIT')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const existing = await prisma.task.findFirst({
-    where: { id, companyId: session.user.companyId },
+    where: { id, companyId: session.user.companyId, ...taskScopeWhere(session.user) },
   })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 
   const body = await req.json()
   const {
     status, scheduledAt, startTime, endTime, title, description, marina, clientId, boatId, isBacklog,
-    plannedMaterials, photosBefore, photosAfter,
+    plannedMaterials, photosBefore, photosAfter, version,
   } = body
+
+  const conflict = checkVersion(version, existing.version)
+  if (conflict) return conflict
 
   const data: Record<string, unknown> = {}
   if (title       !== undefined) data.title       = title
@@ -137,6 +144,7 @@ export async function PATCH(
   }
   if (photosBefore !== undefined) data.photosBefore = photosBefore
   if (photosAfter  !== undefined) data.photosAfter  = photosAfter
+  data.version = { increment: 1 }
 
   let updated
   let lowStockAlerts: { name: string; newStock: Decimal; unit: string; minAlert: Decimal }[] = []
@@ -207,10 +215,11 @@ export async function DELETE(
   const { id } = await params
   const session = await getCrmSession()
   if (!session) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-  requirePermission(session.user.role, session.user.permissions, 'SCHEDULE', 'DELETE')
-
+  if (!hasPermission(session.user.role, session.user.permissions, 'SCHEDULE', 'DELETE')) {
+    return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+  }
   const existing = await prisma.task.findFirst({
-    where: { id, companyId: session.user.companyId },
+    where: { id, companyId: session.user.companyId, ...taskScopeWhere(session.user) },
   })
   if (!existing) return NextResponse.json({ error: 'Не найдено' }, { status: 404 })
 
