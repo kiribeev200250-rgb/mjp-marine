@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Decimal from 'decimal.js'
 import {
@@ -87,6 +87,11 @@ export interface BuilderInitialData {
   jobs: BuilderInitialJob[]
   // Только для invoice — оптимистичная блокировка на PUT, см. lib/crm/optimisticLock.ts
   version?: number
+  discountType?: 'NONE' | 'PERCENT' | 'FIXED'
+  discountValue?: string
+  depositType?: 'NONE' | 'PERCENT' | 'FIXED'
+  depositValue?: string
+  isWarranty?: boolean
 }
 
 interface Props {
@@ -171,6 +176,11 @@ export function DocumentBuilder({
   const [matSearch,     setMatSearch]    = useState<{ job: number; mat: number } | null>(null)
   const [ivaRate,       setIvaRate]      = useState(initialData?.ivaRate ?? defaultIvaRate)
   const [irpfRate,      setIrpfRate]     = useState(initialData?.irpfRate ?? defaultIrpfRate)
+  const [discountType,  setDiscountType] = useState<'NONE' | 'PERCENT' | 'FIXED'>(initialData?.discountType ?? 'NONE')
+  const [discountValue, setDiscountValue] = useState(initialData?.discountValue ?? '')
+  const [depositType,   setDepositType]  = useState<'NONE' | 'PERCENT' | 'FIXED'>(initialData?.depositType ?? 'NONE')
+  const [depositValue,  setDepositValue] = useState(initialData?.depositValue ?? '')
+  const [isWarranty,    setIsWarranty]   = useState(initialData?.isWarranty ?? false)
   const [dueDate,       setDueDate]      = useState(initialData?.dueDate ?? '')
   const [validUntil,    setValidUntil]   = useState(initialData?.validUntil ?? '')
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod ?? PAYMENT_METHODS[0])
@@ -178,6 +188,55 @@ export function DocumentBuilder({
   const [asDraft,       setAsDraft]      = useState(false)
   const [saving,        setSaving]       = useState(false)
   const [error,         setError]        = useState<string | null>(null)
+
+  // Шаблоны работ («сохранить как шаблон» / «применить в один клик») —
+  // общие для смет и счетов, см. app/api/crm/templates.
+  const [templates,       setTemplates]       = useState<{ id: string; name: string; jobs: BuilderInitialJob[] }[]>([])
+  const [templatePick,    setTemplatePick]    = useState('')
+  const [savingTemplate,  setSavingTemplate]  = useState(false)
+  const [templateName,    setTemplateName]    = useState('')
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/crm/templates').then((r) => r.json()).then(setTemplates).catch(() => {})
+  }, [])
+
+  function applyTemplate(templateId: string) {
+    const tpl = templates.find((t) => t.id === templateId)
+    if (!tpl) return
+    const newLines = tpl.jobs.map(jobToLine)
+    setJobs((prev) => (prev.length === 1 && !prev[0].title.trim() ? newLines : [...prev, ...newLines]))
+    setTemplatePick('')
+  }
+
+  async function handleSaveTemplate() {
+    if (!templateName.trim()) return
+    setSavingTemplate(true)
+    const cleanJobs = jobs
+      .filter((j) => j.title.trim())
+      .map((j) => ({
+        title: j.title.trim(),
+        laborHours: j.mode === 'hours' ? (j.laborHours || '0') : undefined,
+        laborRate:  j.mode === 'hours' ? (j.laborRate  || '0') : undefined,
+        quantity:   j.mode === 'qty'   ? (j.quantity   || '0') : undefined,
+        unitPrice:  j.mode === 'qty'   ? (j.unitPrice  || '0') : undefined,
+        laborCost:  j.mode === 'fixed' ? (j.laborCost  || '0') : '0',
+        materials: j.materials
+          .filter((m) => m.name.trim() && Number(m.unitPrice) >= 0 && Number(m.quantity) > 0)
+          .map((m) => ({ name: m.name.trim(), quantity: m.quantity, unitPrice: m.unitPrice, inventoryItemId: m.inventoryItemId })),
+      }))
+    const res = await fetch('/api/crm/templates', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: templateName.trim(), jobs: cleanJobs }),
+    })
+    setSavingTemplate(false)
+    if (res.ok) {
+      const tpl = await res.json()
+      setTemplates((prev) => [...prev, tpl].sort((a, b) => a.name.localeCompare(b.name)))
+      setShowSaveTemplate(false)
+      setTemplateName('')
+    }
+  }
 
   const filteredClients = useMemo(() => {
     const q = clientSearch.trim().toLowerCase()
@@ -258,14 +317,20 @@ export function DocumentBuilder({
     })
     const jobsTotal      = jobRows.reduce((s, j) => s.plus(j.laborCostDec), new Decimal(0))
     const materialsTotal = jobRows.reduce((s, j) => s.plus(j.materialsSum), new Decimal(0))
-    const subtotal   = jobsTotal.plus(materialsTotal)
+    const catalogSubtotal = jobsTotal.plus(materialsTotal)
+    const discountAmount = discountType === 'NONE' || !discountValue
+      ? new Decimal(0)
+      : discountType === 'PERCENT'
+      ? catalogSubtotal.times(new Decimal(discountValue || 0)).div(100)
+      : Decimal.min(new Decimal(discountValue || 0), catalogSubtotal)
+    const subtotal   = catalogSubtotal.minus(discountAmount)
     const iva        = new Decimal(ivaRate || 0)
     const irpf       = new Decimal(isInvoice ? irpfRate || 0 : 0)
     const ivaAmount  = subtotal.times(iva).div(100)
     const irpfAmount = subtotal.times(irpf).div(100)
     const total       = subtotal.plus(ivaAmount).minus(irpfAmount)
-    return { jobRows, jobsTotal, materialsTotal, subtotal, ivaAmount, irpfAmount, total }
-  }, [jobs, ivaRate, irpfRate, isInvoice])
+    return { jobRows, jobsTotal, materialsTotal, catalogSubtotal, discountAmount, subtotal, ivaAmount, irpfAmount, total }
+  }, [jobs, ivaRate, irpfRate, isInvoice, discountType, discountValue])
 
   async function handleSubmit() {
     setError(null)
@@ -294,10 +359,15 @@ export function DocumentBuilder({
     const payload = isInvoice
       ? {
           clientId, boatId: boatId || null, language, dueDate: dueDate || undefined, ivaRate, irpfRate, paymentMethod, notes, jobs: cleanJobs,
+          discountType, discountValue: discountValue || '0', depositType, depositValue: depositValue || '0',
+          isWarranty,
           ...(!isEdit && { asDraft }),
           ...(isEdit && { version: initialData?.version }),
         }
-      : { clientId, boatId: boatId || null, language, validUntil: validUntil || undefined, ivaRate, notes, jobs: cleanJobs }
+      : {
+          clientId, boatId: boatId || null, language, validUntil: validUntil || undefined, ivaRate, notes, jobs: cleanJobs,
+          discountType, discountValue: discountValue || '0', depositType, depositValue: depositValue || '0',
+        }
 
     const res = await fetch(endpoint, {
       method:  isEdit ? 'PUT' : 'POST',
@@ -386,7 +456,19 @@ export function DocumentBuilder({
 
         {/* Работы */}
         <div className="space-y-3">
-          <label className="block text-label text-gray-500 uppercase tracking-wide">Работы и материалы</label>
+          <div className="flex items-center justify-between">
+            <label className="block text-label text-gray-500 uppercase tracking-wide">Работы и материалы</label>
+            {templates.length > 0 && (
+              <select
+                value={templatePick}
+                onChange={(e) => applyTemplate(e.target.value)}
+                className="text-label border border-gray-200 rounded-control px-2 py-1 text-gray-700"
+              >
+                <option value="">+ Применить шаблон…</option>
+                {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            )}
+          </div>
 
           <DndContext sensors={jobSensors} collisionDetection={closestCenter} onDragEnd={handleJobDragEnd}>
             <SortableContext items={jobs.map((j) => j.key)} strategy={verticalListSortingStrategy}>
@@ -413,9 +495,37 @@ export function DocumentBuilder({
             </SortableContext>
           </DndContext>
 
-          <button type="button" onClick={addJob} className="text-info text-body font-medium hover:underline">
-            + Работа
-          </button>
+          <div className="flex items-center gap-4">
+            <button type="button" onClick={addJob} className="text-info text-body font-medium hover:underline">
+              + Работа
+            </button>
+            {!showSaveTemplate ? (
+              <button
+                type="button"
+                onClick={() => setShowSaveTemplate(true)}
+                disabled={jobs.every((j) => !j.title.trim())}
+                className="text-gray-500 text-label hover:text-gray-900 hover:underline disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Сохранить как шаблон
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="Название шаблона"
+                  className="text-label border border-gray-200 rounded-control px-2 py-1"
+                />
+                <button type="button" onClick={handleSaveTemplate} disabled={savingTemplate || !templateName.trim()} className="text-info text-label font-medium hover:underline disabled:opacity-40">
+                  {savingTemplate ? '...' : 'Сохранить'}
+                </button>
+                <button type="button" onClick={() => { setShowSaveTemplate(false); setTemplateName('') }} className="text-gray-500 text-label hover:underline">
+                  Отмена
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -430,10 +540,48 @@ export function DocumentBuilder({
           )}
         </div>
 
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Select label="Скидка" value={discountType} onChange={(e) => setDiscountType(e.target.value as typeof discountType)}>
+              <option value="NONE">Нет</option>
+              <option value="PERCENT">%</option>
+              <option value="FIXED">€</option>
+            </Select>
+            {discountType !== 'NONE' && (
+              <Input
+                label={discountType === 'PERCENT' ? 'Скидка, %' : 'Скидка, €'}
+                type="number" min="0" step="0.01"
+                value={discountValue} onChange={(e) => setDiscountValue(e.target.value)}
+              />
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select label="Требуется аванс" value={depositType} onChange={(e) => setDepositType(e.target.value as typeof depositType)}>
+              <option value="NONE">Нет</option>
+              <option value="PERCENT">%</option>
+              <option value="FIXED">€</option>
+            </Select>
+            {depositType !== 'NONE' && (
+              <Input
+                label={depositType === 'PERCENT' ? 'Аванс, %' : 'Аванс, €'}
+                type="number" min="0" step="0.01"
+                value={depositValue} onChange={(e) => setDepositValue(e.target.value)}
+              />
+            )}
+          </div>
+        </div>
+
         {isInvoice && (
           <Select label="Способ оплаты" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
             {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
           </Select>
+        )}
+
+        {isInvoice && (
+          <label className="flex items-center gap-2 text-body text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={isWarranty} onChange={(e) => setIsWarranty(e.target.checked)} className="rounded border-gray-300" />
+            Гарантия / переделка — без нового дохода клиенту, себестоимость материалов учитывается
+          </label>
         )}
 
         <div className="space-y-1">
@@ -544,6 +692,12 @@ export function DocumentBuilder({
               <span className="text-white/50">Итого материалы</span>
               <span className="text-white tabular-nums">{formatMoney(computed.materialsTotal)}</span>
             </div>
+            {computed.discountAmount.gt(0) && (
+              <div className="flex justify-between text-body px-3 py-1.5 border-b border-white/10">
+                <span className="text-white/50">Скидка{discountType === 'PERCENT' ? ` (${discountValue}%)` : ''}</span>
+                <span className="text-danger tabular-nums">−{formatMoney(computed.discountAmount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-body px-3 py-1.5 border-b border-white/10">
               <span className="text-white/50">Subtotal</span>
               <span className="text-white tabular-nums">{formatMoney(computed.subtotal)}</span>
@@ -562,6 +716,14 @@ export function DocumentBuilder({
               <span className="text-gold font-bold text-label uppercase tracking-wide">Total</span>
               <span className="text-gold font-bold text-subheading tabular-nums">{formatMoney(computed.total)}</span>
             </div>
+            {depositType !== 'NONE' && depositValue && (
+              <div className="flex justify-between text-label px-3 py-1.5 bg-info/10 text-info">
+                <span>Требуется аванс{depositType === 'PERCENT' ? ` (${depositValue}%)` : ''}</span>
+                <span className="tabular-nums">
+                  {formatMoney(depositType === 'PERCENT' ? computed.total.times(new Decimal(depositValue || 0)).div(100) : new Decimal(depositValue || 0))}
+                </span>
+              </div>
+            )}
           </div>
 
           <p className="text-white/30 text-[10px] pt-2 border-t border-white/5">

@@ -5,26 +5,30 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/crm/ui'
 import { RefundModal } from './RefundModal'
+import { DepositModal } from './DepositModal'
 import type { InvoiceStatus } from '@prisma/client'
 
 interface Props {
-  id:              string
-  status:          InvoiceStatus
-  hasEmail:        boolean
-  paidNet:         string
-  ivaRate:         string
-  number:          string
-  lastEmailSentAt: string | null
-  lastEmailError:  string | null
+  id:               string
+  status:           InvoiceStatus
+  hasEmail:         boolean
+  paidNet:          string
+  ivaRate:          string
+  number:           string
+  remainingGross:   string
+  suggestedDeposit: string
+  lastEmailSentAt:  string | null
+  lastEmailError:   string | null
 }
 
-export function InvoiceActions({ id, status, hasEmail, paidNet, ivaRate, number, lastEmailSentAt, lastEmailError }: Props) {
+export function InvoiceActions({ id, status, hasEmail, paidNet, ivaRate, number, remainingGross, suggestedDeposit, lastEmailSentAt, lastEmailError }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const [cascade, setCascade] = useState<string[] | null>(null)
   const [refunding, setRefunding] = useState(false)
+  const [depositing, setDepositing] = useState(false)
 
   async function setStatus(next: InvoiceStatus) {
     setBusy(next); setError(null); setCascade(null)
@@ -130,6 +134,11 @@ export function InvoiceActions({ id, status, hasEmail, paidNet, ivaRate, number,
             ✓ Отметить оплаченным
           </Button>
         )}
+        {!isDraft && !isFinal && Number(remainingGross) > 0 && (
+          <Button variant="secondary" size="sm" onClick={() => setDepositing(true)}>
+            💶 Зафиксировать аванс
+          </Button>
+        )}
         {(isPaid || status === 'PARTIAL') && Number(paidNet) > 0 && (
           <Button variant="danger" size="sm" onClick={() => setRefunding(true)}>
             ↩ Оформить возврат
@@ -186,6 +195,17 @@ export function InvoiceActions({ id, status, hasEmail, paidNet, ivaRate, number,
           ivaRate={ivaRate}
           onClose={() => setRefunding(false)}
           onDone={(lines) => { setRefunding(false); setCascade(lines); setError(null); router.refresh() }}
+        />
+      )}
+      {depositing && (
+        <DepositModal
+          invoiceId={id}
+          invoiceNumber={number}
+          suggested={suggestedDeposit}
+          remainingGross={remainingGross}
+          ivaRate={ivaRate}
+          onClose={() => setDepositing(false)}
+          onDone={(lines) => { setDepositing(false); setCascade(lines); setError(null); router.refresh() }}
         />
       )}
     </div>

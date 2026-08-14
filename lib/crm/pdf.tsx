@@ -74,7 +74,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     dueDate: 'Срок оплаты', validUntil: 'Действителен до', description: 'Описание',
     qty: 'Кол-во', unitPrice: 'Цена', total: 'Сумма', subtotal: 'База',
     hours: 'Часы', rate: 'Норма/ч',
-    jobsTotal: 'Итого работа', materialsTotal: 'Итого материалы',
+    jobsTotal: 'Итого работа', materialsTotal: 'Итого материалы', discount: 'Скидка',
     iva: 'IVA', irpf: 'IRPF', grandTotal: 'Итого', paymentMethod: 'Способ оплаты',
     bankAccount: 'Банковский счёт', notes: 'Примечания', signature: 'Подпись клиента',
     disclaimer: 'Перед использованием сверьтесь с gestor’ом (бухгалтером) — документ носит информационный характер.',
@@ -84,7 +84,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     dueDate: 'Due date', validUntil: 'Valid until', description: 'Description',
     qty: 'Qty', unitPrice: 'Unit price', total: 'Total', subtotal: 'Subtotal',
     hours: 'Hours', rate: 'Rate/h',
-    jobsTotal: 'Labor total', materialsTotal: 'Materials total',
+    jobsTotal: 'Labor total', materialsTotal: 'Materials total', discount: 'Discount',
     iva: 'VAT', irpf: 'IRPF', grandTotal: 'Total', paymentMethod: 'Payment method',
     bankAccount: 'Bank account', notes: 'Notes', signature: 'Client signature',
     disclaimer: 'Please verify with your gestor (accountant) before use — this document is informational.',
@@ -94,7 +94,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     dueDate: 'Vencimiento', validUntil: 'Válido hasta', description: 'Descripción',
     qty: 'Cant.', unitPrice: 'Precio', total: 'Importe', subtotal: 'Base imponible',
     hours: 'Horas', rate: 'Tarifa/h',
-    jobsTotal: 'Total mano de obra', materialsTotal: 'Total materiales',
+    jobsTotal: 'Total mano de obra', materialsTotal: 'Total materiales', discount: 'Descuento',
     iva: 'IVA', irpf: 'IRPF', grandTotal: 'Total', paymentMethod: 'Forma de pago',
     bankAccount: 'Cuenta bancaria', notes: 'Notas', signature: 'Conforme el cliente',
     disclaimer: 'Verifique con su gestor antes de usar este documento — tiene carácter informativo.',
@@ -104,7 +104,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     dueDate: 'Термін оплати', validUntil: 'Дійсний до', description: 'Опис',
     qty: 'К-сть', unitPrice: 'Ціна', total: 'Сума', subtotal: 'База',
     hours: 'Години', rate: 'Ставка/год',
-    jobsTotal: 'Разом роботи', materialsTotal: 'Разом матеріали',
+    jobsTotal: 'Разом роботи', materialsTotal: 'Разом матеріали', discount: 'Знижка',
     iva: 'ПДВ', irpf: 'IRPF', grandTotal: 'Разом', paymentMethod: 'Спосіб оплати',
     bankAccount: 'Банківський рахунок', notes: 'Примітки', signature: 'Підпис клієнта',
     disclaimer: 'Перед використанням звірте з gestor’ом (бухгалтером) — документ має інформаційний характер.',
@@ -114,7 +114,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     dueDate: 'Termin płatności', validUntil: 'Ważne do', description: 'Opis',
     qty: 'Ilość', unitPrice: 'Cena', total: 'Suma', subtotal: 'Podstawa',
     hours: 'Godziny', rate: 'Stawka/h',
-    jobsTotal: 'Suma robocizny', materialsTotal: 'Suma materiałów',
+    jobsTotal: 'Suma robocizny', materialsTotal: 'Suma materiałów', discount: 'Rabat',
     iva: 'VAT', irpf: 'IRPF', grandTotal: 'Razem', paymentMethod: 'Sposób płatności',
     bankAccount: 'Konto bankowe', notes: 'Uwagi', signature: 'Podpis klienta',
     disclaimer: 'Przed użyciem skonsultuj się z gestorem (księgowym) — dokument ma charakter informacyjny.',
@@ -217,6 +217,7 @@ export interface PdfDocumentData {
   jobs:           PdfJob[]
   jobsTotal:      string
   materialsTotal: string
+  discountAmount?: string
   subtotal:       string
   ivaRate:        string
   ivaAmount:      string
@@ -327,6 +328,12 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
             <Text style={styles.totalLabel}>{t.materialsTotal}</Text>
             <Text style={styles.totalValue}>{fmtMoney(data.materialsTotal)}</Text>
           </View>
+          {data.discountAmount != null && parseFloat(data.discountAmount) > 0 ? (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>{t.discount}</Text>
+              <Text style={styles.totalValue}>-{fmtMoney(data.discountAmount)}</Text>
+            </View>
+          ) : null}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>{t.subtotal}</Text>
             <Text style={styles.totalValue}>{fmtMoney(data.subtotal)}</Text>

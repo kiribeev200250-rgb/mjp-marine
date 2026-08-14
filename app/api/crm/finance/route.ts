@@ -45,7 +45,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
   }
   const body = await req.json()
-  const { type, category, categoryId, amountExpr, date, paymentMethod, description, clientId, hasVat, vatRate } = body
+  const {
+    type, category, categoryId, amountExpr, date, paymentMethod, description, clientId, hasVat, vatRate,
+    salaryBrutto, salaryIrpfWithheld, salarySocialSecurity,
+  } = body
 
   if (!VALID_TYPES.includes(type)) {
     return NextResponse.json({ error: 'Некорректный тип' }, { status: 400 })
@@ -86,6 +89,25 @@ export async function POST(req: NextRequest) {
     vat    = grossOrNet.minus(amount)
   }
 
+  // Разбивка зарплаты (необязательно — простой ввод одной суммой продолжает
+  // работать как раньше). Когда указан brutto, он и есть P&L-затрата
+  // (amount) — IRPF/соц.взносы удержаны ИЗ него, не сверх; netto считаем
+  // сами, не доверяя клиенту. См. комментарий у полей в schema.prisma.
+  let salaryBreakdown: {
+    salaryBrutto: Decimal; salaryIrpfWithheld: Decimal; salarySocialSecurity: Decimal; salaryNetto: Decimal
+  } | null = null
+  if (type === 'SALARY' && salaryBrutto != null && String(salaryBrutto).trim() !== '') {
+    const brutto = new Decimal(String(salaryBrutto))
+    const irpfW  = new Decimal(String(salaryIrpfWithheld ?? 0))
+    const ssW    = new Decimal(String(salarySocialSecurity ?? 0))
+    if (brutto.lte(0)) return NextResponse.json({ error: 'Брутто должно быть больше нуля' }, { status: 400 })
+    if (irpfW.lt(0) || ssW.lt(0)) return NextResponse.json({ error: 'Удержания не могут быть отрицательными' }, { status: 400 })
+    const netto = brutto.minus(irpfW).minus(ssW)
+    if (netto.lt(0)) return NextResponse.json({ error: 'Удержания не могут превышать брутто' }, { status: 400 })
+    amount = brutto
+    salaryBreakdown = { salaryBrutto: brutto, salaryIrpfWithheld: irpfW, salarySocialSecurity: ssW, salaryNetto: netto }
+  }
+
   const entryDate = date ? new Date(date) : new Date()
   if (isNaN(entryDate.getTime())) return NextResponse.json({ error: 'Некорректная дата' }, { status: 400 })
   const year      = entryDate.getFullYear()
@@ -113,6 +135,7 @@ export async function POST(req: NextRequest) {
         paymentMethod: (paymentMethod ?? '').trim(),
         description:   (description   ?? '').trim(),
         ...(clientId && { clientId }),
+        ...(salaryBreakdown && salaryBreakdown),
       },
     })
 

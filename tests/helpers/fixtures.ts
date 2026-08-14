@@ -72,7 +72,7 @@ export async function makeInvoice(
 export async function makeInventoryItem(
   tx: Prisma.TransactionClient,
   companyId: string,
-  opts: { qtyInStock: number; costPrice?: number; qtyMinAlert?: number },
+  opts: { qtyInStock: number; costPrice?: number; qtyMinAlert?: number; qtyOrdered?: number },
 ) {
   return tx.inventoryItem.create({
     data: {
@@ -80,9 +80,48 @@ export async function makeInventoryItem(
       name: 'Test item',
       unit: 'шт',
       qtyInStock:  new Decimal(opts.qtyInStock),
+      qtyOrdered:  new Decimal(opts.qtyOrdered ?? 0),
       costPrice:   new Decimal(opts.costPrice ?? 10),
       sellPrice:   new Decimal(opts.costPrice ?? 10),
       qtyMinAlert: new Decimal(opts.qtyMinAlert ?? 0),
+    },
+  })
+}
+
+export async function makeSupplier(tx: Prisma.TransactionClient, companyId: string, opts?: { name?: string }) {
+  return tx.supplier.create({
+    data: { companyId, name: opts?.name ?? `Test supplier ${Date.now()}` },
+  })
+}
+
+interface MakeSupplierBillOpts {
+  itemId?:  string
+  qty?:     number
+  amount:   number
+  hasVat?:  boolean
+  vatRate?: number
+  status?:  'ORDERED' | 'RECEIVED' | 'PAID' | 'CANCELLED'
+}
+
+export async function makeSupplierBill(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  supplierId: string,
+  opts: MakeSupplierBillOpts,
+) {
+  const amount  = new Decimal(opts.amount)
+  const vatRate = new Decimal(opts.hasVat ? (opts.vatRate ?? 21) : 0)
+  const vatAmount = opts.hasVat ? amount.times(vatRate).div(100).toDecimalPlaces(2) : new Decimal(0)
+  const total = amount.plus(vatAmount)
+
+  return tx.supplierBill.create({
+    data: {
+      companyId, supplierId,
+      itemId: opts.itemId,
+      description: 'Test supplier bill',
+      qty: new Decimal(opts.qty ?? 1),
+      amount, hasVat: !!opts.hasVat, vatRate, vatAmount, total,
+      status: opts.status ?? 'ORDERED',
     },
   })
 }

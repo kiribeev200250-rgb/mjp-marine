@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input, Select, Textarea, Button } from '@/components/crm/ui'
 import type { SerializedTask, ClientWithBoats } from './types'
@@ -37,9 +37,23 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
     scheduledAt: task?.scheduledAt ? task.scheduledAt.slice(0, 10) : (defaultDate ?? ''),
     startTime:   task?.startTime ? task.startTime.slice(11, 16) : '',
     endTime:     task?.endTime   ? task.endTime.slice(11, 16)   : '',
+    isWarranty:     task?.isWarranty     ?? false,
+    reworkOfTaskId: task?.reworkOfTaskId ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState<string | null>(null)
+  const [clientTasks, setClientTasks] = useState<{ id: string; title: string }[]>([])
+
+  // Список других задач этого клиента — источник для «исходная работа» при
+  // отметке «гарантия/переделка». Подгружаем только когда реально нужно —
+  // клиент выбран и стоит галка гарантии.
+  useEffect(() => {
+    if (!form.clientId || !form.isWarranty) { setClientTasks([]); return }
+    fetch(`/api/crm/tasks?clientId=${form.clientId}`)
+      .then((r) => r.json())
+      .then((rows: SerializedTask[]) => setClientTasks(rows.filter((t) => t.id !== task?.id).map((t) => ({ id: t.id, title: t.title }))))
+      .catch(() => setClientTasks([]))
+  }, [form.clientId, form.isWarranty, task?.id])
 
   function set(key: string, value: string) { setForm((p) => ({ ...p, [key]: value })) }
 
@@ -67,6 +81,8 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
       scheduledAt: buildDatetime(form.scheduledAt, ''),
       startTime:   buildDatetime(form.scheduledAt, form.startTime),
       endTime:     buildDatetime(form.scheduledAt, form.endTime),
+      isWarranty:     form.isWarranty,
+      reworkOfTaskId: form.isWarranty ? (form.reworkOfTaskId || null) : null,
       ...(isEdit && { version: task!.version }),
     }
 
@@ -149,6 +165,24 @@ export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultB
           <Input label="Конец"  type="time" value={form.endTime}   onChange={(e) => set('endTime',   e.target.value)} />
         </div>
       )}
+
+      <div className="space-y-3">
+        <label className="flex items-center gap-2 text-body text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.isWarranty}
+            onChange={(e) => setForm((p) => ({ ...p, isWarranty: e.target.checked, reworkOfTaskId: e.target.checked ? p.reworkOfTaskId : '' }))}
+            className="rounded border-gray-300"
+          />
+          Гарантия / переделка — без нового дохода клиенту, себестоимость учитывается
+        </label>
+        {form.isWarranty && clientTasks.length > 0 && (
+          <Select label="Исходная работа (необязательно)" value={form.reworkOfTaskId} onChange={(e) => set('reworkOfTaskId', e.target.value)}>
+            <option value="">— не указана —</option>
+            {clientTasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+          </Select>
+        )}
+      </div>
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" loading={saving}>

@@ -11,6 +11,8 @@ import { BarList } from '@/components/crm/reports/BarList'
 import { MarginTable } from '@/components/crm/reports/MarginTable'
 import { marginByBoat, marginByClient, marginByWorkType } from '@/lib/crm/services/profitability'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { computeWarrantyStats } from '@/lib/crm/services/warranty'
+import { computeAccountsPayable } from '@/lib/crm/services/supplierBills'
 import type { InvoiceStatus } from '@prisma/client'
 
 interface SearchParams { month?: string }
@@ -62,6 +64,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     marginBoats,
     marginClients,
     marginWorkTypes,
+    warrantyStats,
+    accountsPayable,
   ] = await Promise.all([
     prisma.invoice.findMany({
       where:   { companyId, status: 'PAID', paidAt: { gte: from, lt: to } },
@@ -98,6 +102,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     marginByBoat(companyId, from, to),
     marginByClient(companyId, from, to),
     marginByWorkType(companyId, from, to),
+    computeWarrantyStats(companyId, from, to),
+    computeAccountsPayable(companyId),
   ])
 
   // ── Выручка по маринам ──────────────────────────────────────────────────
@@ -180,6 +186,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             delta={blendedCpl ? `CPL: ${formatMoney(blendedCpl)}` : 'Нет расходов на рекламу'}
             deltaTone={blendedRomi && blendedRomi.gte(0) ? 'success' : blendedRomi ? 'danger' : 'neutral'}
           />
+          <KpiCard
+            label="Кредиторка (поставщикам)"
+            value={formatMoney(accountsPayable)}
+            delta="Заказано/принято, не оплачено"
+            deltaTone={accountsPayable.gt(0) ? 'danger' : 'neutral'}
+          />
         </div>
 
         <KpiGoalCard
@@ -219,6 +231,20 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             Выручка — нетто по счёту (без IVA), материалы — по текущей закупочной цене склада. Себестоимость труда не учтена — в системе нет ставки часа.
           </p>
         </div>
+
+        <Card>
+          <SectionHeader title="Гарантия / переделки" />
+          <div className="grid grid-cols-4 gap-4">
+            <KpiCard label="Гарантийных задач" value={warrantyStats.taskCount} deltaTone="neutral" />
+            <KpiCard label="Часов на гарантию" value={warrantyStats.taskHours.toFixed(1)} deltaTone="neutral" />
+            <KpiCard label="Себестоимость материалов (задачи)" value={formatMoney(warrantyStats.taskMaterialCost)} deltaTone={warrantyStats.taskMaterialCost.gt(0) ? 'danger' : 'neutral'} />
+            <KpiCard label="Себестоимость материалов (счета)" value={formatMoney(warrantyStats.invoiceMaterialCost)} deltaTone={warrantyStats.invoiceMaterialCost.gt(0) ? 'danger' : 'neutral'} />
+          </div>
+          <p className="text-label text-gray-500 mt-3">
+            Метрика качества — реальная себестоимость гарантийных случаев за месяц, без нового дохода клиенту.
+            Часы — прокси по времени задачи (начало/конец), не денежная сумма — в системе нет ставки часа техника.
+          </p>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>

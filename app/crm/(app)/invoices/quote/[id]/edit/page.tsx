@@ -48,6 +48,10 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
     ivaRate:    quote.ivaRate.toString(),
     validUntil: toDateInput(quote.validUntil),
     notes:      quote.notes,
+    discountType:  quote.discountType,
+    discountValue: quote.discountValue.toString(),
+    depositType:   quote.depositType,
+    depositValue:  quote.depositValue.toString(),
     jobs: quote.jobs.map((j) => ({
       title:      j.title,
       laborHours: j.laborHours?.toString() ?? null,

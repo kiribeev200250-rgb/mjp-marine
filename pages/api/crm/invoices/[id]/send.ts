@@ -52,6 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })),
     jobsTotal:      invoice.jobsTotal.toString(),
     materialsTotal: invoice.materialsTotal.toString(),
+    discountAmount: invoice.discountAmount.toString(),
     subtotal:      invoice.subtotal.toString(),
     ivaRate:       invoice.ivaRate.toString(),
     ivaAmount:     invoice.ivaAmount.toString(),

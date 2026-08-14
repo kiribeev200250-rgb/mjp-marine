@@ -129,8 +129,15 @@ export async function returnInvoiceMaterials(
   return lines
 }
 
-// Оплата фактуры: доход в P&L/кассу, снятие с дебиторки, воронка → «Оплачено».
-// Идемпотентно — повторный вызов на уже оплаченной фактуре ничего не делает.
+// Оплата фактуры (полная — доплата остатка): доход в P&L/кассу, снятие с
+// дебиторки, воронка → «Оплачено». Идемпотентно — повторный вызов на уже
+// оплаченной фактуре ничего не делает.
+//
+// Платит именно ОСТАТОК (subtotal минус уже зачтённый нетто-доход по этому
+// счёту), а не всегда полный subtotal — так одна и та же функция корректно
+// закрывает и обычную оплату (остаток = вся сумма, ничего раньше не платили),
+// и финальную доплату после аванса (см. recordDeposit ниже), без отдельной
+// функции и без риска задвоить уже зачтённый аванс.
 //
 // IVA не деньги компании — в P&L идёт только база (нетто). Полная сумма
 // (нетто+IVA) физически приходит на счёт (касса это видит через IVA repercutido,
@@ -150,41 +157,53 @@ export async function recordPayment(
   const current = await tx.invoice.findUnique({ where: { id: invoice.id }, select: { status: true } })
   if (current?.status === 'PAID') return []
 
-  const year   = new Date().getFullYear()
-  const autoId = await nextFinanceAutoId(tx, companyId, 'INCOME', year)
-  const netAmount = new Decimal(String(invoice.subtotal))
-  const ivaAmount = new Decimal(String(invoice.ivaAmount))
-  const ivaRate   = new Decimal(String(invoice.ivaRate))
-  const category = await findOrCreateCategory(tx, companyId, 'INCOME', 'Работы по фактуре')
+  const fullNet = new Decimal(String(invoice.subtotal))
+  const ivaRate = new Decimal(String(invoice.ivaRate))
+  const paidEntries = await tx.financeEntry.findMany({ where: { invoiceId: invoice.id, type: 'INCOME' } })
+  const paidNet = paidEntries.reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
+  const remainingNet = fullNet.minus(paidNet)
+
   const now = new Date()
+  const lines: string[] = []
 
-  const entry = await tx.financeEntry.create({
-    data: {
-      companyId,
-      autoId,
-      type:          'INCOME',
-      date:          now,
-      category:      category.name,
-      categoryId:    category.id,
-      amountExpr:    netAmount.toString(),
-      amount:        netAmount,
-      paymentMethod: invoice.paymentMethod || paymentMethod || '',
-      description:   `Оплата счёта ${invoice.number}`,
-      clientId:      invoice.clientId,
-      invoiceId:     invoice.id,
-    },
-  })
+  // Остаток уже покрыт (напр. авансом на всю сумму) — новую запись не создаём,
+  // только закрываем статус, чтобы не задвоить доход.
+  if (remainingNet.gt(0)) {
+    const year   = now.getFullYear()
+    const autoId = await nextFinanceAutoId(tx, companyId, 'INCOME', year)
+    const remainingIva = remainingNet.times(ivaRate).div(100).toDecimalPlaces(2)
+    const category = await findOrCreateCategory(tx, companyId, 'INCOME', 'Работы по фактуре')
 
-  await recordVat(tx, companyId, {
-    direction:      'REPERCUTIDO',
-    date:           now,
-    baseAmount:     netAmount,
-    rate:           ivaRate,
-    amount:         ivaAmount,
-    invoiceId:      invoice.id,
-    financeEntryId: entry.id,
-    note:           `Счёт ${invoice.number}`,
-  })
+    const entry = await tx.financeEntry.create({
+      data: {
+        companyId,
+        autoId,
+        type:          'INCOME',
+        date:          now,
+        category:      category.name,
+        categoryId:    category.id,
+        amountExpr:    remainingNet.toString(),
+        amount:        remainingNet,
+        paymentMethod: invoice.paymentMethod || paymentMethod || '',
+        description:   paidNet.gt(0) ? `Доплата остатка по счёту ${invoice.number}` : `Оплата счёта ${invoice.number}`,
+        clientId:      invoice.clientId,
+        invoiceId:     invoice.id,
+      },
+    })
+
+    await recordVat(tx, companyId, {
+      direction:      'REPERCUTIDO',
+      date:           now,
+      baseAmount:     remainingNet,
+      rate:           ivaRate,
+      amount:         remainingIva,
+      invoiceId:      invoice.id,
+      financeEntryId: entry.id,
+      note:           `Счёт ${invoice.number}`,
+    })
+
+    lines.push(`Доход +${remainingNet.toFixed(2)} € (${autoId}) зачислен в P&L — это нетто, без IVA`)
+  }
 
   await tx.invoice.update({
     where: { id: invoice.id },
@@ -195,15 +214,97 @@ export async function recordPayment(
     data: { clientId: invoice.clientId, fromStage: 'INVOICE_SENT', toStage: 'PAID', note: `Счёт ${invoice.number} оплачен` },
   })
 
+  lines.push(`Счёт ${invoice.number} снят с дебиторки`, `Клиент переведён на стадию «Оплачено»`)
+
+  const netAmount = fullNet // для итоговой строки ниже (полная сумма/IVA счёта, не только последний платёж)
+  const ivaAmount = new Decimal(String(invoice.ivaAmount))
   const grossReceived = netAmount.plus(ivaAmount)
-  const lines = [
-    `Доход +${netAmount.toFixed(2)} € (${autoId}) зачислен в P&L — это нетто, без IVA`,
-    `Счёт ${invoice.number} снят с дебиторки`,
-    `Клиент переведён на стадию «Оплачено»`,
-  ]
   if (ivaAmount.gt(0)) {
     lines.push(`На счёт поступило ${grossReceived.toFixed(2)} € (нетто ${netAmount.toFixed(2)} € + IVA ${ivaAmount.toFixed(2)} €) — IVA отложен как repercutido, не прибыль`)
   }
+  return lines
+}
+
+// Аванс/предоплата — частичная оплата ДО или В МОМЕНТ выставления (не после,
+// как recordPayment/обычный поток). depositGrossAmount — сумма, которую
+// клиент реально внёс (брутто, с IVA — так её и озвучивают клиенту: «внесите
+// 30% сейчас»), а не депонированное поле Invoice.depositValue (то —
+// информационное, «сколько попросить», не движение денег). Тот же паттерн
+// разбивки нетто/IVA, что и в recordPayment; счёт уходит в PARTIAL (или сразу
+// в PAID, если аванс = 100% остатка) — тот же статус, что и «оплатили, потом
+// частично вернули», потому что оба означают одно и то же для дебиторки:
+// «оплачено не всё». Финальная доплата — обычный recordPayment (платит
+// остаток, не задваивает аванс).
+export async function recordDeposit(
+  tx: Tx,
+  companyId: string,
+  invoice: { id: string; number: string; clientId: string; ivaRate: unknown },
+  depositGrossAmount: Decimal,
+  paymentMethod?: string,
+): Promise<string[]> {
+  if (depositGrossAmount.lte(0)) throw new Error('Сумма аванса должна быть больше нуля')
+
+  const current = await tx.invoice.findUnique({ where: { id: invoice.id }, select: { status: true, subtotal: true } })
+  if (!current) throw new Error('Счёт не найден')
+  if (current.status === 'PAID' || current.status === 'CANCELLED') {
+    throw new Error('По этому счёту нельзя внести аванс — счёт уже закрыт')
+  }
+
+  const ivaRate = new Decimal(String(invoice.ivaRate))
+  const netPortion = depositGrossAmount.div(ivaRate.div(100).plus(1)).toDecimalPlaces(2)
+  const ivaPortion = depositGrossAmount.minus(netPortion)
+
+  const paidEntries = await tx.financeEntry.findMany({ where: { invoiceId: invoice.id, type: 'INCOME' } })
+  const paidNet = paidEntries.reduce((s, e) => s.plus(e.amount.toString()), new Decimal(0))
+  const fullNet = new Decimal(current.subtotal.toString())
+  if (paidNet.plus(netPortion).gt(fullNet)) {
+    throw new Error('Аванс превышает остаток по счёту')
+  }
+
+  const now  = new Date()
+  const year = now.getFullYear()
+  const autoId = await nextFinanceAutoId(tx, companyId, 'INCOME', year)
+  const category = await findOrCreateCategory(tx, companyId, 'INCOME', 'Аванс по счёту')
+
+  const entry = await tx.financeEntry.create({
+    data: {
+      companyId,
+      autoId,
+      type:          'INCOME',
+      date:          now,
+      category:      category.name,
+      categoryId:    category.id,
+      amountExpr:    netPortion.toString(),
+      amount:        netPortion,
+      paymentMethod: paymentMethod ?? '',
+      description:   `Аванс по счёту ${invoice.number}`,
+      clientId:      invoice.clientId,
+      invoiceId:     invoice.id,
+    },
+  })
+
+  await recordVat(tx, companyId, {
+    direction:      'REPERCUTIDO',
+    date:           now,
+    baseAmount:     netPortion,
+    rate:           ivaRate,
+    amount:         ivaPortion,
+    invoiceId:      invoice.id,
+    financeEntryId: entry.id,
+    note:           `Аванс по счёту ${invoice.number}`,
+  })
+
+  const fullyCovered = paidNet.plus(netPortion).gte(fullNet)
+  await tx.invoice.update({
+    where: { id: invoice.id },
+    data:  { status: fullyCovered ? 'PAID' : 'PARTIAL', ...(fullyCovered && { paidAt: now }) },
+  })
+
+  const lines = [
+    `Аванс +${netPortion.toFixed(2)} € (${autoId}) зачислен в P&L — это нетто, без IVA`,
+    `Остаток по счёту ${invoice.number}: ${fullNet.minus(paidNet).minus(netPortion).toFixed(2)} € (нетто)`,
+  ]
+  if (fullyCovered) lines.push(`Аванс покрыл всю сумму — счёт переведён в «Оплачено»`)
   return lines
 }
 

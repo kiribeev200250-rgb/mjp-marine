@@ -13,6 +13,8 @@ export interface SerializedTask {
   completedAt: string | null
   createdAt:   string
   version:     number
+  isWarranty:     boolean
+  reworkOfTaskId: string | null
   client: {
     id:        string
     firstName: string

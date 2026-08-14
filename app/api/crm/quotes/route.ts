@@ -4,9 +4,9 @@ import { getCrmSession } from '@/lib/crm/session'
 import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
-import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
+import { parseJobsInput, jobsToCreateInput, computeDiscountAmount, type JobInput } from '@/lib/crm/documentJobs'
 import { prisma } from '@/lib/prisma'
-import type { QuoteStatus } from '@prisma/client'
+import type { QuoteStatus, AmountKind } from '@prisma/client'
 
 // GET /api/crm/quotes — список пресметов
 export async function GET(req: NextRequest) {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
   }
   const body = await req.json()
-  const { clientId, boatId, language, validUntil, ivaRate, notes, jobs } = body as {
+  const { clientId, boatId, language, validUntil, ivaRate, notes, jobs, discountType, discountValue, depositType, depositValue } = body as {
     clientId: string
     boatId?: string | null
     language?: string
@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
     ivaRate?: string | number
     notes?: string
     jobs: JobInput[]
+    discountType?: AmountKind
+    discountValue?: string | number
+    depositType?: AmountKind
+    depositValue?: string | number
   }
 
   if (!clientId) return NextResponse.json({ error: 'Выберите клиента' }, { status: 400 })
@@ -74,7 +78,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректные позиции' }, { status: 400 })
   }
 
-  const subtotal  = jobsTotal.plus(materialsTotal)
+  const catalogSubtotal = jobsTotal.plus(materialsTotal)
+  let discountAmount: Decimal
+  try {
+    discountAmount = computeDiscountAmount(catalogSubtotal, discountType, discountValue)
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректная скидка' }, { status: 400 })
+  }
+  const subtotal  = catalogSubtotal.minus(discountAmount)
   const rate      = new Decimal(ivaRate ?? 21)
   const ivaAmount = subtotal.times(rate).div(100).toDecimalPlaces(2)
   const total     = subtotal.plus(ivaAmount)
@@ -94,9 +105,14 @@ export async function POST(req: NextRequest) {
           ivaRate:    rate,
           jobsTotal,
           materialsTotal,
+          discountType:  discountType  ?? 'NONE',
+          discountValue: new Decimal(discountValue ?? 0),
+          discountAmount,
           subtotal,
           ivaAmount,
           total,
+          depositType:   depositType   ?? 'NONE',
+          depositValue:  new Decimal(depositValue  ?? 0),
           notes:      notes ?? '',
           jobs: { create: jobsToCreateInput(parsedJobs) },
         },

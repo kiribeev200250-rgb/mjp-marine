@@ -3,11 +3,11 @@ import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
 import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
-import { parseJobsInput, jobsToCreateInput, type JobInput } from '@/lib/crm/documentJobs'
+import { parseJobsInput, jobsToCreateInput, computeDiscountAmount, type JobInput } from '@/lib/crm/documentJobs'
 import { recordPayment, returnInvoiceMaterials, refundPayment } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
 import { checkVersion } from '@/lib/crm/optimisticLock'
-import type { InvoiceStatus } from '@prisma/client'
+import type { InvoiceStatus, AmountKind } from '@prisma/client'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -109,7 +109,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const body = await req.json()
   const {
     clientId, boatId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
-    clientNif, clientAddress, version,
+    clientNif, clientAddress, version, discountType, discountValue, depositType, depositValue, isWarranty,
   } = body as {
     clientId: string
     boatId?: string | null
@@ -123,6 +123,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     clientNif?: string
     clientAddress?: string
     version?: number
+    discountType?: AmountKind
+    discountValue?: string | number
+    depositType?: AmountKind
+    depositValue?: string | number
+    isWarranty?: boolean
   }
 
   const conflict = checkVersion(version, existing.version)
@@ -144,7 +149,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректные позиции' }, { status: 400 })
   }
 
-  const subtotal   = jobsTotal.plus(materialsTotal)
+  const catalogSubtotal = jobsTotal.plus(materialsTotal)
+  const effDiscountType  = discountType  ?? existing.discountType
+  const effDiscountValue = discountValue ?? existing.discountValue.toString()
+  let discountAmount: Decimal
+  try {
+    discountAmount = computeDiscountAmount(catalogSubtotal, effDiscountType, effDiscountValue)
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректная скидка' }, { status: 400 })
+  }
+  const subtotal   = catalogSubtotal.minus(discountAmount)
   const iva        = new Decimal(ivaRate ?? existing.ivaRate)
   const irpf       = new Decimal(irpfRate ?? existing.irpfRate)
   if (iva.lt(0) || iva.gt(100))  return NextResponse.json({ error: 'Ставка IVA должна быть от 0 до 100%' },  { status: 400 })
@@ -168,6 +182,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           ivaRate:       iva,
           irpfRate:      irpf,
           jobsTotal, materialsTotal, subtotal, ivaAmount, irpfAmount, total,
+          discountType:  effDiscountType,
+          discountValue: new Decimal(effDiscountValue),
+          discountAmount,
+          depositType:   depositType  ?? existing.depositType,
+          depositValue:  new Decimal(depositValue ?? existing.depositValue),
+          isWarranty:    isWarranty ?? existing.isWarranty,
           clientName:    `${client.firstName} ${client.lastName}`.trim(),
           clientNif:     clientNif ?? existing.clientNif,
           clientAddress: clientAddress ?? existing.clientAddress,

@@ -52,6 +52,8 @@ export default async function SchedulePage() {
     completedAt: t.completedAt?.toISOString() ?? null,
     createdAt:   t.createdAt.toISOString(),
     version:     t.version,
+    isWarranty:     t.isWarranty,
+    reworkOfTaskId: t.reworkOfTaskId,
     client:      t.client,
     boat:        t.boat,
   }))

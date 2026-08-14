@@ -3,10 +3,10 @@ import Decimal from 'decimal.js'
 import { getCrmSession } from '@/lib/crm/session'
 import { hasPermission } from '@/lib/crm/permissions'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
-import { parseJobsInput, jobsToCreateInput, companyInfoSnapshot, type JobInput } from '@/lib/crm/documentJobs'
+import { parseJobsInput, jobsToCreateInput, companyInfoSnapshot, computeDiscountAmount, type JobInput } from '@/lib/crm/documentJobs'
 import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
 import { prisma } from '@/lib/prisma'
-import type { InvoiceStatus } from '@prisma/client'
+import type { InvoiceStatus, AmountKind } from '@prisma/client'
 
 // GET /api/crm/invoices — список счетов
 export async function GET(req: NextRequest) {
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
   const {
     clientId, boatId, language, dueDate, ivaRate, irpfRate, paymentMethod, notes, jobs,
     clientNif, clientAddress, asDraft,
+    discountType, discountValue, depositType, depositValue, isWarranty,
   } = body as {
     clientId: string
     boatId?: string | null
@@ -62,6 +63,11 @@ export async function POST(req: NextRequest) {
     clientNif?: string
     clientAddress?: string
     asDraft?: boolean
+    discountType?: AmountKind
+    discountValue?: string | number
+    depositType?: AmountKind
+    depositValue?: string | number
+    isWarranty?: boolean
   }
 
   if (!clientId) return NextResponse.json({ error: 'Выберите клиента' }, { status: 400 })
@@ -86,7 +92,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректные позиции' }, { status: 400 })
   }
 
-  const subtotal   = jobsTotal.plus(materialsTotal)
+  const catalogSubtotal = jobsTotal.plus(materialsTotal)
+  let discountAmount: Decimal
+  try {
+    discountAmount = computeDiscountAmount(catalogSubtotal, discountType, discountValue)
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Некорректная скидка' }, { status: 400 })
+  }
+  const subtotal   = catalogSubtotal.minus(discountAmount)
   const iva        = new Decimal(ivaRate ?? 21)
   const irpf       = new Decimal(irpfRate ?? 0)
   if (iva.lt(0) || iva.gt(100))  return NextResponse.json({ error: 'Ставка IVA должна быть от 0 до 100%' },  { status: 400 })
@@ -118,6 +131,12 @@ export async function POST(req: NextRequest) {
           ivaRate:       iva,
           irpfRate:      irpf,
           jobsTotal, materialsTotal, subtotal, ivaAmount, irpfAmount, total,
+          discountType:  discountType  ?? 'NONE',
+          discountValue: new Decimal(discountValue ?? 0),
+          discountAmount,
+          depositType:   depositType   ?? 'NONE',
+          depositValue:  new Decimal(depositValue  ?? 0),
+          isWarranty:    isWarranty ?? false,
           clientName:    `${client.firstName} ${client.lastName}`.trim(),
           clientNif:     clientNif ?? '',
           clientAddress: clientAddress ?? '',

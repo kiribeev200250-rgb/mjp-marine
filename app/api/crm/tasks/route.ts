@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
   }
   const body = await req.json()
-  const { title, description, clientId, boatId, marina, scheduledAt, startTime, endTime, isBacklog } = body
+  const { title, description, clientId, boatId, marina, scheduledAt, startTime, endTime, isBacklog, isWarranty, reworkOfTaskId } = body
 
   if (!title?.trim()) return NextResponse.json({ error: 'Название обязательно' }, { status: 422 })
 
@@ -78,6 +78,8 @@ export async function POST(req: NextRequest) {
       endTime:     endTime    ? new Date(endTime)      : null,
       isBacklog:   isBacklog  ?? false,
       status:      scheduledAt ? 'SCHEDULED' : 'NEW',
+      isWarranty:     isWarranty ?? false,
+      reworkOfTaskId: isWarranty ? (reworkOfTaskId || null) : null,
     },
     include: {
       client: { select: { id: true, firstName: true, lastName: true, marina: true } },

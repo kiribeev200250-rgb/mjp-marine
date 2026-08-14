@@ -72,12 +72,17 @@ export default async function InventoryPage({
               )}
             </p>
           </div>
-          <Link
-            href="/crm/inventory/new"
-            className="inline-flex items-center gap-2 bg-navy text-white text-body font-semibold px-4 py-2 rounded-control hover:bg-navy/90 transition"
-          >
-            + Добавить товар
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/crm/inventory/suppliers" className="text-body text-info hover:underline">
+              Поставщики
+            </Link>
+            <Link
+              href="/crm/inventory/new"
+              className="inline-flex items-center gap-2 bg-navy text-white text-body font-semibold px-4 py-2 rounded-control hover:bg-navy/90 transition"
+            >
+              + Добавить товар
+            </Link>
+          </div>
         </div>
       </div>
 

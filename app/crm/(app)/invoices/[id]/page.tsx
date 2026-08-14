@@ -8,6 +8,7 @@ import { formatMoney, INVOICE_STATUS_LABELS, LANGUAGE_LABELS } from '@/lib/crm/u
 import { Badge, INVOICE_TONE } from '@/components/crm/ui'
 import { InvoiceActions } from '@/components/crm/invoices/InvoiceActions'
 import { computeInvoiceMargin } from '@/lib/crm/services/profitability'
+import { outstandingBalances } from '@/lib/crm/services/ar'
 import Decimal from 'decimal.js'
 
 function fmtDate(d: Date) {
@@ -56,6 +57,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     .filter((f) => f.type === 'INCOME')
     .reduce((s, f) => s.plus(f.amount.toString()), new Decimal(0))
 
+  const balances = await outstandingBalances([invoice])
+  const remainingGross = balances.get(invoice.id) ?? new Decimal(0)
+  const suggestedDeposit = invoice.depositType === 'PERCENT'
+    ? invoice.total.mul(invoice.depositValue).div(100).toDecimalPlaces(2)
+    : invoice.depositType === 'FIXED'
+    ? new Decimal(invoice.depositValue.toString())
+    : new Decimal(0)
+
   const margin = await computeInvoiceMargin(invoice.id)
 
   const auditTrail = await prisma.auditLog.findMany({
@@ -80,6 +89,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           hasEmail={!!invoice.client.email}
           paidNet={paidNet.toString()}
           ivaRate={invoice.ivaRate.toString()}
+          remainingGross={remainingGross.toString()}
+          suggestedDeposit={suggestedDeposit.toString()}
           lastEmailSentAt={invoice.lastEmailSentAt?.toISOString() ?? null}
           lastEmailError={invoice.lastEmailError}
         />

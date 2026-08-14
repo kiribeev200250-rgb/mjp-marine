@@ -1,5 +1,5 @@
 import Decimal from 'decimal.js'
-import type { CompanyInfo } from '@prisma/client'
+import type { CompanyInfo, AmountKind } from '@prisma/client'
 
 // Общая иерархия «работа → материалы» для Quote и Invoice (QuoteJob/InvoiceJob
 // используют одинаковые поля, поэтому парсинг и построение Prisma-инпута общие).
@@ -21,6 +21,24 @@ export function companyInfoSnapshot(companyInfo: CompanyInfo) {
     companyBankAccount: companyInfo.bankAccount,
     companyLogoUrl:     companyInfo.logoUrl,
   }
+}
+
+// Скидка — отдельная сущность (AmountKind), не заниженная unitPrice/laborCost:
+// jobsTotal/materialsTotal остаются каталожными, discountAmount — снапшот в
+// валюте, subtotal = catalogSubtotal − discountAmount. Так маржа/аналитика
+// видят и каталожную выручку, и сколько именно отдано скидкой, а не тихо
+// заниженную «менее маржинальную» работу.
+export function computeDiscountAmount(catalogSubtotal: Decimal, discountType: AmountKind | undefined, discountValue: unknown): Decimal {
+  if (!discountType || discountType === 'NONE') return new Decimal(0)
+  const value = new Decimal(String(discountValue ?? 0))
+  if (value.lt(0)) throw new Error('Скидка не может быть отрицательной')
+  if (discountType === 'PERCENT') {
+    if (value.gt(100)) throw new Error('Скидка в процентах не может быть больше 100%')
+    return catalogSubtotal.times(value).div(100).toDecimalPlaces(2)
+  }
+  // FIXED
+  if (value.gt(catalogSubtotal)) throw new Error('Скидка не может быть больше суммы по каталогу')
+  return value.toDecimalPlaces(2)
 }
 
 export interface JobMaterialInput {

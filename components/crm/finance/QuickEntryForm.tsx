@@ -43,6 +43,10 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
   const [amountExpr,    setAmountExpr]    = useState('')
   const [hasVat,        setHasVat]        = useState(false)
   const [vatRate,       setVatRate]       = useState(VAT_RATES[0])
+  const [salaryBreakdown,     setSalaryBreakdown]     = useState(false)
+  const [salaryBrutto,        setSalaryBrutto]        = useState('')
+  const [salaryIrpfWithheld,  setSalaryIrpfWithheld]  = useState('')
+  const [salarySocialSecurity, setSalarySocialSecurity] = useState('')
   const [date,          setDate]          = useState(TODAY)
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
   const [description,   setDescription]   = useState('')
@@ -57,18 +61,25 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
     requestAnimationFrame(() => amountRef.current?.focus())
   }
 
+  const useSalaryBreakdown = type === 'SALARY' && salaryBreakdown
+
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault()
     if (!category) { setError('Укажите категорию'); categoryRef.current?.focus(); return }
-    if (!amountExpr.trim()) { setError('Введите сумму'); return }
+    if (useSalaryBreakdown) {
+      if (!salaryBrutto.trim()) { setError('Введите брутто'); return }
+    } else if (!amountExpr.trim()) { setError('Введите сумму'); return }
 
     setSaving(true); setError(null); setSuccess(false)
     const res = await fetch('/api/crm/finance', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        type, categoryId: category.id, amountExpr, date, paymentMethod, description,
+        type, categoryId: category.id,
+        amountExpr: useSalaryBreakdown ? salaryBrutto : amountExpr,
+        date, paymentMethod, description,
         hasVat: type === 'EXPENSE' && hasVat, vatRate,
+        ...(useSalaryBreakdown && { salaryBrutto, salaryIrpfWithheld, salarySocialSecurity }),
       }),
     })
     setSaving(false)
@@ -82,6 +93,9 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
 
     setCategory(null)
     setAmountExpr('')
+    setSalaryBrutto('')
+    setSalaryIrpfWithheld('')
+    setSalarySocialSecurity('')
     setDescription('')
     setSuccess(true)
     setTimeout(() => setSuccess(false), 1500)
@@ -122,19 +136,67 @@ export function QuickEntryForm({ onAdded, compact }: Props) {
         />
       </div>
 
-      <div className="space-y-1">
-        <label className="block text-label text-gray-500 uppercase tracking-wide">Сумма (€) — можно выражение</label>
-        <input
-          ref={amountRef}
-          type="text"
-          inputMode="decimal"
-          placeholder="168.23 или 250/2"
-          value={amountExpr}
-          onChange={(e) => setAmountExpr(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleSubmit() } }}
-          className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
-        />
-      </div>
+      {!useSalaryBreakdown && (
+        <div className="space-y-1">
+          <label className="block text-label text-gray-500 uppercase tracking-wide">Сумма (€) — можно выражение</label>
+          <input
+            ref={amountRef}
+            type="text"
+            inputMode="decimal"
+            placeholder="168.23 или 250/2"
+            value={amountExpr}
+            onChange={(e) => setAmountExpr(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleSubmit() } }}
+            className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+          />
+        </div>
+      )}
+
+      {type === 'SALARY' && (
+        <div className="space-y-1.5">
+          <label className="flex items-center gap-2 text-label text-gray-700 cursor-pointer select-none">
+            <input type="checkbox" checked={salaryBreakdown} onChange={(e) => setSalaryBreakdown(e.target.checked)} className="rounded" />
+            Разбивка: брутто / IRPF / соц.взносы
+          </label>
+          {useSalaryBreakdown && (
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <label className="block text-label text-gray-500 uppercase tracking-wide">Брутто, €</label>
+                <input
+                  ref={amountRef}
+                  type="text" inputMode="decimal" placeholder="1500"
+                  value={salaryBrutto} onChange={(e) => setSalaryBrutto(e.target.value)}
+                  className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-label text-gray-500 uppercase tracking-wide">Удержан IRPF, €</label>
+                <input
+                  type="text" inputMode="decimal" placeholder="0"
+                  value={salaryIrpfWithheld} onChange={(e) => setSalaryIrpfWithheld(e.target.value)}
+                  className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-label text-gray-500 uppercase tracking-wide">Соц.взносы, €</label>
+                <input
+                  type="text" inputMode="decimal" placeholder="0"
+                  value={salarySocialSecurity} onChange={(e) => setSalarySocialSecurity(e.target.value)}
+                  className="w-full rounded-control border border-gray-200 bg-white px-3 py-2 text-body text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-info/40 focus:border-info transition"
+                />
+              </div>
+            </div>
+          )}
+          {useSalaryBreakdown && (() => {
+            const brutto = parseFloat(salaryBrutto.replace(',', '.'))
+            if (!brutto || isNaN(brutto)) return null
+            const irpf = parseFloat(salaryIrpfWithheld.replace(',', '.')) || 0
+            const ss   = parseFloat(salarySocialSecurity.replace(',', '.')) || 0
+            const netto = brutto - irpf - ss
+            return <p className="text-label text-gray-500">На руки (netto): {netto.toFixed(2)} €</p>
+          })()}
+        </div>
+      )}
 
       {type === 'EXPENSE' && (
         <div className="space-y-1.5">

@@ -26,6 +26,7 @@ const MODELS_IN_DEPENDENCY_ORDER = [
   'telegramSession', // самостоятельная (ключ — не FK)
   'periodLock',      // → Company, CrmUser?
   'sequenceCounter', // → Company
+  'jobTemplate',     // → Company
 
   // Клиенты и лодки
   'client',            // → Company
@@ -34,7 +35,8 @@ const MODELS_IN_DEPENDENCY_ORDER = [
   'note',              // → Company, Client?, Yacht?, CrmUser?
 
   // Склад
-  'inventoryItem',     // → Company
+  'supplier',          // → Company
+  'inventoryItem',     // → Company, Supplier?
 
   // Документы
   'quote',             // → Company, Client, Yacht?
@@ -56,6 +58,7 @@ const MODELS_IN_DEPENDENCY_ORDER = [
   'recurringExpenseOccurrence', // → RecurringExpense, FinanceEntry? (после financeEntry — важно для FK)
   'vatEntry',              // → Company, Invoice?, FinanceEntry?
   'stockMovement',          // → Company, InventoryItem, Invoice?, Task?
+  'supplierBill',           // → Company, Supplier, Task?, Client?, InventoryItem?, FinanceEntry?
 
   // Служебное
   'auditLog',   // → Company, CrmUser?
@@ -77,10 +80,16 @@ export interface BackupPayload {
 export async function exportDatabaseBackup(): Promise<BackupPayload> {
   const tables: Record<string, unknown[]> = {}
 
+  // Модели с самоссылкой (reversalOfId/reworkOf...Id — запись-«потомок» всегда
+  // создана позже той, на которую ссылается) — выгружаем в хронологическом
+  // порядке, иначе createMany при восстановлении может упасть на FK: ссылка
+  // на ещё не вставленную (в этом же batch'е) строку той же таблицы.
+  const SELF_REFERENCING_MODELS = new Set(['financeEntry', 'capitalEntry', 'task', 'invoice'])
+
   for (const model of MODELS_IN_DEPENDENCY_ORDER) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = (prisma as any)[model]
-    if (model === 'financeEntry') {
+    if (SELF_REFERENCING_MODELS.has(model)) {
       tables[model] = await client.findMany({ orderBy: { createdAt: 'asc' } })
     } else {
       tables[model] = await client.findMany()

@@ -49,6 +49,11 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     paymentMethod: invoice.paymentMethod,
     notes:         invoice.notes,
     version:       invoice.version,
+    discountType:  invoice.discountType,
+    discountValue: invoice.discountValue.toString(),
+    depositType:   invoice.depositType,
+    depositValue:  invoice.depositValue.toString(),
+    isWarranty:    invoice.isWarranty,
     jobs: invoice.jobs.map((j) => ({
       title:      j.title,
       laborHours: j.laborHours?.toString() ?? null,

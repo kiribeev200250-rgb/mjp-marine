@@ -63,6 +63,8 @@ export default async function TaskDetailPage({
     completedAt: task.completedAt?.toISOString() ?? null,
     createdAt:   task.createdAt.toISOString(),
     version:     task.version,
+    isWarranty:     task.isWarranty,
+    reworkOfTaskId: task.reworkOfTaskId,
     client:      task.client,
     boat:        task.boat,
   }

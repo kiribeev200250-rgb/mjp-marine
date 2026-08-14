@@ -103,7 +103,7 @@ export async function PATCH(
   const body = await req.json()
   const {
     status, scheduledAt, startTime, endTime, title, description, marina, clientId, boatId, isBacklog,
-    plannedMaterials, photosBefore, photosAfter, version,
+    plannedMaterials, photosBefore, photosAfter, version, isWarranty, reworkOfTaskId,
   } = body
 
   const conflict = checkVersion(version, existing.version)
@@ -115,6 +115,10 @@ export async function PATCH(
   if (marina      !== undefined) data.marina      = marina
   if (clientId    !== undefined) data.clientId    = clientId || null
   if (isBacklog   !== undefined) data.isBacklog   = isBacklog
+  if (isWarranty  !== undefined) {
+    data.isWarranty     = isWarranty
+    data.reworkOfTaskId = isWarranty ? (reworkOfTaskId || null) : null
+  }
 
   if (boatId !== undefined) {
     if (boatId) {
