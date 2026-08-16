@@ -67,3 +67,15 @@ export const QUOTE_TONE: Record<string, BadgeTone> = {
   ACCEPTED: 'success',
   REJECTED: 'danger',
 }
+
+export const PROJECT_TONE: Record<string, BadgeTone> = {
+  ACTIVE: 'info',
+  DONE:   'success',
+  PAUSED: 'neutral',
+}
+
+export const PROJECT_WORK_TONE: Record<string, BadgeTone> = {
+  PLANNED:          'neutral',
+  DONE:             'success',
+  MOVED_TO_INVOICE: 'info',
+}

@@ -17,10 +17,16 @@ class RollbackSentinel extends Error {}
 export async function withRollback<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   let result!: T
   try {
+    // Дефолтный таймаут интерактивной транзакции Prisma — 5с. Каскады с
+    // множеством последовательных запросов (напр. перенос нескольких работ
+    // проекта в счёт: project → works → companyInfo → invoice → jobs →
+    // writeOffInvoiceMaterials → updateMany → несколько auditLog) против
+    // удалённого Supabase-пулера иногда не укладываются — не логическая
+    // ошибка, а сетевые круговые задержки, накопившиеся сверх лимита.
     await prisma.$transaction(async (tx) => {
       result = await fn(tx)
       throw new RollbackSentinel('intentional rollback — not a real failure')
-    })
+    }, { timeout: 20000 })
   } catch (e) {
     if (!(e instanceof RollbackSentinel)) throw e
   }

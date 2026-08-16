@@ -2,10 +2,11 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { formatMoney, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS, TASK_STATUS_LABELS } from '@/lib/crm/utils'
-import { Badge, INVOICE_TONE, QUOTE_TONE, TASK_TONE, Button } from '@/components/crm/ui'
+import { formatMoney, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS, TASK_STATUS_LABELS, PROJECT_STATUS_LABELS } from '@/lib/crm/utils'
+import { Badge, INVOICE_TONE, QUOTE_TONE, TASK_TONE, PROJECT_TONE, Button } from '@/components/crm/ui'
 import { BoatEditForm } from '@/components/crm/clients/BoatEditForm'
 import { NotesThread } from '@/components/crm/clients/NotesThread'
+import { CreateProjectButton } from '@/components/crm/clients/CreateProjectButton'
 import { computeBoatMargin } from '@/lib/crm/services/profitability'
 import { outstandingBalances } from '@/lib/crm/services/ar'
 
@@ -24,7 +25,7 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
   })
   if (!boat) notFound()
 
-  const [quotes, invoices, tasks, notes, movements, payments, allClients] = await Promise.all([
+  const [quotes, invoices, tasks, notes, movements, payments, allClients, projects] = await Promise.all([
     prisma.quote.findMany({ where: { boatId }, orderBy: { createdAt: 'desc' } }),
     prisma.invoice.findMany({ where: { boatId }, orderBy: { date: 'desc' } }),
     prisma.task.findMany({ where: { boatId }, orderBy: { scheduledAt: 'desc' } }),
@@ -32,6 +33,7 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
     prisma.stockMovement.findMany({ where: { invoice: { boatId } }, include: { item: { select: { name: true, unit: true } }, invoice: { select: { number: true } } }, orderBy: { createdAt: 'desc' } }),
     prisma.financeEntry.findMany({ where: { invoice: { boatId } }, include: { invoice: { select: { number: true } } }, orderBy: { date: 'desc' } }),
     prisma.client.findMany({ where: { companyId: session.user.companyId, active: true }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: 'asc' } }),
+    prisma.project.findMany({ where: { boatId }, orderBy: { createdAt: 'desc' }, include: { _count: { select: { works: { where: { status: 'PLANNED' } } } } } }),
   ])
 
   const paidTotal = invoices.filter((i) => i.status === 'PAID').reduce((s, i) => s + Number(i.total), 0)
@@ -132,6 +134,28 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
             <Link href={`/crm/schedule/new?${qs}`}>
               <Button variant="secondary" size="sm">📋 Задача</Button>
             </Link>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-card shadow-e2 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide">Проекты</h2>
+              <CreateProjectButton boatId={boat.id} />
+            </div>
+            {projects.length === 0 ? (
+              <p className="text-body text-gray-500">Проектов пока нет — накопительный список работ по лодке между сделками.</p>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {projects.map((p) => (
+                  <Link key={p.id} href={`/crm/projects/${p.id}`} className="flex items-center justify-between gap-3 py-2 hover:text-gold transition">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-body text-gray-900 truncate">{p.name}</span>
+                      <Badge tone={PROJECT_TONE[p.status] ?? 'neutral'}>{PROJECT_STATUS_LABELS[p.status] ?? p.status}</Badge>
+                    </div>
+                    <span className="text-label text-gray-500 shrink-0">{p._count.works} в плане</span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           <NotesThread boatId={boat.id} initial={notes.map((n) => ({

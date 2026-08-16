@@ -5,16 +5,61 @@ import Decimal from 'decimal.js'
 // ВНУТРИ той же транзакции, что и сам тест (см. withRollback) — при откате
 // исчезают вместе со всем остальным, отдельной уборки не требуется.
 
-export async function makeCompany(tx: Prisma.TransactionClient, opts?: { ivaRate?: number; irpfRate?: number }) {
+export async function makeCompany(tx: Prisma.TransactionClient, opts?: { ivaRate?: number; irpfRate?: number; legalName?: string }) {
   const company = await tx.company.create({ data: { name: 'TEST company (rollback)' } })
   await tx.companyInfo.create({
     data: {
       companyId: company.id,
       ivaRate:  new Decimal(opts?.ivaRate  ?? 21),
       irpfRate: new Decimal(opts?.irpfRate ?? 0),
+      ...(opts?.legalName && { legalName: opts.legalName }),
     },
   })
   return company.id
+}
+
+export async function makeUser(tx: Prisma.TransactionClient, companyId: string, opts?: { role?: 'ADMIN' | 'EMPLOYEE' }) {
+  return tx.crmUser.create({
+    data: {
+      companyId, email: `test-${Date.now()}-${Math.random().toString(36).slice(2)}@test.local`,
+      name: 'Test User', password: 'x', role: opts?.role ?? 'ADMIN',
+    },
+  })
+}
+
+export async function makeBoat(tx: Prisma.TransactionClient, clientId: string, opts?: { name?: string }) {
+  return tx.yacht.create({ data: { clientId, name: opts?.name ?? 'Test boat' } })
+}
+
+export async function makeProject(tx: Prisma.TransactionClient, companyId: string, boatId: string, opts?: { name?: string }) {
+  return tx.project.create({ data: { companyId, boatId, name: opts?.name ?? 'Test project' } })
+}
+
+interface MakeProjectWorkOpts {
+  laborCost: number
+  status?: 'PLANNED' | 'DONE' | 'MOVED_TO_INVOICE'
+  materials?: { name: string; quantity: number; unitPrice: number; inventoryItemId?: string }[]
+}
+
+export async function makeProjectWork(tx: Prisma.TransactionClient, projectId: string, opts: MakeProjectWorkOpts) {
+  return tx.projectWork.create({
+    data: {
+      projectId,
+      title: 'Test work',
+      laborCost: new Decimal(opts.laborCost),
+      status: opts.status ?? 'PLANNED',
+      materials: {
+        create: (opts.materials ?? []).map((m) => ({
+          name: m.name,
+          quantity: new Decimal(m.quantity),
+          unitPrice: new Decimal(m.unitPrice),
+          total: new Decimal(m.quantity).times(m.unitPrice),
+          inventoryItemId: m.inventoryItemId,
+        })),
+      },
+    },
+    include: { materials: true },
+  })
 }
 
 export async function makeClient(tx: Prisma.TransactionClient, companyId: string, opts?: { funnelStage?: FunnelStage }) {

@@ -80,6 +80,18 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
   CANCELLED_BY_CLIENT: 'Отменено клиентом',
 }
 
+export const PROJECT_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Активный',
+  DONE:   'Завершён',
+  PAUSED: 'На паузе',
+}
+
+export const PROJECT_WORK_STATUS_LABELS: Record<string, string> = {
+  PLANNED:          'Запланирована',
+  DONE:             'Выполнена',
+  MOVED_TO_INVOICE: 'В счёте',
+}
+
 export const FUNNEL_STAGE_LABELS: Record<string, string> = {
   NEW_LEAD:       'Новый лид',
   CONTACT_MADE:   'Контакт установлен',

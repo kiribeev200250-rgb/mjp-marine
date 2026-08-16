@@ -33,6 +33,7 @@ const MODELS_IN_DEPENDENCY_ORDER = [
   'yacht',             // → Client
   'funnelHistory',     // → Client
   'note',              // → Company, Client?, Yacht?, CrmUser?
+  'project',           // → Company, Yacht
 
   // Склад
   'supplier',          // → Company
@@ -48,6 +49,10 @@ const MODELS_IN_DEPENDENCY_ORDER = [
 
   // Задачи
   'task',              // → Company, Client?, Yacht?, Quote?, CrmUser (assignee)?
+
+  // Работы проекта — после task/quote/invoice (ссылается на все три опционально)
+  'projectWork',         // → Project, Task?, Quote?, Invoice?
+  'projectWorkMaterial',  // → ProjectWork, InventoryItem?
 
   // Финансы (FinanceEntry ссылается сама на себя через reversalOfId —
   // экспортируется в хронологическом порядке, поэтому исходная запись

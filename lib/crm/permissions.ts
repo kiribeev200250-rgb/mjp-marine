@@ -8,6 +8,7 @@ export type CrmModule =
   | 'INVENTORY'
   | 'FINANCE'
   | 'INVOICES'
+  | 'PROJECTS'
   | 'REPORTS'
   | 'SETTINGS'
 
@@ -23,6 +24,7 @@ export const ADMIN_PERMISSIONS: PermissionMatrix = {
   INVENTORY: ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
   FINANCE:   ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
   INVOICES:  ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
+  PROJECTS:  ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
   REPORTS:   ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
   SETTINGS:  ['VIEW', 'CREATE', 'EDIT', 'DELETE'],
 }

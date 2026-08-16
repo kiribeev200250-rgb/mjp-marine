@@ -35,6 +35,7 @@ const routes: { module: string; path: string; loader: () => Promise<Record<strin
   { module: 'INVENTORY', path: 'app/api/crm/inventory/route.ts',            loader: () => import('@/app/api/crm/inventory/route'),            method: 'GET' },
   { module: 'FINANCE',   path: 'app/api/crm/finance/route.ts',              loader: () => import('@/app/api/crm/finance/route'),              method: 'GET' },
   { module: 'INVOICES',  path: 'app/api/crm/invoices/route.ts',             loader: () => import('@/app/api/crm/invoices/route'),             method: 'GET' },
+  { module: 'PROJECTS',  path: 'app/api/crm/projects/route.ts',             loader: () => import('@/app/api/crm/projects/route'),             method: 'GET' },
   { module: 'REPORTS',   path: 'app/api/crm/reports/gestor-export/route.ts', loader: () => import('@/app/api/crm/reports/gestor-export/route'), method: 'GET' },
   { module: 'SETTINGS',  path: 'app/api/crm/settings/users/route.ts',       loader: () => import('@/app/api/crm/settings/users/route'),       method: 'POST' },
 ]
