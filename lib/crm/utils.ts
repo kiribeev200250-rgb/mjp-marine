@@ -63,19 +63,21 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 
 // Цвета статусов задач
 export const TASK_STATUS_COLORS: Record<string, string> = {
-  NEW:         'bg-gray-400',
-  SCHEDULED:   'bg-blue-500',
-  IN_PROGRESS: 'bg-yellow-500',
-  DONE:        'bg-green-500',
-  PROBLEM:     'bg-red-500',
+  NEW:                 'bg-gray-400',
+  SCHEDULED:           'bg-blue-500',
+  IN_PROGRESS:         'bg-yellow-500',
+  DONE:                'bg-green-500',
+  PROBLEM:             'bg-red-500',
+  CANCELLED_BY_CLIENT: 'bg-gray-500',
 }
 
 export const TASK_STATUS_LABELS: Record<string, string> = {
-  NEW:         'Новая',
-  SCHEDULED:   'Запланирована',
-  IN_PROGRESS: 'В работе',
-  DONE:        'Выполнена',
-  PROBLEM:     'Проблема',
+  NEW:                 'Новая',
+  SCHEDULED:           'Запланирована',
+  IN_PROGRESS:         'В работе',
+  DONE:                'Выполнена',
+  PROBLEM:             'Проблема',
+  CANCELLED_BY_CLIENT: 'Отменено клиентом',
 }
 
 export const FUNNEL_STAGE_LABELS: Record<string, string> = {

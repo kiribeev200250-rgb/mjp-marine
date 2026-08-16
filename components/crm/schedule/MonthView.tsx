@@ -5,11 +5,12 @@ import type { SerializedTask } from './types'
 const DAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 const STATUS_DOT: Record<string, string> = {
-  NEW:         'bg-gray-400',
-  SCHEDULED:   'bg-info',
-  IN_PROGRESS: 'bg-warning',
-  DONE:        'bg-success',
-  PROBLEM:     'bg-danger',
+  NEW:                 'bg-gray-400',
+  SCHEDULED:           'bg-info',
+  IN_PROGRESS:         'bg-warning',
+  DONE:                'bg-success',
+  PROBLEM:             'bg-danger',
+  CANCELLED_BY_CLIENT: 'bg-gray-500',
 }
 
 interface Props {

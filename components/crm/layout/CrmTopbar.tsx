@@ -3,6 +3,7 @@
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { QuickAddModal } from '@/components/crm/finance/QuickAddModal'
+import { GlobalSearch } from '@/components/crm/layout/GlobalSearch'
 import { useCrmI18n } from '@/components/crm/i18n/CrmI18nProvider'
 import { CRM_LANGS, CRM_LANG_LABEL } from '@/lib/crm/i18n'
 
@@ -18,19 +19,7 @@ export function CrmTopbar({ userName, userInitial }: Props) {
 
   return (
     <header className="h-14 bg-navy-900 border-b border-white/5 flex items-center px-5 shrink-0 gap-4">
-      {/* Search */}
-      <div className="flex-1 max-w-lg">
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45 text-body select-none">
-            🔍
-          </span>
-          <input
-            type="text"
-            placeholder={t('search')}
-            className="w-full bg-white/7 border border-white/10 rounded-control pl-8 pr-4 py-1.5 text-label text-white placeholder:text-white/45 focus:outline-none focus:border-white/20 focus:bg-white/10 transition"
-          />
-        </div>
-      </div>
+      <GlobalSearch />
 
       <button
         onClick={() => setQuickAddOpen(true)}

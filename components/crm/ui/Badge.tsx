@@ -44,11 +44,12 @@ export const FUNNEL_TONE: Record<string, BadgeTone> = {
 }
 
 export const TASK_TONE: Record<string, BadgeTone> = {
-  NEW:         'neutral',
-  SCHEDULED:   'info',
-  IN_PROGRESS: 'warning',
-  DONE:        'success',
-  PROBLEM:     'danger',
+  NEW:                 'neutral',
+  SCHEDULED:           'info',
+  IN_PROGRESS:         'warning',
+  DONE:                'success',
+  PROBLEM:             'danger',
+  CANCELLED_BY_CLIENT: 'neutral',
 }
 
 export const INVOICE_TONE: Record<string, BadgeTone> = {

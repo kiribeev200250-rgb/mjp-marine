@@ -84,7 +84,7 @@ export default function TgTasksPage() {
         </div>
         <Badge tone={TASK_TONE[task.status]}>{TASK_STATUS_LABELS[task.status]}</Badge>
       </div>
-      {task.status !== 'DONE' && task.status !== 'PROBLEM' && (
+      {task.status !== 'DONE' && task.status !== 'PROBLEM' && task.status !== 'CANCELLED_BY_CLIENT' && (
         <TgButton variant="secondary" disabled={busyId === task.id} onClick={() => advance(task)}>
           {busyId === task.id ? '...' : `→ ${TASK_STATUS_LABELS[NEXT_STATUS[task.status]!]}`}
         </TgButton>

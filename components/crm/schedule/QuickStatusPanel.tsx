@@ -4,14 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TASK_STATUS_LABELS } from '@/lib/crm/utils'
 
-const STATUSES = ['NEW', 'SCHEDULED', 'IN_PROGRESS', 'DONE', 'PROBLEM'] as const
+const STATUSES = ['NEW', 'SCHEDULED', 'IN_PROGRESS', 'DONE', 'PROBLEM', 'CANCELLED_BY_CLIENT'] as const
 
 const STATUS_STYLE: Record<string, { active: string; idle: string }> = {
-  NEW:         { active: 'bg-gray-200 text-gray-900 border-gray-300',   idle: 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-900' },
-  SCHEDULED:   { active: 'bg-info/15 text-info border-info/30',         idle: 'border-gray-200 text-gray-500 hover:border-info/40 hover:text-info' },
-  IN_PROGRESS: { active: 'bg-warning/15 text-warning border-warning/30', idle: 'border-gray-200 text-gray-500 hover:border-warning/40 hover:text-warning' },
-  DONE:        { active: 'bg-success/15 text-success border-success/30', idle: 'border-gray-200 text-gray-500 hover:border-success/40 hover:text-success' },
-  PROBLEM:     { active: 'bg-danger/15 text-danger border-danger/30',   idle: 'border-gray-200 text-gray-500 hover:border-danger/40 hover:text-danger' },
+  NEW:                 { active: 'bg-gray-200 text-gray-900 border-gray-300',   idle: 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-900' },
+  SCHEDULED:           { active: 'bg-info/15 text-info border-info/30',         idle: 'border-gray-200 text-gray-500 hover:border-info/40 hover:text-info' },
+  IN_PROGRESS:         { active: 'bg-warning/15 text-warning border-warning/30', idle: 'border-gray-200 text-gray-500 hover:border-warning/40 hover:text-warning' },
+  DONE:                { active: 'bg-success/15 text-success border-success/30', idle: 'border-gray-200 text-gray-500 hover:border-success/40 hover:text-success' },
+  PROBLEM:             { active: 'bg-danger/15 text-danger border-danger/30',   idle: 'border-gray-200 text-gray-500 hover:border-danger/40 hover:text-danger' },
+  CANCELLED_BY_CLIENT: { active: 'bg-gray-200 text-gray-700 border-gray-400',   idle: 'border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700' },
 }
 
 interface Props {

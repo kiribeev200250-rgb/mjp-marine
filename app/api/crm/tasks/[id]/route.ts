@@ -7,11 +7,8 @@ import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { prisma } from '@/lib/prisma'
 import { taskScopeWhere } from '@/lib/crm/scope'
 import { checkVersion } from '@/lib/crm/optimisticLock'
-import type { PrismaClient, TaskStatus } from '@prisma/client'
-
-type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
-
-interface TaskMaterial { itemId: string; name: string; unit: string; qty: string }
+import { writeOffMaterials, type TaskMaterial } from '@/lib/crm/services/taskMaterials'
+import type { TaskStatus } from '@prisma/client'
 
 export async function GET(
   req: NextRequest,
@@ -42,49 +39,6 @@ export async function GET(
 // можно было получить задачу в DONE без реального списания склада. Алерты о
 // низком остатке возвращаются вызывающей стороне — уведомление в Telegram
 // шлётся уже ПОСЛЕ успешного коммита транзакции, не раньше.
-async function writeOffMaterials(
-  tx: Tx,
-  companyId: string,
-  taskId: string,
-  materials: TaskMaterial[],
-): Promise<{ name: string; newStock: Decimal; unit: string; minAlert: Decimal }[]> {
-  if (materials.length === 0) return []
-
-  const items = await tx.inventoryItem.findMany({
-    where: { id: { in: materials.map((m) => m.itemId) }, companyId },
-  })
-
-  const lowStockAlerts: { name: string; newStock: Decimal; unit: string; minAlert: Decimal }[] = []
-
-  for (const m of materials) {
-    const item = items.find((i) => i.id === m.itemId)
-    if (!item) continue
-
-    const qty          = new Decimal(m.qty || 0)
-    const currentStock = new Decimal(item.qtyInStock.toString())
-    const newStock      = Decimal.max(0, currentStock.minus(qty))
-    const unitPrice      = new Decimal(item.costPrice.toString())
-    const total           = qty.mul(unitPrice)
-
-    await tx.stockMovement.create({
-      data: {
-        companyId, itemId: item.id, taskId, type: 'WRITE_OFF',
-        qty, unitPrice, total, note: 'Автосписание при выполнении задачи',
-      },
-    })
-    await tx.inventoryItem.update({ where: { id: item.id }, data: { qtyInStock: newStock } })
-
-    const minAlert = new Decimal(item.qtyMinAlert.toString())
-    if (minAlert.gt(0) && newStock.lt(minAlert)) {
-      lowStockAlerts.push({ name: item.name, newStock, unit: item.unit, minAlert })
-    }
-  }
-
-  await tx.task.update({ where: { id: taskId }, data: { materialsWrittenOff: true } })
-
-  return lowStockAlerts
-}
-
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },

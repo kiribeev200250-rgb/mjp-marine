@@ -16,11 +16,12 @@ interface Props {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'NEW',         label: 'Новая'         },
-  { value: 'SCHEDULED',   label: 'Запланирована'  },
-  { value: 'IN_PROGRESS', label: 'В работе'      },
-  { value: 'DONE',        label: 'Выполнена'     },
-  { value: 'PROBLEM',     label: 'Проблема'      },
+  { value: 'NEW',                 label: 'Новая'              },
+  { value: 'SCHEDULED',           label: 'Запланирована'       },
+  { value: 'IN_PROGRESS',         label: 'В работе'           },
+  { value: 'DONE',                label: 'Выполнена'          },
+  { value: 'PROBLEM',             label: 'Проблема'           },
+  { value: 'CANCELLED_BY_CLIENT', label: 'Отменено клиентом'  },
 ]
 
 export function TaskForm({ task, clients, defaultDate, defaultClientId, defaultBoatId, onSaved, onDeleted }: Props) {

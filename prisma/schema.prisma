@@ -563,7 +563,8 @@ enum TaskStatus {
   SCHEDULED
   IN_PROGRESS
   DONE
-  PROBLEM
+  PROBLEM // Проблема на объекте — не смешивать с отменой клиентом, см. CANCELLED_BY_CLIENT
+  CANCELLED_BY_CLIENT // Клиент отменил работу — отдельно от PROBLEM, чтобы не искажать аналитику
 }
 
 // ─── СКЛАД ──────────────────────────────────────────────────────

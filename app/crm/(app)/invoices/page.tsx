@@ -4,9 +4,10 @@ import { getCrmSession } from '@/lib/crm/session'
 import { requirePermission } from '@/lib/crm/permissions'
 import { prisma } from '@/lib/prisma'
 import { formatMoney, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS } from '@/lib/crm/utils'
-import { Badge, Button, DataTable, ExportCsvButton, INVOICE_TONE, QUOTE_TONE, type Column } from '@/components/crm/ui'
+import { Badge, Button, DataTable, ExportCsvButton, QUOTE_TONE, type Column } from '@/components/crm/ui'
+import { InvoicesBulkTable, type InvoiceRow as BulkInvoiceRow } from '@/components/crm/invoices/InvoicesBulkTable'
 import { outstandingBalances } from '@/lib/crm/services/ar'
-import type { Invoice, Quote, Client } from '@prisma/client'
+import type { Quote, Client } from '@prisma/client'
 
 interface SearchParams { tab?: string }
 
@@ -45,31 +46,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const totalOutstanding = outstandingInvoices
     .reduce((s, i) => s + balances.get(i.id)!.toNumber(), 0)
 
-  type InvoiceRow = Invoice & { client: Pick<Client, 'id' | 'firstName' | 'lastName'> }
   type QuoteRow   = Quote   & { client: Pick<Client, 'id' | 'firstName' | 'lastName'> }
-
-  const invoiceColumns: Column<InvoiceRow>[] = [
-    { key: 'number', header: 'Номер', render: (r) => (
-      <Link href={`/crm/invoices/${r.id}`} className="font-mono text-gray-900 hover:text-gold transition">{r.number}</Link>
-    ) },
-    { key: 'client', header: 'Клиент', render: (r) => (
-      <Link href={`/crm/clients/${r.client.id}`} className="text-gray-900 hover:text-gold transition">
-        {r.client.firstName} {r.client.lastName}
-      </Link>
-    ) },
-    { key: 'date', header: 'Дата', render: (r) => fmtDate(r.date) },
-    { key: 'total', header: 'Сумма', align: 'right', render: (r) => (
-      <span className="tabular-nums font-medium">{formatMoney(r.total)}</span>
-    ) },
-    { key: 'status', header: 'Статус', render: (r) => (
-      <Badge tone={INVOICE_TONE[r.status] ?? 'neutral'}>{INVOICE_STATUS_LABELS[r.status] ?? r.status}</Badge>
-    ) },
-    { key: 'actions', header: '', align: 'right', render: (r) => (
-      r.status === 'DRAFT' ? (
-        <Link href={`/crm/invoices/${r.id}/edit`} className="text-gray-500 hover:text-gold transition text-label">✏ Редактировать</Link>
-      ) : null
-    ) },
-  ]
 
   const quoteColumns: Column<QuoteRow>[] = [
     { key: 'number', header: 'Номер', render: (r) => (
@@ -92,8 +69,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     ) },
   ]
 
-  const rowsInvoices: InvoiceRow[] = invoices as InvoiceRow[]
-  const rowsQuotes: QuoteRow[]     = quotes as QuoteRow[]
+  const rowsQuotes: QuoteRow[] = quotes as QuoteRow[]
 
   // Плоские сериализуемые версии для CSV — Decimal/Date не пересекают серверную границу
   const csvInvoices = invoices.map((r) => ({
@@ -103,6 +79,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const csvQuotes = quotes.map((r) => ({
     number: r.number, client: `${r.client.firstName} ${r.client.lastName}`,
     date: fmtDate(r.createdAt), total: Number(r.total), status: QUOTE_STATUS_LABELS[r.status] ?? r.status,
+  }))
+
+  const bulkInvoiceRows: BulkInvoiceRow[] = invoices.map((r) => ({
+    id: r.id, number: r.number, clientId: r.client.id,
+    clientName: `${r.client.firstName} ${r.client.lastName}`,
+    date: fmtDate(r.date), total: Number(r.total), status: r.status, isDraft: r.status === 'DRAFT',
   }))
 
   return (
@@ -156,13 +138,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
 
       <div className="flex-1 p-6">
         {tab === 'invoices' ? (
-          <DataTable
-            columns={invoiceColumns}
-            rows={rowsInvoices}
-            keyField="id"
-            emptyIcon="🧾"
-            emptyText="Счетов пока нет"
-          />
+          <InvoicesBulkTable rows={bulkInvoiceRows} />
         ) : (
           <DataTable
             columns={quoteColumns}

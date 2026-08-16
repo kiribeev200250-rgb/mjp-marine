@@ -18,18 +18,20 @@ const TOTAL_MIN = (GRID_END_HOUR - GRID_START_HOUR) * 60
 const DAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 const STATUS_BG: Record<string, string> = {
-  NEW:         'bg-gray-50  border-gray-300',
-  SCHEDULED:   'bg-info/10  border-info/40',
-  IN_PROGRESS: 'bg-warning/10 border-warning/40',
-  DONE:        'bg-success/10 border-success/40',
-  PROBLEM:     'bg-danger/10  border-danger/40',
+  NEW:                 'bg-gray-50  border-gray-300',
+  SCHEDULED:           'bg-info/10  border-info/40',
+  IN_PROGRESS:         'bg-warning/10 border-warning/40',
+  DONE:                'bg-success/10 border-success/40',
+  PROBLEM:             'bg-danger/10  border-danger/40',
+  CANCELLED_BY_CLIENT: 'bg-gray-100 border-gray-400',
 }
 const STATUS_DOT: Record<string, string> = {
-  NEW:         'bg-gray-400',
-  SCHEDULED:   'bg-info',
-  IN_PROGRESS: 'bg-warning',
-  DONE:        'bg-success',
-  PROBLEM:     'bg-danger',
+  NEW:                 'bg-gray-400',
+  SCHEDULED:           'bg-info',
+  IN_PROGRESS:         'bg-warning',
+  DONE:                'bg-success',
+  PROBLEM:             'bg-danger',
+  CANCELLED_BY_CLIENT: 'bg-gray-500',
 }
 
 function pad(n: number) { return String(n).padStart(2, '0') }

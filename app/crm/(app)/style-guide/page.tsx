@@ -123,13 +123,14 @@ export default function StyleGuidePage() {
           ))}
         </Row>
         <Row label="задачи">
-          {(['NEW','SCHEDULED','IN_PROGRESS','DONE','PROBLEM'] as const).map((s) => (
+          {(['NEW','SCHEDULED','IN_PROGRESS','DONE','PROBLEM','CANCELLED_BY_CLIENT'] as const).map((s) => (
             <Badge key={s} tone={
               s === 'NEW' ? 'neutral'
               : s === 'SCHEDULED' ? 'info'
               : s === 'IN_PROGRESS' ? 'warning'
               : s === 'DONE' ? 'success'
-              : 'danger'
+              : s === 'PROBLEM' ? 'danger'
+              : 'neutral'
             }>{s}</Badge>
           ))}
         </Row>

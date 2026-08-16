@@ -121,6 +121,10 @@ export function SchedulerBoard({ initialTasks, clients }: Props) {
     } catch { setTasks(prev) }
   }, [tasks])
 
+  const handleBulkApplied = useCallback((ids: string[], patch: Partial<SerializedTask>) => {
+    setTasks((ts) => ts.map((t) => (ids.includes(t.id) ? { ...t, ...patch } : t)))
+  }, [])
+
   // ── DnD (backlog <-> day, day <-> day, at day granularity) ────────────────
   function handleDragStart({ active }: DragStartEvent) {
     setActiveTask(tasks.find((t) => t.id === active.id) ?? null)
@@ -245,7 +249,7 @@ export function SchedulerBoard({ initialTasks, clients }: Props) {
           </div>
 
           {/* Backlog panel */}
-          <BacklogPanel tasks={backlogTasks} onTaskClick={setDetailTask} />
+          <BacklogPanel tasks={backlogTasks} onTaskClick={setDetailTask} onBulkApplied={handleBulkApplied} />
         </div>
       </div>
 

@@ -17,6 +17,10 @@ const SYNONYMS: Record<string, TaskStatus> = {
   выполнена:   'DONE',
   problem:     'PROBLEM',
   проблема:    'PROBLEM',
+  cancelled:   'CANCELLED_BY_CLIENT',
+  cancel:      'CANCELLED_BY_CLIENT',
+  отменено:    'CANCELLED_BY_CLIENT',
+  отмена:      'CANCELLED_BY_CLIENT',
 }
 
 export function parseTaskStatus(input: string): TaskStatus | null {
