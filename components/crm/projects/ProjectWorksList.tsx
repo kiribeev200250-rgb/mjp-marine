@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Badge, Button, Input, Select, PROJECT_WORK_TONE } from '@/components/crm/ui'
-import { formatMoney, PAYMENT_METHODS, PROJECT_WORK_STATUS_LABELS } from '@/lib/crm/utils'
+import { formatMoney, PAYMENT_METHODS, PROJECT_WORK_STATUS_LABELS, LANGUAGE_LABELS } from '@/lib/crm/utils'
 
 export interface WorkRow {
   id: string
@@ -26,6 +26,7 @@ interface Props {
   works: WorkRow[]
   defaultIvaRate: string
   defaultIrpfRate: string
+  defaultLanguage: string
 }
 
 const TRANSFERABLE = new Set(['PLANNED', 'DONE'])
@@ -34,13 +35,15 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso))
 }
 
-export function ProjectWorksList({ projectId, works, defaultIvaRate, defaultIrpfRate }: Props) {
+export function ProjectWorksList({ projectId, works, defaultIvaRate, defaultIrpfRate, defaultLanguage }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [transferMode, setTransferMode] = useState<'invoice' | 'quote' | null>(null)
+  const [transferMode, setTransferMode] = useState<'invoice' | 'quote' | 'pdf' | null>(null)
   const [ivaRate, setIvaRate] = useState(defaultIvaRate)
   const [irpfRate, setIrpfRate] = useState(defaultIrpfRate)
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0])
+  const [pdfPrices, setPdfPrices] = useState(true)
+  const [pdfLang, setPdfLang] = useState(defaultLanguage)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -87,8 +90,42 @@ export function ProjectWorksList({ projectId, works, defaultIvaRate, defaultIrpf
     }
   }
 
+  const downloadPlanPdf = () => {
+    const params = new URLSearchParams({ prices: pdfPrices ? '1' : '0', lang: pdfLang })
+    if (selected.size > 0) params.set('workIds', Array.from(selected).join(','))
+    window.open(`/api/crm/projects/${projectId}/plan-pdf?${params.toString()}`, '_blank')
+  }
+
+  const eligibleCount = works.filter((w) => TRANSFERABLE.has(w.status)).length
+
   return (
     <div className="space-y-3">
+      {eligibleCount > 0 && (
+        <div className="flex items-center justify-end">
+          <Button size="sm" variant="secondary" onClick={() => setTransferMode(transferMode === 'pdf' ? null : 'pdf')}>
+            📄 Скачать план работ (PDF)
+          </Button>
+        </div>
+      )}
+
+      {transferMode === 'pdf' && (
+        <div className="bg-white border border-gray-200 rounded-card shadow-e2 p-4 space-y-3">
+          <p className="text-label text-gray-500">
+            {selected.size > 0 ? `Выбранные работы (${selected.size})` : 'Все запланированные работы'} — не фискальный документ, только презентация плана.
+          </p>
+          <div className="grid grid-cols-2 gap-3 max-w-md">
+            <Select label="Язык документа" value={pdfLang} onChange={(e) => setPdfLang(e.target.value)}>
+              {Object.entries(LANGUAGE_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+            </Select>
+            <label className="flex items-center gap-2 text-body text-gray-900 cursor-pointer select-none self-end pb-2">
+              <input type="checkbox" checked={pdfPrices} onChange={(e) => setPdfPrices(e.target.checked)} />
+              Показывать цены
+            </label>
+          </div>
+          <Button onClick={downloadPlanPdf}>Скачать PDF</Button>
+        </div>
+      )}
+
       {selected.size > 0 && (
         <div className="bg-navy-900 text-white rounded-card px-4 py-2.5 flex items-center gap-3">
           <span className="text-body font-medium">Выбрано: {selected.size} — {formatMoney(selectedTotal)}</span>

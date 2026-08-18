@@ -17,7 +17,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const project = await prisma.project.findFirst({
     where: { id, companyId: session.user.companyId },
     include: {
-      boat: { include: { client: { select: { id: true, firstName: true, lastName: true } } } },
+      boat: { include: { client: { select: { id: true, firstName: true, lastName: true, language: true } } } },
       works: {
         orderBy: { sortOrder: 'asc' },
         include: {
@@ -86,6 +86,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             works={works}
             defaultIvaRate={(companyInfo?.ivaRate ?? 21).toString()}
             defaultIrpfRate={(companyInfo?.irpfRate ?? 0).toString()}
+            defaultLanguage={project.boat.client.language || 'ru'}
           />
         </div>
       </div>

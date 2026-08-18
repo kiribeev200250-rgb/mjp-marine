@@ -62,6 +62,8 @@ const styles = StyleSheet.create({
   signatureLabel: { fontSize: 8, color: '#8892a6' },
   disclaimer: { marginTop: 22, padding: 10, backgroundColor: '#fdf3e7', borderWidth: 1, borderColor: '#f0d9b5', borderRadius: 4 },
   disclaimerText: { fontSize: 8, color: '#8a6116' },
+  planNotice: { marginTop: 22, padding: 10, backgroundColor: '#EEF1F5', borderWidth: 1, borderColor: GRID, borderRadius: 4 },
+  planNoticeText: { fontSize: 8, color: '#4a5568' },
   notes: { marginTop: 14, fontSize: 8.5, color: '#4a5568' },
 })
 
@@ -70,7 +72,7 @@ export type PdfLang = typeof LANGS[number]
 
 const T: Record<PdfLang, Record<string, string>> = {
   ru: {
-    invoice: 'СЧЁТ', quote: 'ПРЕСМЕТ', billTo: 'Получатель', date: 'Дата',
+    invoice: 'СЧЁТ', quote: 'ПРЕСМЕТ', plan: 'ПЛАН РАБОТ', billTo: 'Получатель', date: 'Дата',
     dueDate: 'Срок оплаты', validUntil: 'Действителен до', description: 'Описание',
     qty: 'Кол-во', unitPrice: 'Цена', total: 'Сумма', subtotal: 'База',
     hours: 'Часы', rate: 'Норма/ч',
@@ -78,9 +80,10 @@ const T: Record<PdfLang, Record<string, string>> = {
     iva: 'IVA', irpf: 'IRPF', grandTotal: 'Итого', paymentMethod: 'Способ оплаты',
     bankAccount: 'Банковский счёт', notes: 'Примечания', signature: 'Подпись клиента',
     disclaimer: 'Перед использованием сверьтесь с gestor’ом (бухгалтером) — документ носит информационный характер.',
+    planNotice: 'Это предложение по плану работ, не счёт и не пресмет — без номера документа и без обязательств. Ориентировочные суммы могут измениться.',
   },
   en: {
-    invoice: 'INVOICE', quote: 'QUOTE', billTo: 'Bill to', date: 'Date',
+    invoice: 'INVOICE', quote: 'QUOTE', plan: 'WORK PLAN', billTo: 'Bill to', date: 'Date',
     dueDate: 'Due date', validUntil: 'Valid until', description: 'Description',
     qty: 'Qty', unitPrice: 'Unit price', total: 'Total', subtotal: 'Subtotal',
     hours: 'Hours', rate: 'Rate/h',
@@ -88,9 +91,10 @@ const T: Record<PdfLang, Record<string, string>> = {
     iva: 'VAT', irpf: 'IRPF', grandTotal: 'Total', paymentMethod: 'Payment method',
     bankAccount: 'Bank account', notes: 'Notes', signature: 'Client signature',
     disclaimer: 'Please verify with your gestor (accountant) before use — this document is informational.',
+    planNotice: 'This is a work-plan proposal, not an invoice or a quote — no document number, no obligation. Estimated amounts may change.',
   },
   es: {
-    invoice: 'FACTURA', quote: 'PRESUPUESTO', billTo: 'Cliente', date: 'Fecha',
+    invoice: 'FACTURA', quote: 'PRESUPUESTO', plan: 'PLAN DE TRABAJO', billTo: 'Cliente', date: 'Fecha',
     dueDate: 'Vencimiento', validUntil: 'Válido hasta', description: 'Descripción',
     qty: 'Cant.', unitPrice: 'Precio', total: 'Importe', subtotal: 'Base imponible',
     hours: 'Horas', rate: 'Tarifa/h',
@@ -98,9 +102,10 @@ const T: Record<PdfLang, Record<string, string>> = {
     iva: 'IVA', irpf: 'IRPF', grandTotal: 'Total', paymentMethod: 'Forma de pago',
     bankAccount: 'Cuenta bancaria', notes: 'Notas', signature: 'Conforme el cliente',
     disclaimer: 'Verifique con su gestor antes de usar este documento — tiene carácter informativo.',
+    planNotice: 'Esta es una propuesta de plan de trabajo, no una factura ni un presupuesto — sin número de documento ni obligación. Los importes son orientativos y pueden variar.',
   },
   uk: {
-    invoice: 'РАХУНОК', quote: 'КОШТОРИС', billTo: 'Отримувач', date: 'Дата',
+    invoice: 'РАХУНОК', quote: 'КОШТОРИС', plan: 'ПЛАН РОБІТ', billTo: 'Отримувач', date: 'Дата',
     dueDate: 'Термін оплати', validUntil: 'Дійсний до', description: 'Опис',
     qty: 'К-сть', unitPrice: 'Ціна', total: 'Сума', subtotal: 'База',
     hours: 'Години', rate: 'Ставка/год',
@@ -108,9 +113,10 @@ const T: Record<PdfLang, Record<string, string>> = {
     iva: 'ПДВ', irpf: 'IRPF', grandTotal: 'Разом', paymentMethod: 'Спосіб оплати',
     bankAccount: 'Банківський рахунок', notes: 'Примітки', signature: 'Підпис клієнта',
     disclaimer: 'Перед використанням звірте з gestor’ом (бухгалтером) — документ має інформаційний характер.',
+    planNotice: 'Це пропозиція плану робіт, не рахунок і не кошторис — без номера документа і без зобов’язань. Суми орієнтовні й можуть змінитися.',
   },
   pl: {
-    invoice: 'FAKTURA', quote: 'WYCENA', billTo: 'Nabywca', date: 'Data',
+    invoice: 'FAKTURA', quote: 'WYCENA', plan: 'PLAN PRAC', billTo: 'Nabywca', date: 'Data',
     dueDate: 'Termin płatności', validUntil: 'Ważne do', description: 'Opis',
     qty: 'Ilość', unitPrice: 'Cena', total: 'Suma', subtotal: 'Podstawa',
     hours: 'Godziny', rate: 'Stawka/h',
@@ -118,6 +124,7 @@ const T: Record<PdfLang, Record<string, string>> = {
     iva: 'VAT', irpf: 'IRPF', grandTotal: 'Razem', paymentMethod: 'Sposób płatności',
     bankAccount: 'Konto bankowe', notes: 'Uwagi', signature: 'Podpis klienta',
     disclaimer: 'Przed użyciem skonsultuj się z gestorem (księgowym) — dokument ma charakter informacyjny.',
+    planNotice: 'To propozycja planu prac, nie faktura ani wycena — bez numeru dokumentu i bez zobowiązań. Kwoty są orientacyjne i mogą się zmienić.',
   },
 }
 
@@ -204,7 +211,7 @@ export function resolveInvoiceCompanyInfo(invoice: InvoiceCompanySnapshot, live:
 }
 
 export interface PdfDocumentData {
-  kind:           'invoice' | 'quote'
+  kind:           'invoice' | 'quote' | 'plan'
   number:         string
   date:           Date | string
   dueDate?:       Date | string | null
@@ -226,12 +233,18 @@ export interface PdfDocumentData {
   total:          string
   paymentMethod?: string
   notes?:         string
+  // Только для kind:'plan' — «план работ» может выгружаться без цен (для
+  // согласования объёма работ), тогда весь блок цен/итогов не рендерится.
+  // Для invoice/quote всегда true (не передаётся, фискальный документ без
+  // цены не имеет смысла).
+  showPrices?:    boolean
 }
 
 function DocumentPdf({ data }: { data: PdfDocumentData }) {
   const lang = resolveLang(data.language)
   const t = T[lang]
   const hasIrpf = data.irpfAmount != null && parseFloat(data.irpfAmount) !== 0
+  const showPrices = data.kind !== 'plan' || data.showPrices !== false
 
   return (
     <Document>
@@ -252,8 +265,8 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
               <Text style={styles.companySub}>NIF: {data.company.nif}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.docBadge}>{data.kind === 'invoice' ? t.invoice : t.quote}</Text>
-              <Text style={styles.docNumber}>#{data.number}</Text>
+              <Text style={styles.docBadge}>{data.kind === 'invoice' ? t.invoice : data.kind === 'quote' ? t.quote : t.plan}</Text>
+              <Text style={styles.docNumber}>{data.kind === 'plan' ? data.number : `#${data.number}`}</Text>
             </View>
           </View>
         </View>
@@ -288,10 +301,10 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
             <Text style={[styles.tHeadCell, styles.colNum]}> </Text>
             <Text style={[styles.tHeadCell, styles.colDesc]}>{t.description}</Text>
             <Text style={[styles.tHeadCell, styles.colHours]}>{t.hours}</Text>
-            <Text style={[styles.tHeadCell, styles.colRate]}>{t.rate}</Text>
+            {showPrices && <Text style={[styles.tHeadCell, styles.colRate]}>{t.rate}</Text>}
             <Text style={[styles.tHeadCell, styles.colQty]}>{t.qty}</Text>
-            <Text style={[styles.tHeadCell, styles.colPrice]}>{t.unitPrice}</Text>
-            <Text style={[styles.tHeadCell, styles.colTotal]}>{t.total}</Text>
+            {showPrices && <Text style={[styles.tHeadCell, styles.colPrice]}>{t.unitPrice}</Text>}
+            {showPrices && <Text style={[styles.tHeadCell, styles.colTotal]}>{t.total}</Text>}
           </View>
           {data.jobs.map((job, ji) => (
             <View key={ji}>
@@ -299,26 +312,27 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
                 <Text style={[styles.jobCell, styles.colNum]}>{ji + 1}</Text>
                 <Text style={[styles.jobCell, styles.colDesc]}>{job.title}</Text>
                 <Text style={[styles.jobCell, styles.colHours]}>{job.laborHours ?? '—'}</Text>
-                <Text style={[styles.jobCell, styles.colRate]}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</Text>
+                {showPrices && <Text style={[styles.jobCell, styles.colRate]}>{job.laborRate ? fmtMoney(job.laborRate) : '—'}</Text>}
                 <Text style={[styles.jobCell, styles.colQty]}>{job.quantity ?? '—'}</Text>
-                <Text style={[styles.jobCell, styles.colPrice]}>{job.unitPrice ? fmtMoney(job.unitPrice) : '—'}</Text>
-                <Text style={[styles.jobCell, styles.colTotal]}>{fmtMoney(job.laborCost)}</Text>
+                {showPrices && <Text style={[styles.jobCell, styles.colPrice]}>{job.unitPrice ? fmtMoney(job.unitPrice) : '—'}</Text>}
+                {showPrices && <Text style={[styles.jobCell, styles.colTotal]}>{fmtMoney(job.laborCost)}</Text>}
               </View>
               {job.materials.map((mat, mi) => (
                 <View key={mi} style={styles.matRow}>
                   <Text style={[styles.matCell, styles.colNum]}>{ji + 1}.{mi + 1}</Text>
                   <Text style={[styles.matCell, styles.colDescMat]}>{mat.name}</Text>
                   <Text style={[styles.matCell, styles.colHours]}>—</Text>
-                  <Text style={[styles.matCell, styles.colRate]}>—</Text>
+                  {showPrices && <Text style={[styles.matCell, styles.colRate]}>—</Text>}
                   <Text style={[styles.matCell, styles.colQty]}>{mat.quantity}</Text>
-                  <Text style={[styles.matCell, styles.colPrice]}>{fmtMoney(mat.unitPrice)}</Text>
-                  <Text style={[styles.matCell, styles.colTotal]}>{fmtMoney(mat.total)}</Text>
+                  {showPrices && <Text style={[styles.matCell, styles.colPrice]}>{fmtMoney(mat.unitPrice)}</Text>}
+                  {showPrices && <Text style={[styles.matCell, styles.colTotal]}>{fmtMoney(mat.total)}</Text>}
                 </View>
               ))}
             </View>
           ))}
         </View>
 
+        {showPrices && (
         <View style={styles.totals}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>{t.jobsTotal}</Text>
@@ -353,6 +367,7 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
             <Text style={styles.grandValue}>{fmtMoney(data.total)}</Text>
           </View>
         </View>
+        )}
 
         <View style={styles.footerRow}>
           {data.paymentMethod ? (
@@ -361,7 +376,7 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
               <Text style={styles.footerValue}>{data.paymentMethod}</Text>
             </View>
           ) : <View />}
-          {data.company.bankAccount ? (
+          {data.kind !== 'plan' && data.company.bankAccount ? (
             <View style={[styles.footerBlock, { alignItems: 'flex-end' }]}>
               <Text style={styles.footerLabel}>{t.bankAccount}</Text>
               <Text style={styles.footerValue}>{data.company.bankAccount}</Text>
@@ -387,6 +402,12 @@ function DocumentPdf({ data }: { data: PdfDocumentData }) {
         {data.kind === 'invoice' ? (
           <View style={styles.disclaimer}>
             <Text style={styles.disclaimerText}>{t.disclaimer}</Text>
+          </View>
+        ) : null}
+
+        {data.kind === 'plan' ? (
+          <View style={styles.planNotice}>
+            <Text style={styles.planNoticeText}>{t.planNotice}</Text>
           </View>
         ) : null}
       </Page>
