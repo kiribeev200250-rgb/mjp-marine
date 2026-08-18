@@ -43,15 +43,15 @@ export interface MoveToInvoiceOpts {
   asDraft?:       boolean
 }
 
-// Переносит выбранные работы проекта (обязательно PLANNED — уже перенесённые
-// или ни разу не тронутые статусом не подходят) в новый счёт: та же сборка
+// Переносит выбранные работы проекта (PLANNED или DONE — уже перенесённые в
+// счёт не подходят, повторно взять их нельзя) в новый счёт: та же сборка
 // jobs/materials, что и обычный POST /api/crm/invoices, плюс — как только
 // счёт ISSUED — существующий каскад writeOffInvoiceMaterials (списание
 // склада). Проект сам склад/деньги никогда не трогает — только через этот
 // путь, ровно как описано в промпте («Проект НЕ проводит склад/деньги сам —
 // только через счёт»). Перенесённые работы помечаются MOVED_TO_INVOICE и
 // пропадают из активного списка проекта — не задвоятся при повторном переносе,
-// потому что выборка ниже фильтрует status: 'PLANNED'.
+// потому что выборка ниже исключает уже перенесённые.
 export async function moveProjectWorksToInvoice(
   tx: Tx,
   companyId: string,
@@ -67,7 +67,7 @@ export async function moveProjectWorksToInvoice(
   if (!project) throw new Error('Проект не найден')
 
   const works = await tx.projectWork.findMany({
-    where: { id: { in: workIds }, projectId, status: 'PLANNED' },
+    where: { id: { in: workIds }, projectId, status: { in: ['PLANNED', 'DONE'] } },
     include: { materials: true },
     orderBy: { sortOrder: 'asc' },
   })
@@ -173,11 +173,128 @@ export async function moveProjectWorksToInvoice(
         action:   'STATUS_CHANGE',
         entity:   'ProjectWork',
         entityId: w.id,
-        oldValue: { status: 'PLANNED' },
+        oldValue: { status: w.status },
         newValue: { status: 'MOVED_TO_INVOICE', invoiceId: invoice.id, invoiceNumber: invoice.number },
       },
     })
   }
 
   return { invoice, cascade }
+}
+
+export interface MoveToQuoteOpts {
+  ivaRate?:      number | string
+  language?:     string
+  validUntil?:   string | null
+}
+
+// Переносит выбранные работы проекта в новый пресмет (Presupuesto) — в
+// отличие от счёта, работы ОСТАЮТСЯ в проекте (пресмет предварительный, не
+// обязательство, можно переоценивать и пере-предлагать клиенту несколько
+// раз). Единственный эффект на ProjectWork — quoteId обновляется на
+// последний пресмет, куда её включили (не история всех пресметов, именно
+// "куда её сейчас предлагают"). Пресмет никогда не трогает склад/деньги —
+// это ровно так же, как обычный POST /api/crm/quotes, просто позиции берутся
+// из проекта, а не вводятся вручную.
+export async function moveProjectWorksToQuote(
+  tx: Tx,
+  companyId: string,
+  userId: string,
+  projectId: string,
+  workIds: string[],
+  opts: MoveToQuoteOpts,
+) {
+  const project = await tx.project.findFirst({
+    where: { id: projectId, companyId },
+    include: { boat: { include: { client: true } } },
+  })
+  if (!project) throw new Error('Проект не найден')
+
+  const works = await tx.projectWork.findMany({
+    where: { id: { in: workIds }, projectId, status: { in: ['PLANNED', 'DONE'] } },
+    include: { materials: true },
+    orderBy: { sortOrder: 'asc' },
+  })
+  if (works.length === 0) throw new Error('Нет работ для переноса — уже перенесены в счёт или не найдены')
+
+  const client = project.boat.client
+
+  const jobsTotal = works.reduce((s, w) => s.plus(w.laborCost.toString()), new Decimal(0))
+  const materialsTotal = works.reduce(
+    (s, w) => s.plus(w.materials.reduce((ms, m) => ms.plus(m.total.toString()), new Decimal(0))),
+    new Decimal(0),
+  )
+  const subtotal = jobsTotal.plus(materialsTotal)
+  const iva = new Decimal(opts.ivaRate ?? 21)
+  if (iva.lt(0) || iva.gt(100)) throw new Error('Ставка IVA должна быть от 0 до 100%')
+  const ivaAmount = subtotal.times(iva).div(100).toDecimalPlaces(2)
+  const total = subtotal.plus(ivaAmount)
+
+  const { number } = await nextDocumentNumber(tx, companyId, 'quote')
+
+  const quote = await tx.quote.create({
+    data: {
+      companyId,
+      clientId: client.id,
+      boatId:   project.boatId,
+      number,
+      language:   opts.language || client.language || 'ru',
+      validUntil: opts.validUntil ? new Date(opts.validUntil) : null,
+      ivaRate: iva,
+      jobsTotal, materialsTotal, subtotal, ivaAmount, total,
+      notes: `Перенесено из проекта «${project.name}»`,
+      jobs: {
+        create: works.map((w, i) => ({
+          sortOrder:  i,
+          title:      w.title,
+          laborHours: w.laborHours,
+          laborRate:  w.laborRate,
+          quantity:   w.quantity,
+          unitPrice:  w.unitPrice,
+          laborCost:  w.laborCost,
+          materials: {
+            create: w.materials.map((m, mi) => ({
+              sortOrder: mi,
+              name: m.name,
+              quantity: m.quantity,
+              unitPrice: m.unitPrice,
+              total: m.total,
+              inventoryItemId: m.inventoryItemId,
+            })),
+          },
+        })),
+      },
+    },
+    include: { jobs: { include: { materials: true } } },
+  })
+
+  await tx.projectWork.updateMany({
+    where: { id: { in: works.map((w) => w.id) } },
+    data:  { quoteId: quote.id },
+  })
+
+  await tx.auditLog.create({
+    data: {
+      companyId, userId,
+      action:   'CREATE',
+      entity:   'Quote',
+      entityId: quote.id,
+      newValue: { number: quote.number, total: quote.total.toString(), fromProject: project.name },
+      meta:     { linkedWorkIds: works.map((w) => w.id) },
+    },
+  })
+  for (const w of works) {
+    await tx.auditLog.create({
+      data: {
+        companyId, userId,
+        action:   'UPDATE',
+        entity:   'ProjectWork',
+        entityId: w.id,
+        oldValue: { quoteId: w.quoteId },
+        newValue: { quoteId: quote.id, quoteNumber: quote.number },
+      },
+    })
+  }
+
+  return { quote }
 }

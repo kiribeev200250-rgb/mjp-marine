@@ -65,6 +65,23 @@ describe('moveProjectWorksToInvoice', () => {
     })
   })
 
+  it('a DONE work (not yet billed) is invoiceable too', async () => {
+    await withRollback(async (tx) => {
+      const companyId = await makeCompany(tx, { legalName: 'Test SL' })
+      const user      = await makeUser(tx, companyId)
+      const clientId  = await makeClient(tx, companyId)
+      const boat      = await makeBoat(tx, clientId)
+      const project   = await makeProject(tx, companyId, boat.id)
+      const work      = await makeProjectWork(tx, project.id, { laborCost: 50, status: 'DONE' })
+
+      const { invoice } = await moveProjectWorksToInvoice(tx, companyId, user.id, project.id, [work.id], {})
+      expect(invoice.status).toBe('ISSUED')
+
+      const updated = await tx.projectWork.findUnique({ where: { id: work.id } })
+      expect(updated!.status).toBe('MOVED_TO_INVOICE')
+    })
+  })
+
   it('rejects when company fiscal info is not filled in', async () => {
     await withRollback(async (tx) => {
       const companyId = await makeCompany(tx) // no legalName override — keeps the placeholder

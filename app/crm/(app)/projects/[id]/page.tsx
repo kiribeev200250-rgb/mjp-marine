@@ -20,7 +20,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       boat: { include: { client: { select: { id: true, firstName: true, lastName: true } } } },
       works: {
         orderBy: { sortOrder: 'asc' },
-        include: { materials: true, task: { select: { id: true } }, invoice: { select: { id: true, number: true } } },
+        include: {
+          materials: true,
+          task: { select: { id: true } },
+          invoice: { select: { id: true, number: true } },
+          quote: { select: { id: true, number: true } },
+        },
       },
     },
   })
@@ -38,13 +43,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     taskId: w.taskId,
     invoiceId: w.invoiceId,
     invoiceNumber: w.invoice?.number ?? null,
+    quoteId: w.quoteId,
+    quoteNumber: w.quote?.number ?? null,
     materials: w.materials.map((m) => ({
       id: m.id, name: m.name, quantity: m.quantity.toString(), unitPrice: m.unitPrice.toString(), total: m.total.toString(),
     })),
   }))
 
   const planTotal = works
-    .filter((w) => w.status === 'PLANNED')
+    .filter((w) => w.status !== 'MOVED_TO_INVOICE')
     .reduce((s, w) => s + Number(w.laborCost) + Number(w.materialsTotal), 0)
 
   return (
