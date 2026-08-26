@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import Decimal from 'decimal.js'
 import { withRollback } from '../helpers/rollback'
-import { makeCompany, makeClient, makeBoat, makeProject, makeProjectWork, makeUser } from '../helpers/fixtures'
+import { makeCompany, makeClient, makeBoat, makeProject, makeProjectWork, makeUser, makeInventoryItem } from '../helpers/fixtures'
 import { moveProjectWorksToQuote } from '@/lib/crm/services/projects'
 
 describe('moveProjectWorksToQuote', () => {
@@ -42,12 +42,21 @@ describe('moveProjectWorksToQuote', () => {
       const clientId  = await makeClient(tx, companyId)
       const boat      = await makeBoat(tx, clientId)
       const project   = await makeProject(tx, companyId, boat.id)
-      const work      = await makeProjectWork(tx, project.id, { laborCost: 50 })
+      const item      = await makeInventoryItem(tx, companyId, { qtyInStock: 10, costPrice: 15 })
+      const work      = await makeProjectWork(tx, project.id, {
+        laborCost: 50,
+        materials: [{ name: 'Impeller', quantity: 2, unitPrice: 15, inventoryItemId: item.id }],
+      })
 
       await moveProjectWorksToQuote(tx, companyId, user.id, project.id, [work.id], {})
 
-      const movements = await tx.stockMovement.findMany({})
+      // Scoped to this test's own throwaway item/company — not an unscoped
+      // count of the whole table, which would pick up unrelated real data.
+      const movements = await tx.stockMovement.findMany({ where: { itemId: item.id } })
       expect(movements.length).toBe(0)
+
+      const updatedItem = await tx.inventoryItem.findUnique({ where: { id: item.id } })
+      expect(new Decimal(updatedItem!.qtyInStock.toString()).toString()).toBe('10')
     })
   })
 

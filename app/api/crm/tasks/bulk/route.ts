@@ -5,6 +5,7 @@ import { notifyAdmins } from '@/lib/crm/telegram/notify'
 import { prisma } from '@/lib/prisma'
 import { taskScopeWhere } from '@/lib/crm/scope'
 import { writeOffMaterials, type TaskMaterial, type LowStockAlert } from '@/lib/crm/services/taskMaterials'
+import { syncProjectWorkFromTaskStatus } from '@/lib/crm/services/projects'
 import type { TaskStatus } from '@prisma/client'
 
 const MAX_IDS = 100
@@ -74,6 +75,11 @@ export async function PATCH(req: NextRequest) {
             const alerts = await writeOffMaterials(tx, session.user.companyId, updated.id, materials)
             lowStockAlerts.push(...alerts)
           }
+        }
+
+        // Двусторонняя связь с работой проекта — то же, что и одиночный PATCH.
+        if (patch.status !== undefined) {
+          await syncProjectWorkFromTaskStatus(tx, updated.id, updated.status)
         }
 
         await tx.auditLog.create({

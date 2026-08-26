@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 import { taskScopeWhere } from '@/lib/crm/scope'
 import { checkVersion } from '@/lib/crm/optimisticLock'
 import { writeOffMaterials, type TaskMaterial } from '@/lib/crm/services/taskMaterials'
+import { syncProjectWorkFromTaskStatus } from '@/lib/crm/services/projects'
 import type { TaskStatus } from '@prisma/client'
 
 export async function GET(
@@ -125,6 +126,12 @@ export async function PATCH(
         if (materials.length > 0) {
           lowStockAlerts = await writeOffMaterials(tx, session.user.companyId, id, materials)
         }
+      }
+
+      // Двусторонняя связь с работой проекта (см. Project/ProjectWork) —
+      // отметка «выполнена» в календаре отражается в работе проекта.
+      if (status !== undefined) {
+        await syncProjectWorkFromTaskStatus(tx, id, u.status)
       }
 
       if (status && status !== existing.status) {

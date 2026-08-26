@@ -46,6 +46,7 @@ export function ProjectWorksList({ projectId, works, defaultIvaRate, defaultIrpf
   const [pdfLang, setPdfLang] = useState(defaultLanguage)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [busyWorkId, setBusyWorkId] = useState<string | null>(null)
 
   const selectedWorks = works.filter((w) => selected.has(w.id))
   const selectedTotal = selectedWorks.reduce((s, w) => s + Number(w.laborCost) + Number(w.materialsTotal), 0)
@@ -94,6 +95,19 @@ export function ProjectWorksList({ projectId, works, defaultIvaRate, defaultIrpf
     const params = new URLSearchParams({ prices: pdfPrices ? '1' : '0', lang: pdfLang })
     if (selected.size > 0) params.set('workIds', Array.from(selected).join(','))
     window.open(`/api/crm/projects/${projectId}/plan-pdf?${params.toString()}`, '_blank')
+  }
+
+  const toggleWorkStatus = async (work: WorkRow) => {
+    setBusyWorkId(work.id)
+    try {
+      await fetch(`/api/crm/projects/${projectId}/works/${work.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: work.status === 'DONE' ? 'PLANNED' : 'DONE' }),
+      })
+      router.refresh()
+    } finally {
+      setBusyWorkId(null)
+    }
   }
 
   const eligibleCount = works.filter((w) => TRANSFERABLE.has(w.status)).length
@@ -198,6 +212,15 @@ export function ProjectWorksList({ projectId, works, defaultIvaRate, defaultIrpf
                       </ul>
                     )}
                   </div>
+                  {TRANSFERABLE.has(w.status) && (
+                    <button
+                      disabled={busyWorkId === w.id}
+                      onClick={() => toggleWorkStatus(w)}
+                      className="text-label text-gray-500 hover:text-gray-900 transition shrink-0"
+                    >
+                      {w.status === 'DONE' ? '↺ В план' : '✓ Выполнено'}
+                    </button>
+                  )}
                   <span className="text-body font-semibold tabular-nums text-gray-900 shrink-0">{formatMoney(total)}</span>
                 </div>
               </div>

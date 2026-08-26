@@ -3,6 +3,7 @@ import Decimal from 'decimal.js'
 import { nextDocumentNumber } from '@/lib/crm/numbering'
 import { companyInfoSnapshot } from '@/lib/crm/documentJobs'
 import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
+import { writeOffMaterials, type TaskMaterial, type LowStockAlert } from '@/lib/crm/services/taskMaterials'
 
 type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 
@@ -30,6 +31,63 @@ export async function createLinkedTask(
     },
   })
   return task.id
+}
+
+// Двусторонняя синхронизация «выполнена» между задачей календаря и работой
+// проекта (см. Task.projectWork / ProjectWork.taskId). Единственное, что
+// синхронизируется, — сам факт готовности: DONE↔DONE, что угодно другое↔
+// PLANNED. Работу, уже перенесённую в счёт (MOVED_TO_INVOICE), синк не
+// трогает никогда — это терминальный статус, «отменить» выставленный счёт
+// через отметку в календаре нельзя.
+
+// Направление 1: задача → работа проекта. Вызывать ПОСЛЕ смены Task.status
+// внутри той же транзакции (см. app/api/crm/tasks/[id]/route.ts,
+// app/api/crm/tasks/bulk/route.ts). Чисто смена статуса — склад/деньги
+// проект никогда не проводит сам, поэтому здесь их и не может быть.
+export async function syncProjectWorkFromTaskStatus(tx: Tx, taskId: string, newTaskStatus: string): Promise<void> {
+  const work = await tx.projectWork.findUnique({ where: { taskId } })
+  if (!work || work.status === 'MOVED_TO_INVOICE') return
+
+  const nextStatus = newTaskStatus === 'DONE' ? 'DONE' : 'PLANNED'
+  if (work.status !== nextStatus) {
+    await tx.projectWork.update({ where: { id: work.id }, data: { status: nextStatus } })
+  }
+}
+
+// Направление 2: работа проекта → связанная задача (отметили выполненной
+// прямо в проекте, не через календарь). Если у работы есть Task — та же
+// логика завершения, что и обычный PATCH задачи: completedAt, и, если у
+// задачи (не работы!) заполнен свой plannedMaterials и он ещё не списан —
+// то же автосписание склада, что сработало бы при завершении из календаря
+// (см. lib/crm/services/taskMaterials.ts) — чтобы поведение не расходилось
+// в зависимости от того, откуда отметили готовность.
+export async function syncTaskFromProjectWorkStatus(
+  tx: Tx,
+  companyId: string,
+  work: { taskId: string | null },
+  newWorkStatus: string,
+): Promise<LowStockAlert[]> {
+  if (!work.taskId) return []
+  const task = await tx.task.findUnique({ where: { id: work.taskId } })
+  if (!task) return []
+
+  if (newWorkStatus === 'DONE') {
+    if (task.status === 'DONE') return []
+    await tx.task.update({ where: { id: task.id }, data: { status: 'DONE', completedAt: new Date() } })
+    if (!task.materialsWrittenOff) {
+      const materials = Array.isArray(task.plannedMaterials) ? (task.plannedMaterials as unknown as TaskMaterial[]) : []
+      if (materials.length > 0) {
+        return writeOffMaterials(tx, companyId, task.id, materials)
+      }
+    }
+    return []
+  }
+
+  if (task.status === 'DONE') {
+    const revertStatus = task.scheduledAt ? 'SCHEDULED' : 'NEW'
+    await tx.task.update({ where: { id: task.id }, data: { status: revertStatus, completedAt: null } })
+  }
+  return []
 }
 
 export interface MoveToInvoiceOpts {
