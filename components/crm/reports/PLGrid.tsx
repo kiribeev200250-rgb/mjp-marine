@@ -108,7 +108,7 @@ export function PLGrid({ categories, entries }: Props) {
     return (
       <td
         className={`px-2.5 py-1.5 text-right tabular-nums text-body border-l border-gray-100 ${
-          items.length > 0 ? 'cursor-pointer hover:bg-info/10 transition' : 'text-gray-500'
+          items.length > 0 ? 'text-gray-900 cursor-pointer hover:bg-info/10 transition' : 'text-gray-500'
         }`}
         onClick={() => openDrill(label, items)}
       >
@@ -128,7 +128,7 @@ export function PLGrid({ categories, entries }: Props) {
         ))}
         <td
           className={`px-2.5 py-1.5 text-right tabular-nums text-body font-medium border-l-2 border-gray-200 ${
-            yearItems.length > 0 ? 'cursor-pointer hover:bg-info/10 transition' : 'text-gray-500'
+            yearItems.length > 0 ? 'text-gray-900 cursor-pointer hover:bg-info/10 transition' : 'text-gray-500'
           }`}
           onClick={() => openDrill(`${cat.name} · за год`, yearItems)}
         >
@@ -202,7 +202,7 @@ export function PLGrid({ categories, entries }: Props) {
                   <td
                     key={m}
                     className={`px-2.5 py-1.5 text-right tabular-nums text-body border-l border-gray-100 ${
-                      items.length > 0 ? 'cursor-pointer hover:bg-info/10 transition' : 'text-gray-500'
+                      items.length > 0 ? 'text-gray-900 cursor-pointer hover:bg-info/10 transition' : 'text-gray-500'
                     }`}
                     onClick={() => openDrill(`ФОТ · ${MONTHS_SHORT[m]}`, items)}
                   >
@@ -211,7 +211,7 @@ export function PLGrid({ categories, entries }: Props) {
                 )
               })}
               <td
-                className="px-2.5 py-1.5 text-right tabular-nums text-body font-medium border-l-2 border-gray-200 cursor-pointer hover:bg-info/10 transition"
+                className="px-2.5 py-1.5 text-right tabular-nums text-body font-medium text-gray-900 border-l-2 border-gray-200 cursor-pointer hover:bg-info/10 transition"
                 onClick={() => openDrill('ФОТ · за год', monthSalary.flat())}
               >
                 {formatMoney(yearSalary)}
