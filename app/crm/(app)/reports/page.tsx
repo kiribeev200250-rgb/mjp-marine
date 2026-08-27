@@ -13,6 +13,7 @@ import { marginByBoat, marginByClient, marginByWorkType } from '@/lib/crm/servic
 import { outstandingBalances } from '@/lib/crm/services/ar'
 import { computeWarrantyStats } from '@/lib/crm/services/warranty'
 import { computeAccountsPayable } from '@/lib/crm/services/supplierBills'
+import { computeProjectPipeline } from '@/lib/crm/services/projects'
 import type { InvoiceStatus } from '@prisma/client'
 
 interface SearchParams { month?: string }
@@ -66,6 +67,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     marginWorkTypes,
     warrantyStats,
     accountsPayable,
+    projectPipeline,
   ] = await Promise.all([
     prisma.invoice.findMany({
       where:   { companyId, status: 'PAID', paidAt: { gte: from, lt: to } },
@@ -104,6 +106,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     marginByWorkType(companyId, from, to),
     computeWarrantyStats(companyId, from, to),
     computeAccountsPayable(companyId),
+    computeProjectPipeline({ companyId }),
   ])
 
   // ── Выручка по маринам ──────────────────────────────────────────────────
@@ -191,6 +194,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             value={formatMoney(accountsPayable)}
             delta="Заказано/принято, не оплачено"
             deltaTone={accountsPayable.gt(0) ? 'danger' : 'neutral'}
+          />
+          <KpiCard
+            label="Пайплайн работ (проекты)"
+            value={formatMoney(projectPipeline)}
+            delta="Запланировано, ещё не выставлено"
+            deltaTone="neutral"
           />
         </div>
 

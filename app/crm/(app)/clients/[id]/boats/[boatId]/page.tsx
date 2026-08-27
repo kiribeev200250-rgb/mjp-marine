@@ -9,6 +9,7 @@ import { NotesThread } from '@/components/crm/clients/NotesThread'
 import { CreateProjectButton } from '@/components/crm/clients/CreateProjectButton'
 import { computeBoatMargin } from '@/lib/crm/services/profitability'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { computeProjectPipeline } from '@/lib/crm/services/projects'
 
 function fmtDate(d: Date) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(d)
@@ -43,6 +44,7 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
   const balances = await outstandingBalances(debtInvoices)
   const debtTotal = debtInvoices.reduce((s, i) => s + balances.get(i.id)!.toNumber(), 0)
   const margin = await computeBoatMargin(boatId)
+  const projectPipeline = await computeProjectPipeline({ companyId: session.user.companyId, boatId })
 
   type FeedEvent = { date: Date; title: string; badge?: React.ReactNode; href?: string }
   const feed: FeedEvent[] = [
@@ -95,7 +97,8 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
         />
       </div>
 
-      <div className="bg-white border-b border-gray-200 px-6 py-3 grid grid-cols-2 md:grid-cols-5 gap-4 shrink-0">
+      <div className="bg-white border-b border-gray-200 px-6 py-3 grid grid-cols-2 md:grid-cols-6 gap-4 shrink-0">
+        <Summary label="Пайплайн работ" value={formatMoney(projectPipeline)} />
         <Summary label="Оплачено всего" value={formatMoney(paidTotal)} />
         <Summary label="В дебиторке" value={formatMoney(debtTotal)} danger={debtTotal > 0} />
         <Summary

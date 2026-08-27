@@ -6,6 +6,7 @@ import { FUNNEL_STAGE_LABELS, formatMoney, isNegativeMoney } from '@/lib/crm/uti
 import { RevenueChart } from '@/components/crm/dashboard/RevenueChart'
 import { computeCashSummary } from '@/lib/crm/services/cash'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { computeProjectPipeline } from '@/lib/crm/services/projects'
 import { hasPermission } from '@/lib/crm/permissions'
 import Decimal from 'decimal.js'
 
@@ -46,6 +47,7 @@ export default async function DashboardPage() {
   const canClients  = hasPermission(session.user.role, session.user.permissions, 'CLIENTS',  'VIEW')
   const canSchedule = hasPermission(session.user.role, session.user.permissions, 'SCHEDULE', 'VIEW')
   const canSettings = hasPermission(session.user.role, session.user.permissions, 'SETTINGS', 'VIEW')
+  const canProjects = hasPermission(session.user.role, session.user.permissions, 'PROJECTS', 'VIEW')
 
   const now         = new Date()
   const todayStart  = startOfDay(now)
@@ -65,6 +67,7 @@ export default async function DashboardPage() {
     stageCounts,
     recentAudit,
     chartFinances,
+    projectPipeline,
   ] = await Promise.all([
     // 1. Касса — единая формула, см. lib/crm/services/cash.ts
     canFinance ? computeCashSummary(companyId) : null,
@@ -108,6 +111,8 @@ export default async function DashboardPage() {
       },
       select: { type: true, amount: true, date: true },
     }) : [],
+    // 12. Project pipeline — работы проектов, ещё не выставленные (см. lib/crm/services/projects.ts)
+    canProjects ? computeProjectPipeline({ companyId }) : null,
   ])
 
   // ── KPI computations ───────────────────────────────────────────────────────
@@ -187,8 +192,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* KPI row — 5 cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-5 lg:grid-cols-3 gap-4">
+      {/* KPI row — 6 cards */}
+      <div className="grid grid-cols-2 xl:grid-cols-6 lg:grid-cols-3 gap-4">
         <KpiLink href="/crm/finance" enabled={canFinance}>
           <KpiCard
             label="Касса"
@@ -210,6 +215,14 @@ export default async function DashboardPage() {
             label="Конверсия воронки"
             value={canClients ? `${conversion}%` : '—'}
             delta={canClients ? 'Лид → Оплачено' : 'Нет доступа'}
+            deltaTone="neutral"
+          />
+        </KpiLink>
+        <KpiLink href="/crm/clients" enabled={canProjects}>
+          <KpiCard
+            label="Пайплайн работ"
+            value={canProjects ? formatMoney(projectPipeline ?? new Decimal(0)) : '—'}
+            delta={canProjects ? 'Запланировано в проектах' : 'Нет доступа'}
             deltaTone="neutral"
           />
         </KpiLink>

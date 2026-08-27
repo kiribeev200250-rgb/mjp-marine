@@ -8,6 +8,7 @@ import { NotesThread } from '@/components/crm/clients/NotesThread'
 import { AddBoatButton } from '@/components/crm/clients/AddBoatButton'
 import { computeClientMargin } from '@/lib/crm/services/profitability'
 import { outstandingBalances } from '@/lib/crm/services/ar'
+import { computeProjectPipeline } from '@/lib/crm/services/projects'
 import { clientScopeWhere } from '@/lib/crm/scope'
 
 const STAGE_ORDER = Object.keys(FSL)
@@ -65,6 +66,10 @@ export default async function ClientDetailPage({
     .reduce((s, i) => s + balances.get(i.id)!.toNumber(), 0)
   const dealsCount = client.invoices.filter((i) => i.status === 'PAID').length
   const margin = await computeClientMargin(client.id)
+  // Пайплайн работ — запланированные работы во всех проектах лодок клиента,
+  // ещё не выставленные ни в один счёт. Отдельный, самый ранний уровень
+  // воронки денег — см. lib/crm/services/projects.ts.
+  const projectPipeline = await computeProjectPipeline({ companyId: session.user.companyId, clientId: client.id })
 
   type FeedEvent = { date: Date; title: string; badge?: React.ReactNode; note?: string; href?: string }
   const feed: FeedEvent[] = [
@@ -126,7 +131,8 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Сводка по клиенту */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 grid grid-cols-2 md:grid-cols-5 gap-4 shrink-0">
+      <div className="bg-white border-b border-gray-200 px-6 py-3 grid grid-cols-2 md:grid-cols-6 gap-4 shrink-0">
+        <Summary label="Пайплайн работ" value={formatMoney(projectPipeline)} />
         <Summary label="Оплачено всего" value={formatMoney(paidTotal)} />
         <Summary label="В дебиторке" value={formatMoney(debtTotal)} danger={debtTotal > 0} />
         <Summary

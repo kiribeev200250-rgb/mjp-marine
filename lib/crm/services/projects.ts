@@ -4,8 +4,39 @@ import { nextDocumentNumber } from '@/lib/crm/numbering'
 import { companyInfoSnapshot } from '@/lib/crm/documentJobs'
 import { writeOffInvoiceMaterials } from '@/lib/crm/services/invoiceCascade'
 import { writeOffMaterials, type TaskMaterial, type LowStockAlert } from '@/lib/crm/services/taskMaterials'
+import { prisma } from '@/lib/prisma'
 
 type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
+
+// Пайплайн работ — сумма ещё НЕ выставленных работ по проектам (PLANNED/DONE,
+// т.е. всё, что не MOVED_TO_INVOICE). Отдельный, самый ранний уровень
+// воронки денег: пайплайн (запланировано в проектах) → дебиторка
+// (outstandingBalances, выставлено, не оплачено) → доход (FinanceEntry,
+// реально оплачено). Три источника правды, не путать: эта функция никогда
+// не смотрит на Invoice/FinanceEntry, только на ProjectWork.
+export interface ProjectPipelineFilter {
+  companyId: string
+  boatId?:   string
+  clientId?: string
+}
+
+export async function computeProjectPipeline(filter: ProjectPipelineFilter): Promise<Decimal> {
+  const works = await prisma.projectWork.findMany({
+    where: {
+      status: { in: ['PLANNED', 'DONE'] },
+      project: {
+        companyId: filter.companyId,
+        ...(filter.boatId   && { boatId: filter.boatId }),
+        ...(filter.clientId && { boat: { clientId: filter.clientId } }),
+      },
+    },
+    include: { materials: true },
+  })
+  return works.reduce(
+    (s, w) => s.plus(w.laborCost.toString()).plus(w.materials.reduce((ms, m) => ms.plus(m.total.toString()), new Decimal(0))),
+    new Decimal(0),
+  )
+}
 
 // Создаёт задачу в календаре для работы проекта, у которой задана дата —
 // двусторонняя связь: taskId на ProjectWork, а сама Task наследует клиента/
