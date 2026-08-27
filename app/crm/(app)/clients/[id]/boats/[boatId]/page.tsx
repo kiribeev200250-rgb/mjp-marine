@@ -34,7 +34,10 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
     prisma.stockMovement.findMany({ where: { invoice: { boatId } }, include: { item: { select: { name: true, unit: true } }, invoice: { select: { number: true } } }, orderBy: { createdAt: 'desc' } }),
     prisma.financeEntry.findMany({ where: { invoice: { boatId } }, include: { invoice: { select: { number: true } } }, orderBy: { date: 'desc' } }),
     prisma.client.findMany({ where: { companyId: session.user.companyId, active: true }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: 'asc' } }),
-    prisma.project.findMany({ where: { boatId }, orderBy: { createdAt: 'desc' }, include: { _count: { select: { works: { where: { status: 'PLANNED' } } } } } }),
+    prisma.project.findMany({
+      where: { boatId }, orderBy: { createdAt: 'desc' },
+      include: { works: { where: { status: { in: ['PLANNED', 'DONE'] } }, include: { materials: true } } },
+    }),
   ])
 
   const paidTotal = invoices.filter((i) => i.status === 'PAID').reduce((s, i) => s + Number(i.total), 0)
@@ -148,15 +151,23 @@ export default async function BoatDetailPage({ params }: { params: Promise<{ id:
               <p className="text-body text-gray-500">Проектов пока нет — накопительный список работ по лодке между сделками.</p>
             ) : (
               <div className="divide-y divide-gray-100">
-                {projects.map((p) => (
-                  <Link key={p.id} href={`/crm/projects/${p.id}`} className="flex items-center justify-between gap-3 py-2 hover:text-gold transition">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-body text-gray-900 truncate">{p.name}</span>
-                      <Badge tone={PROJECT_TONE[p.status] ?? 'neutral'}>{PROJECT_STATUS_LABELS[p.status] ?? p.status}</Badge>
-                    </div>
-                    <span className="text-label text-gray-500 shrink-0">{p._count.works} в плане</span>
-                  </Link>
-                ))}
+                {projects.map((p) => {
+                  const pipeline = p.works.reduce(
+                    (s, w) => s + Number(w.laborCost) + w.materials.reduce((ms, m) => ms + Number(m.total), 0),
+                    0,
+                  )
+                  return (
+                    <Link key={p.id} href={`/crm/projects/${p.id}`} className="flex items-center justify-between gap-3 py-2 hover:text-gold transition">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-body text-gray-900 truncate">{p.name}</span>
+                        <Badge tone={PROJECT_TONE[p.status] ?? 'neutral'}>{PROJECT_STATUS_LABELS[p.status] ?? p.status}</Badge>
+                      </div>
+                      <span className="text-label text-gray-500 shrink-0">
+                        {p.works.length > 0 ? `${formatMoney(pipeline)} в плане` : 'нет работ в плане'}
+                      </span>
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </div>

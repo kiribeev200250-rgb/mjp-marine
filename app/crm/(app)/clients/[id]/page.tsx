@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { FUNNEL_STAGE_LABELS, FUNNEL_STAGE_LABELS as FSL, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS, TASK_STATUS_LABELS, formatMoney } from '@/lib/crm/utils'
-import { Badge, FUNNEL_TONE, TASK_TONE, INVOICE_TONE, QUOTE_TONE, Button } from '@/components/crm/ui'
+import { FUNNEL_STAGE_LABELS, FUNNEL_STAGE_LABELS as FSL, INVOICE_STATUS_LABELS, QUOTE_STATUS_LABELS, TASK_STATUS_LABELS, PROJECT_STATUS_LABELS, formatMoney } from '@/lib/crm/utils'
+import { Badge, FUNNEL_TONE, TASK_TONE, INVOICE_TONE, QUOTE_TONE, PROJECT_TONE, Button } from '@/components/crm/ui'
 import { NotesThread } from '@/components/crm/clients/NotesThread'
 import { AddBoatButton } from '@/components/crm/clients/AddBoatButton'
 import { computeClientMargin } from '@/lib/crm/services/profitability'
@@ -50,6 +50,17 @@ export default async function ClientDetailPage({
   })
 
   if (!client) notFound()
+
+  // Проекты по всем лодкам клиента разом — на карточке лодки видно по одной,
+  // здесь сводка сразу по всем, чтобы не переходить в каждую лодку отдельно.
+  const projects = await prisma.project.findMany({
+    where:   { companyId: session.user.companyId, boat: { clientId: client.id } },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      boat:  { select: { id: true, name: true, model: true } },
+      works: { where: { status: { in: ['PLANNED', 'DONE'] } }, include: { materials: true } },
+    },
+  })
 
   const stageIndex = STAGE_ORDER.indexOf(client.funnelStage)
 
@@ -196,6 +207,36 @@ export default async function ClientDetailPage({
                       </p>
                     </Link>
                   ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-card shadow-e2 p-5">
+              <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide mb-4">Проекты</h2>
+              {projects.length === 0 ? (
+                <p className="text-body text-gray-500 text-center py-3">Проектов пока нет</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {projects.map((p) => {
+                    const pipeline = p.works.reduce(
+                      (s, w) => s + Number(w.laborCost) + w.materials.reduce((ms, m) => ms + Number(m.total), 0),
+                      0,
+                    )
+                    return (
+                      <Link key={p.id} href={`/crm/projects/${p.id}`} className="flex items-center justify-between gap-3 py-2 hover:text-gold transition">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-body text-gray-900 truncate">{p.name}</span>
+                            <Badge tone={PROJECT_TONE[p.status] ?? 'neutral'}>{PROJECT_STATUS_LABELS[p.status] ?? p.status}</Badge>
+                          </div>
+                          <p className="text-label text-gray-500 mt-0.5">⛵ {p.boat.name || p.boat.model || 'Лодка'}</p>
+                        </div>
+                        <span className="text-label text-gray-500 shrink-0">
+                          {p.works.length > 0 ? `${formatMoney(pipeline)} в плане` : 'нет работ в плане'}
+                        </span>
+                      </Link>
+                    )
+                  })}
                 </div>
               )}
             </div>
