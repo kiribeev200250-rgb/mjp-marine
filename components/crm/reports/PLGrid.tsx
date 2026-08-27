@@ -122,7 +122,7 @@ export function PLGrid({ categories, entries }: Props) {
     const yearItems = entries.filter((e) => catKeyOf(e) === cat.id)
     return (
       <tr className="border-b border-gray-50 hover:bg-gray-50/40 transition">
-        <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-body text-gray-700 whitespace-nowrap">{cat.name}</td>
+        <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-body text-gray-900 whitespace-nowrap">{cat.name}</td>
         {Array.from({ length: 12 }, (_, m) => (
           <Cell key={m} catKey={cat.id} month={m} label={`${cat.name} · ${MONTHS_SHORT[m]}`} />
         ))}
@@ -195,7 +195,7 @@ export function PLGrid({ categories, entries }: Props) {
             </tr>
 
             <tr className="border-b border-gray-100 hover:bg-gray-50/40 transition">
-              <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-body text-gray-700 font-medium">Зарплаты (ФОТ)</td>
+              <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-body text-gray-900 font-medium">Зарплаты (ФОТ)</td>
               {Array.from({ length: 12 }, (_, m) => {
                 const items = monthSalary[m]
                 return (
