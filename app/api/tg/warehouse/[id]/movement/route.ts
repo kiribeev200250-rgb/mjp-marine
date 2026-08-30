@@ -4,7 +4,7 @@ import { getTgSession } from '@/lib/crm/telegram/webapp-auth'
 import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
-import { nextFinanceAutoId } from '@/lib/crm/numbering'
+import { recordStockFinanceEntry } from '@/lib/crm/services/stockFinance'
 import { prisma } from '@/lib/prisma'
 import type { StockMovementType } from '@prisma/client'
 
@@ -38,15 +38,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       data: { companyId: session.companyId, itemId, type, qty: qtyDec, unitPrice, total, note: 'Через Telegram Mini App' },
     })
     await tx.inventoryItem.update({ where: { id: itemId }, data: { qtyInStock: newStock } })
-    if (type === 'SELL') {
-      const incomeAutoId = await nextFinanceAutoId(tx, session.companyId, 'INCOME', new Date().getFullYear())
-      await tx.financeEntry.create({
-        data: {
-          companyId: session.companyId, autoId: incomeAutoId, type: 'INCOME' as const, date: new Date(),
-          category: 'Продажа запчастей', amountExpr: total.toString(), amount: total,
-          description: `Продажа: ${item.name}`,
-        },
-      })
+    if (type === 'RECEIVE' || type === 'SELL') {
+      await recordStockFinanceEntry(tx, session.companyId, item, type, total)
     }
   })
 

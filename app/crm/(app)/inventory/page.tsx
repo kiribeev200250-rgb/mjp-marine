@@ -1,9 +1,12 @@
 import Link from 'next/link'
 import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
-import { requirePermission } from '@/lib/crm/permissions'
+import { requirePermission, hasPermission } from '@/lib/crm/permissions'
 import { redirect } from 'next/navigation'
 import { InventoryTable } from '@/components/crm/inventory/InventoryTable'
+import { computeInventoryValuation } from '@/lib/crm/services/inventory'
+import { KpiCard } from '@/components/crm/ui'
+import { formatMoney } from '@/lib/crm/utils'
 import Decimal from 'decimal.js'
 
 interface SearchParams { q?: string; category?: string; lowStock?: string }
@@ -58,6 +61,12 @@ export default async function InventoryPage({
     return min.gt(0) && qty.lt(min)
   }).length
 
+  // Капитализация склада — сколько денег сейчас «заморожено» в остатках и
+  // сколько можно выручить, продав всё по текущим ценам. Финансовая метрика,
+  // поэтому спрятана за тем же правом, что и остальные суммы в деньгах.
+  const canFinance = hasPermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')
+  const valuation  = canFinance ? await computeInventoryValuation(session.user.companyId) : null
+
   return (
     <div className="flex flex-col h-full">
       {/* Page header */}
@@ -84,6 +93,27 @@ export default async function InventoryPage({
             </Link>
           </div>
         </div>
+
+        {valuation && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <KpiCard
+              label="Капитал склада (закупка)"
+              value={formatMoney(valuation.costValue)}
+              delta="Сколько денег сейчас в остатках"
+            />
+            <KpiCard
+              label="Потенциал (продажа)"
+              value={formatMoney(valuation.potentialValue)}
+              delta="Если продать весь остаток по текущим ценам"
+            />
+            <KpiCard
+              label="Потенциальная маржа"
+              value={formatMoney(valuation.potentialMargin)}
+              delta="Потенциал − капитал"
+              deltaTone="success"
+            />
+          </div>
+        )}
       </div>
 
       {/* Filters */}

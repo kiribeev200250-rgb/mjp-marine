@@ -3,8 +3,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { prisma } from '@/lib/prisma'
 import { hasPermission } from '@/lib/crm/permissions'
 import { notifyAdmins } from '@/lib/crm/telegram/notify'
-import { nextFinanceAutoId } from '@/lib/crm/numbering'
-import { findOrCreateCategory } from '@/lib/crm/services/categories'
+import { recordStockFinanceEntry } from '@/lib/crm/services/stockFinance'
 import Decimal from 'decimal.js'
 import type { StockMovementType } from '@prisma/client'
 
@@ -59,11 +58,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   const total = type !== 'ORDER' ? qtyDec.abs().mul(priceDec) : new Decimal(0)
 
-  // Продажа со склада создаёт доход автоматически (см. SPEC М3)
-  const sellCategory = type === 'SELL'
-    ? await findOrCreateCategory(prisma, session.user.companyId, 'INCOME', 'Продажа запчастей')
-    : null
-
   let movement
   try {
     movement = await prisma.$transaction(async (tx) => {
@@ -95,21 +89,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
           meta:      { note },
         },
       })
-      if (type === 'SELL') {
-        const incomeAutoId = await nextFinanceAutoId(tx, session.user.companyId, 'INCOME', new Date().getFullYear())
-        await tx.financeEntry.create({
-          data: {
-            companyId:   session.user.companyId,
-            autoId:      incomeAutoId,
-            type:        'INCOME' as const,
-            date:        new Date(),
-            category:    sellCategory!.name,
-            categoryId:  sellCategory!.id,
-            amountExpr:  total.toString(),
-            amount:      total,
-            description: `Продажа: ${item.name}`,
-          },
-        })
+      // Приход — покупка за свои деньги (расход из кассы сейчас); продажа —
+      // реальный доход сейчас. Списание в работу (WRITE_OFF) сюда не входит —
+      // его стоимость уже учитывается через счёт клиенту, см. stockFinance.ts.
+      if (type === 'RECEIVE' || type === 'SELL') {
+        await recordStockFinanceEntry(tx, session.user.companyId, item, type, total)
       }
       return m
     })
