@@ -42,7 +42,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function StyleGuidePage() {
   return (
-    <div className="max-w-4xl mx-auto py-8 px-6 space-y-12">
+    <main className="flex-1 overflow-y-auto max-w-4xl mx-auto py-8 px-6 space-y-12">
       <div>
         <h1 className="text-display font-bold text-gray-900">MJP CRM — Style Guide</h1>
         <p className="text-body text-gray-500 mt-1">
@@ -226,6 +226,6 @@ export default function StyleGuidePage() {
           ))}
         </ul>
       </Section>
-    </div>
+    </main>
   )
 }

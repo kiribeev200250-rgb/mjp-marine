@@ -9,7 +9,7 @@ export default async function SuppliersPage() {
   requirePermission(session.user.role, session.user.permissions, 'INVENTORY', 'VIEW')
 
   return (
-    <div className="space-y-5">
+    <main className="flex-1 overflow-y-auto p-6 space-y-5">
       <div>
         <h1 className="text-heading text-gray-900">Поставщики</h1>
         <p className="text-body text-gray-500 mt-1">
@@ -18,6 +18,6 @@ export default async function SuppliersPage() {
         </p>
       </div>
       <SuppliersPanel />
-    </div>
+    </main>
   )
 }

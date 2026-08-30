@@ -9,7 +9,7 @@ export default async function RecurringExpensesPage() {
   requirePermission(session.user.role, session.user.permissions, 'FINANCE', 'VIEW')
 
   return (
-    <div className="space-y-5">
+    <main className="flex-1 overflow-y-auto p-6 space-y-5">
       <div>
         <h1 className="text-heading text-gray-900">Повторяющиеся расходы</h1>
         <p className="text-body text-gray-500 mt-1">
@@ -18,6 +18,6 @@ export default async function RecurringExpensesPage() {
         </p>
       </div>
       <RecurringExpensesPanel />
-    </div>
+    </main>
   )
 }
