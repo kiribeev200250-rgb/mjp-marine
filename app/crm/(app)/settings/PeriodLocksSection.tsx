@@ -78,6 +78,7 @@ export function PeriodLocksSection({ locks: initial }: Props) {
       {locks.length === 0 ? (
         <p className="text-body text-gray-500 text-center py-8">Закрытых периодов нет</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
@@ -108,6 +109,7 @@ export function PeriodLocksSection({ locks: initial }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <div className="px-5 py-4 border-t border-gray-200 bg-gray-50/50">

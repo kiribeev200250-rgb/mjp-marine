@@ -41,14 +41,17 @@ export default async function SettingsPage() {
         <p className="text-label text-gray-500 mt-0.5">Компания, реквизиты, пользователи</p>
       </div>
 
-      <div className="flex-1 p-6 space-y-8 max-w-3xl">
-        <section>
+      <div className="flex-1 p-6 space-y-8">
+        <section className="max-w-3xl">
           <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide mb-4">
             Реквизиты компании (для счетов)
           </h2>
           <CompanyInfoForm companyId={companyId} data={companyInfo} />
         </section>
 
+        {/* Без max-w-3xl — таблице с 6 колонками (включая код привязки Telegram)
+            нужна вся ширина контента, иначе она обрезается справа без возможности
+            прокрутки внутри узкой колонки. */}
         <section>
           <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide mb-4">
             Пользователи CRM
@@ -56,7 +59,7 @@ export default async function SettingsPage() {
           <UsersSection companyId={companyId} users={users} />
         </section>
 
-        <section>
+        <section className="max-w-3xl">
           <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide mb-4">
             Facebook Lead Ads
           </h2>
@@ -67,7 +70,7 @@ export default async function SettingsPage() {
           <h2 className="text-label text-gray-500 font-semibold uppercase tracking-wide mb-4">
             Закрытие периодов
           </h2>
-          <p className="text-label text-gray-500 -mt-3 mb-4">
+          <p className="text-label text-gray-500 -mt-3 mb-4 max-w-3xl">
             Внутри закрытого периода финансовые операции нельзя редактировать или удалять —
             только сторнировать записью в открытом периоде.
           </p>

@@ -92,6 +92,7 @@ export function UsersSection({ companyId, users }: Props) {
   return (
     <div className="bg-white rounded-card shadow-e2 border border-gray-200/60 overflow-hidden">
       {/* Таблица пользователей */}
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
@@ -152,6 +153,7 @@ export function UsersSection({ companyId, users }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* Кнопка добавить */}
       <div className="px-5 py-4 border-t border-gray-200 bg-gray-50/50">
