@@ -5,6 +5,7 @@ import { getCrmSession } from '@/lib/crm/session'
 import { hasPermission } from '@/lib/crm/permissions'
 import { writeAudit } from '@/lib/crm/audit'
 import { prisma } from '@/lib/prisma'
+import { nextFinanceAutoId, nextCapitalAutoId } from '@/lib/crm/numbering'
 
 export const runtime = 'nodejs'
 
@@ -34,7 +35,6 @@ const CATEGORY_KIND_BY_SHEET: Record<'EXPENSE' | 'INCOME' | 'SALARY', CategoryKi
   INCOME:  'INCOME',
   SALARY:  'SALARY',
 }
-const FINANCE_PREFIX: Record<FinanceEntryType, string> = { INCOME: 'INC', EXPENSE: 'EXP', SALARY: 'SAL' }
 
 // Находит/создаёт категорию внутри уже открытой транзакции — тот же паттерн
 // идемпотентного upsert, что и в POST /api/crm/categories, но tx-aware, чтобы
@@ -121,7 +121,6 @@ export async function POST(req: NextRequest) {
           })).map((r) => r.importRef),
         )
 
-        const yearCounters = new Map<number, number>()
         for (const row of rows) {
           if (seenInBatch.has(row.importRef) || existingRefs.has(row.importRef)) {
             skippedDuplicate.push(row.importRef)
@@ -137,14 +136,12 @@ export async function POST(req: NextRequest) {
           }
 
           const year = date.getFullYear()
-          if (!yearCounters.has(year)) {
-            yearCounters.set(year, await tx.capitalEntry.count({
-              where: { companyId, date: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) } },
-            }))
-          }
-          const seq = yearCounters.get(year)! + 1
-          yearCounters.set(year, seq)
-          const autoId = `INV-${year}-${String(seq).padStart(3, '0')}`
+          // Тот же атомарный счётчик (SequenceCounter), что и у всех остальных
+          // источников CapitalEntry — раньше здесь был локальный count()-подсчёт
+          // по году, который не знал про атомарный счётчик и мог выдать autoId,
+          // уже занятый записью, созданной другим путём (нарушение unique
+          // (companyId, autoId)).
+          const autoId = await nextCapitalAutoId(tx, companyId, year)
 
           const entry = await tx.capitalEntry.create({
             data: {
@@ -171,7 +168,6 @@ export async function POST(req: NextRequest) {
           })).map((r) => r.importRef),
         )
 
-        const yearCounters = new Map<number, number>()
         for (const row of rows) {
           if (seenInBatch.has(row.importRef) || existingRefs.has(row.importRef)) {
             skippedDuplicate.push(row.importRef)
@@ -193,14 +189,10 @@ export async function POST(req: NextRequest) {
           }
 
           const year = date.getFullYear()
-          if (!yearCounters.has(year)) {
-            yearCounters.set(year, await tx.financeEntry.count({
-              where: { companyId, type: financeType, date: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) } },
-            }))
-          }
-          const seq = yearCounters.get(year)! + 1
-          yearCounters.set(year, seq)
-          const autoId = `${FINANCE_PREFIX[financeType]}-${year}-${String(seq).padStart(3, '0')}`
+          // Тот же атомарный счётчик, что у обычного создания дохода/расхода,
+          // продажи со склада, каскада счёта и т.д. — см. комментарий выше у
+          // CapitalEntry про то, почему локальный count() по году небезопасен.
+          const autoId = await nextFinanceAutoId(tx, companyId, financeType, year)
 
           const entry = await tx.financeEntry.create({
             data: {
