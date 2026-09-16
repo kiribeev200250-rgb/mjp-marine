@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { detectLang, type Lang } from '@/lib/i18n';
+import { openConsentSettings } from '@/lib/consent';
 
 interface CustomLink { label: string; url: string }
 
@@ -43,6 +44,20 @@ const copyrightByLang: Record<Lang, string> = {
   es: '© 2026 MJP Marine Service · Costa Blanca, España',
   ru: '© 2026 MJP Marine Service · Коста Бланка, Испания',
   uk: '© 2026 MJP Marine Service · Коста Бланка, Іспанія',
+};
+
+const privacyLabelByLang: Record<Lang, string> = {
+  en: 'Privacy Policy',
+  es: 'Política de privacidad',
+  ru: 'Политика конфиденциальности',
+  uk: 'Політика конфіденційності',
+};
+
+const cookieSettingsLabelByLang: Record<Lang, string> = {
+  en: 'Cookie settings',
+  es: 'Configuración de cookies',
+  ru: 'Настройки cookie',
+  uk: 'Налаштування cookie',
 };
 
 export default function Footer({ config }: { config: Config }) {
@@ -201,8 +216,33 @@ export default function Footer({ config }: { config: Config }) {
           )}
         </div>
 
-        {/* Copyright */}
+        {/* Copyright + legal links — всегда видны, независимо от footerShowNav/Brand/Social */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem', textAlign: 'center' }}>
+          <div
+            style={{
+              display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
+              gap: '0.5rem 1rem', marginBottom: '0.75rem',
+            }}
+          >
+            <a
+              href="/privacy-policy"
+              style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontFamily: 'Mulish, sans-serif', textDecoration: 'none' }}
+              className="hover-gold-link"
+            >
+              {privacyLabelByLang[lang]}
+            </a>
+            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem' }}>·</span>
+            <button
+              onClick={() => openConsentSettings()}
+              style={{
+                color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontFamily: 'Mulish, sans-serif',
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              }}
+              className="hover-gold-link"
+            >
+              {cookieSettingsLabelByLang[lang]}
+            </button>
+          </div>
           <p
             style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.75rem', fontFamily: 'Mulish, sans-serif', letterSpacing: '0.05em' }}
             data-i18n="footer.copyright"
